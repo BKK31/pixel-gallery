@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lumina_gallery/screens/albums_screen.dart';
 import 'package:lumina_gallery/screens/photos_screen.dart';
+import 'package:lumina_gallery/screens/settings_screen.dart';
+
+enum MenuItems { settings, recycleBin }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  MenuItems? selectedItem;
 
   final List _pages = [PhotosScreen(), AlbumsScreen()];
 
@@ -29,8 +33,32 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         backgroundColor: Colors.deepPurple[400],
         actions: [
-          Icon(Icons.more_vert, color: Colors.white),
-          // Padding(padding: EdgeInsetsGeometry.only(right: 5)),
+          PopupMenuButton<MenuItems>(
+            onSelected: (MenuItems item) {
+              if (item == MenuItems.settings) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
+                );
+              }
+
+              if (item == MenuItems.recycleBin) {
+                // later: navigate to recycle bin
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem<MenuItems>(
+                value: MenuItems.settings,
+                child: Text('Settings'),
+              ),
+              PopupMenuItem<MenuItems>(
+                value: MenuItems.recycleBin,
+                child: Text('Recycle Bin'),
+              ),
+            ],
+          ),
         ],
       ),
 
@@ -52,4 +80,3 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
