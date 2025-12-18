@@ -28,8 +28,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Center(
-          child: Text("Lumina Gallery", style: TextStyle(color: Colors.white)),
+        title: Align(
+          alignment: Alignment.center,
+          child: Text(
+            "\t\t\t\t\t\t\t\t\tLumina Gallery",
+            style: TextStyle(color: Colors.white),
+          ),
         ),
         backgroundColor: Colors.deepPurple[400],
         actions: [

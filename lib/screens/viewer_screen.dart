@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
+import 'package:lumina_gallery/models/photo_model.dart';
 
 class ViewerScreen extends StatefulWidget {
   final int index;
-  const ViewerScreen({super.key, required this.index});
+  final List<PhotoModel> photos;
+
+  const ViewerScreen({
+    super.key, 
+    required this.index,
+    required this.photos,
+  });
 
   @override
   State<ViewerScreen> createState() => _ViewerScreenState();
@@ -44,16 +52,13 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   _currentIndex = index;
                 });
               },
-              itemCount: 100,
+              itemCount: widget.photos.length,
               itemBuilder: (context, index) {
-                return Container(
-                  color: Colors.black,
-                  child: Center(
-                    child: Text(
-                      (index + 1).toString(),
-                      style: TextStyle(color: Colors.white, fontSize: 32),
-                    ),
-                  ),
+                final photo = widget.photos[index];
+                return AssetEntityImage(
+                  photo.asset,
+                  isOriginal: true,
+                  fit: BoxFit.contain,
                 );
               },
             ),
