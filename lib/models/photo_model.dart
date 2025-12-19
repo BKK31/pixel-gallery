@@ -5,10 +5,12 @@ class PhotoModel {
   final String uid;
   final AssetEntity asset;
   final DateTime timeTaken;
+  final bool isVideo;
 
   PhotoModel({
     required this.uid,
     required this.asset,
     required this.timeTaken,
+    required this.isVideo,
   });
 }

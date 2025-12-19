@@ -17,29 +17,33 @@ class _PhotosScreenState extends State<PhotosScreen> {
   bool _loading = true;
   bool _loadingMore = false;
   bool _hasMore = true;
+  int _page = 0;
+  AssetPathEntity? _currentAlbum;
 
   late final ScrollController _scrollController = ScrollController();
   final MediaService _service = MediaService();
 
   Future<void> _init() async {
-    await _service.init();
-    final firstBatch = await _service.loadNextPage();
-
+    bool perm = await _service.requestPermission();
+    if (!perm) {
+      return;
+    }
+    final albums = await _service.getPhotos();
+    _currentAlbum = albums[0];
+    final media = await _service.getMedia(album: _currentAlbum!, page: 0);
     setState(() {
-      _photos = firstBatch;
+      _photos = media;
       _loading = false;
     });
   }
 
   Future<void> _loadMore() async {
-    _loadingMore = true;
-    final more = await _service.loadNextPage();
-
+    if (_currentAlbum == null) return;
+    _page++;
+    final media = await _service.getMedia(album: _currentAlbum!, page: _page);
     setState(() {
-      _photos.addAll(more);
+      _photos.addAll(media);
     });
-
-    _loadingMore = false;
   }
 
   @override
@@ -50,7 +54,8 @@ class _PhotosScreenState extends State<PhotosScreen> {
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
               _scrollController.position.maxScrollExtent - 300 &&
-          !_loadingMore && _hasMore) {
+          !_loadingMore &&
+          _hasMore) {
         _loadMore();
       }
     });
@@ -92,7 +97,9 @@ class _PhotosScreenState extends State<PhotosScreen> {
             },
             child: AssetEntityImage(
               photo.asset,
-              thumbnailSize: const ThumbnailSize(300, 300),
+              isOriginal: false,
+              thumbnailSize: const ThumbnailSize.square(180),
+              thumbnailFormat: ThumbnailFormat.jpeg,
               fit: BoxFit.cover,
             ),
           );
