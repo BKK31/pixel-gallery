@@ -4,84 +4,72 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
+  static const String accentKey = 'material_you';
+  static const String defaultPageKey = 'albums';
+
+  static Future<bool> getMaterialYou() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(accentKey) ?? true;
+  }
+
+  static Future<bool> getStartupAtAlbums() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(defaultPageKey) ?? true;
+  }
+
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  static const String accent = 'material_you';
-  static const String default_page = 'albums';
-
   bool _materialYou = true;
   bool _albums = true;
 
-  Future<void> _loadSettings() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+  @override
+  void initState() {
+    super.initState();
+    _refreshSettings();
+  }
 
-    final bool? savedMaterialYou = prefs.getBool(accent);
-    final bool? savedAlbums = prefs.getBool(default_page);
-
+  Future<void> _refreshSettings() async {
+    bool mYou = await SettingsScreen.getMaterialYou();
+    bool sAlbums = await SettingsScreen.getStartupAtAlbums();
     setState(() {
-      if (savedMaterialYou != null) {
-        _materialYou = savedMaterialYou;
-      }
-
-      if (savedAlbums != null) {
-        _albums = savedAlbums;
-      }
+      _materialYou = mYou;
+      _albums = sAlbums;
     });
   }
 
   void _saveSettings(String key, bool value) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-
     await prefs.setBool(key, value);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSettings();
+    setState(() {
+      if (key == SettingsScreen.accentKey) _materialYou = value;
+      if (key == SettingsScreen.defaultPageKey) _albums = value;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text("Settings"),
+        centerTitle: true,
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
       body: ListView(
-        scrollDirection: Axis.vertical,
         children: [
-          Container(
-            child: Row(
-              children: [
-                Text("Material You"),
-                Switch(
-                  value: _materialYou,
-                  onChanged: (bool newValue) {
-                    setState(() {
-                      _materialYou = newValue;
-                    });
-                    _saveSettings(accent, newValue);
-                  },
-                ),
-              ],
-            ),
+          SwitchListTile(
+            title: const Text("Material You"),
+            value: _materialYou,
+            onChanged: (bool val) =>
+                _saveSettings(SettingsScreen.accentKey, val),
           ),
-
-          Container(
-            child: Row(
-              children: [
-                Text("Startup at Albums"),
-                Switch(
-                  value: _albums,
-                  onChanged: (bool newValue) {
-                    setState(() {
-                      _albums = newValue;
-                    });
-                    _saveSettings(default_page, newValue);
-                  },
-                ),
-              ],
-            ),
+          SwitchListTile(
+            title: const Text("Startup at Albums"),
+            value: _albums,
+            onChanged: (bool val) =>
+                _saveSettings(SettingsScreen.defaultPageKey, val),
           ),
         ],
       ),

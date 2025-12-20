@@ -67,8 +67,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.album.name),
-        backgroundColor: Colors.deepPurple[400],
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: ListView.builder(
         itemCount: _groupedItems.length,
