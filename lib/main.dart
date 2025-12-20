@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lumina_gallery/screens/albums_screen.dart';
 import 'package:lumina_gallery/screens/home_screen.dart';
-import 'package:lumina_gallery/screens/photos_screen.dart';
-import 'package:lumina_gallery/services/media_service.dart';
+import 'package:lumina_gallery/screens/recents_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +20,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/home': (context) => HomeScreen(),
         '/albums': (context) => AlbumsScreen(),
-        '/photos': (context) => PhotosScreen(),
+        '/recent': (context) => RecentsScreen(),
       },
     );
   }

@@ -5,14 +5,14 @@ import 'package:lumina_gallery/services/media_service.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 
-class PhotosScreen extends StatefulWidget {
-  const PhotosScreen({super.key});
+class RecentsScreen extends StatefulWidget {
+  const RecentsScreen({super.key});
 
   @override
-  State<PhotosScreen> createState() => _PhotosScreenState();
+  State<RecentsScreen> createState() => _RecentsScreenState();
 }
 
-class _PhotosScreenState extends State<PhotosScreen> {
+class _RecentsScreenState extends State<RecentsScreen> {
   List<PhotoModel> _photos = [];
   bool _loading = true;
   bool _loadingMore = false;

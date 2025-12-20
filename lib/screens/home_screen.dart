@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lumina_gallery/screens/albums_screen.dart';
-import 'package:lumina_gallery/screens/photos_screen.dart';
+import 'package:lumina_gallery/screens/recents_screen.dart';
 import 'package:lumina_gallery/screens/settings_screen.dart';
 
 enum MenuItems { settings, recycleBin }
@@ -16,7 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   MenuItems? selectedItem;
 
-  final List _pages = [PhotosScreen(), AlbumsScreen()];
+  final List _pages = [RecentsScreen(), AlbumsScreen()];
 
   void _navigateBottomBar(int index) {
     setState(() {
@@ -28,14 +28,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Align(
-          alignment: Alignment.center,
-          child: Text(
-            "\t\t\t\t\t\t\t\t\tLumina Gallery",
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
+        title: Text("Lumina Gallery"),
+        centerTitle: true,
         backgroundColor: Colors.deepPurple[400],
+        foregroundColor: Colors.white,
         actions: [
           PopupMenuButton<MenuItems>(
             onSelected: (MenuItems item) {
@@ -74,10 +70,10 @@ class _HomeScreenState extends State<HomeScreen> {
           // All Photos
           BottomNavigationBarItem(icon: Icon(Icons.photo), label: "Photos"),
 
-          // Albumns
+          // Albums
           BottomNavigationBarItem(
             icon: Icon(Icons.photo_album),
-            label: "Albumns",
+            label: "Albums",
           ),
         ],
       ),
