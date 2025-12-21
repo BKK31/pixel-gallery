@@ -6,6 +6,7 @@ import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import 'package:lumina_gallery/models/photo_model.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
+import 'package:photo_view/photo_view.dart';
 
 class ViewerScreen extends StatefulWidget {
   final int index;
@@ -128,7 +129,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     _photos = List.from(widget.initialPhotos);
     _controller = PageController(initialPage: widget.index);
     _page = (widget.initialPhotos.length / 50).ceil() - 1;
-    if (_page < 0) _page = 0; 
+    if (_page < 0) _page = 0;
   }
 
   @override
@@ -162,10 +163,14 @@ class _ViewerScreenState extends State<ViewerScreen> {
               itemCount: _photos.length,
               itemBuilder: (context, index) {
                 final photo = _photos[index];
-                return AssetEntityImage(
-                  photo.asset,
-                  isOriginal: true,
-                  fit: BoxFit.contain,
+                return PhotoView(
+                  imageProvider: AssetEntityImageProvider(
+                    photo.asset,
+                    isOriginal: true,
+                  ),
+                  minScale: PhotoViewComputedScale.contained,
+                  maxScale: PhotoViewComputedScale.covered * 4,
+                  heroAttributes: PhotoViewHeroAttributes(tag: photo.asset.id),
                 );
               },
             ),

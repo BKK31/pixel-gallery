@@ -64,11 +64,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             margin: EdgeInsets.only(left: 15),
             child: Row(
               children: [
-                Text("Material You"),
-                Switch(
-                  value: _materialYou,
-                  onChanged: (bool val) =>
-                      _saveSettings(SettingsScreen.accentKey, val),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text("Material You")),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Switch(
+                    value: _materialYou,
+                    onChanged: (bool val) =>
+                        _saveSettings(SettingsScreen.accentKey, val),
+                  ),
                 ),
               ],
             ),
@@ -78,11 +83,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             margin: EdgeInsets.only(left: 15),
             child: Row(
               children: [
-                Text("Startup at Albums"),
-                Switch(
-                  value: _albums,
-                  onChanged: (bool val) =>
-                      _saveSettings(SettingsScreen.defaultPageKey, val),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text("Startup at Albums")),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Switch(
+                    value: _albums,
+                    onChanged: (bool val) =>
+                        _saveSettings(SettingsScreen.defaultPageKey, val),
+                  ),
                 ),
               ],
             ),
