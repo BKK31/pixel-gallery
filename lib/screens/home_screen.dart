@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lumina_gallery/screens/albums_screen.dart';
 import 'package:lumina_gallery/screens/recents_screen.dart';
+import 'package:lumina_gallery/screens/recycle_bin_screen.dart';
 import 'package:lumina_gallery/screens/settings_screen.dart';
 
 enum MenuItems { settings, recycleBin }
@@ -72,7 +73,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
 
                   if (item == MenuItems.recycleBin) {
-                    // later: navigate to recycle bin
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const RecycleBinScreen(),
+                      ),
+                    );
                   }
                 },
                 itemBuilder: (context) => const [
