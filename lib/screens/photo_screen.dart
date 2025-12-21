@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:lumina_gallery/services/trash_service.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import '../services/media_service.dart';
 import '../models/photo_model.dart';
 import 'package:intl/intl.dart';
 import '../screens/viewer_screen.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 class PhotoScreen extends StatefulWidget {
   final AssetPathEntity album;
@@ -26,15 +29,25 @@ class _PhotoScreenState extends State<PhotoScreen> {
   int _page = 0;
   bool _isLoadingMore = false;
 
+  final TrashService _trashService = TrashService();
+
+  // Selection
+  bool _isSelecting = false;
+  final Set<String> _selectedIds = {};
+
   Future<void> _init() async {
     bool perm = await _service.requestPermission();
+    await _trashService.init();
     if (!perm) {
       return;
     }
     final media = await _service.getMedia(album: widget.album, page: 0);
+    final filteredMedia = media
+        .where((p) => !_trashService.isTrashed(p.asset.id))
+        .toList();
     setState(() {
-      _photos = media;
-      _groupedItems = _groupedPhotos(media);
+      _photos = filteredMedia;
+      _groupedItems = _groupedPhotos(filteredMedia);
       _loading = false;
     });
   }
@@ -47,10 +60,13 @@ class _PhotoScreenState extends State<PhotoScreen> {
     _page++;
 
     final media = await _service.getMedia(album: widget.album, page: _page);
+    final filteredMedia = media
+        .where((p) => !_trashService.isTrashed(p.asset.id))
+        .toList();
 
     if (media.isNotEmpty) {
       setState(() {
-        _photos.addAll(media);
+        _photos.addAll(filteredMedia);
         _groupedItems = _groupedPhotos(_photos);
       });
     }
@@ -82,10 +98,65 @@ class _PhotoScreenState extends State<PhotoScreen> {
     return grouped;
   }
 
+  void _onGalleryChange(MethodCall call) {
+    _init();
+  }
+
+  // Selection Logic
+  void _toggleSelection(String id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+        if (_selectedIds.isEmpty) {
+          _isSelecting = false;
+        }
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    for (var id in _selectedIds) {
+      await _trashService.moveToTrash(id);
+    }
+    setState(() {
+      _isSelecting = false;
+      _selectedIds.clear();
+    });
+    _init(); // Refresh list
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Moved selected items to trash")));
+    }
+  }
+
+  Future<void> _shareSelected() async {
+    List<XFile> files = [];
+    for (var id in _selectedIds) {
+      final asset = await AssetEntity.fromId(id);
+      if (asset != null) {
+        final file = await asset.file;
+        if (file != null) files.add(XFile(file.path));
+      }
+    }
+    if (files.isNotEmpty) {
+      await Share.shareXFiles(files);
+    }
+    setState(() {
+      _isSelecting = false;
+      _selectedIds.clear();
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _init();
+
+    PhotoManager.addChangeCallback(_onGalleryChange);
+    PhotoManager.startChangeNotify();
 
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
@@ -97,16 +168,40 @@ class _PhotoScreenState extends State<PhotoScreen> {
 
   @override
   void dispose() {
-    super.dispose();
+    PhotoManager.removeChangeCallback(_onGalleryChange);
     _scrollController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.album.name),
+        title: _isSelecting
+            ? Text("${_selectedIds.length} Selected")
+            : Text(widget.album.name),
+        centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        leading: _isSelecting
+            ? IconButton(
+                icon: Icon(Icons.close),
+                onPressed: () {
+                  setState(() {
+                    _isSelecting = false;
+                    _selectedIds.clear();
+                  });
+                },
+              )
+            : null,
+        actions: _isSelecting
+            ? [
+                IconButton(onPressed: _shareSelected, icon: Icon(Icons.share)),
+                IconButton(
+                  onPressed: _deleteSelected,
+                  icon: Icon(Icons.delete),
+                ),
+              ]
+            : [],
       ),
       body: ListView.builder(
         itemCount: _groupedItems.length,
@@ -135,18 +230,33 @@ class _PhotoScreenState extends State<PhotoScreen> {
               itemBuilder: (context, index) {
                 final photo = item[index];
                 final globalIndex = _photos.indexOf(photo);
+                final isSelected = _selectedIds.contains(photo.asset.id);
+
                 return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ViewerScreen(
-                          index: globalIndex,
-                          initialPhotos: _photos,
-                          sourceAlbums: widget.album,
+                  onLongPress: () {
+                    if (!_isSelecting) {
+                      setState(() {
+                        _isSelecting = true;
+                      });
+                      _toggleSelection(photo.asset.id);
+                    }
+                  },
+                  onTap: () async {
+                    if (_isSelecting) {
+                      _toggleSelection(photo.asset.id);
+                    } else {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ViewerScreen(
+                            index: globalIndex,
+                            initialPhotos: _photos,
+                            sourceAlbums: widget.album,
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                      _init();
+                    }
                   },
                   child: Stack(
                     fit: StackFit.expand,
@@ -157,7 +267,18 @@ class _PhotoScreenState extends State<PhotoScreen> {
                         thumbnailSize: const ThumbnailSize.square(200),
                         fit: BoxFit.cover,
                       ),
-                      if (photo.isVideo)
+                      if (isSelected)
+                        Container(
+                          color: Colors.black.withOpacity(0.4),
+                          child: const Center(
+                            child: Icon(
+                              Icons.check_circle,
+                              color: Colors.blue,
+                              size: 30,
+                            ),
+                          ),
+                        ),
+                      if (photo.isVideo && !isSelected)
                         const Center(
                           child: Icon(
                             Icons.play_circle_fill_outlined,

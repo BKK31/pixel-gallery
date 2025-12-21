@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:lumina_gallery/services/trash_service.dart';
 import '../services/media_service.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
@@ -34,6 +35,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   int _page = 0;
 
   final MediaService _service = MediaService();
+  final TrashService _trashService = TrashService();
 
   Future<void> _loadMore() async {
     _page++;
@@ -66,10 +68,20 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   Future<void> _deletePhoto(PhotoModel photo) async {
-    final res = await PhotoManager.editor.deleteWithIds([photo.asset.id]);
-    if (res.isNotEmpty) {
-      Navigator.pop(context);
-    }
+    await _trashService.moveToTrash(photo.asset.id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Moved to trash"),
+        action: SnackBarAction(
+          label: "Undo",
+          onPressed: () async {
+            await _trashService.restore(photo.asset.id);
+            setState(() {});
+          },
+        ),
+      ),
+    );
+    Navigator.pop(context);
   }
 
   Future<void> _sharePhoto(PhotoModel photo) async {
@@ -127,6 +139,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   @override
   void initState() {
     super.initState();
+    _trashService.init();
     _currentIndex = widget.index;
     _photos = List.from(widget.initialPhotos);
     _controller = PageController(initialPage: widget.index);

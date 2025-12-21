@@ -4,6 +4,8 @@ import '../services/media_service.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import 'photo_screen.dart';
 
+import 'package:flutter/services.dart';
+
 class AlbumsScreen extends StatefulWidget {
   const AlbumsScreen({super.key});
 
@@ -28,10 +30,22 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
     });
   }
 
+  void _onGalleryChange(MethodCall call) {
+    _init();
+  }
+
   @override
   void initState() {
     super.initState();
     _init();
+    PhotoManager.addChangeCallback(_onGalleryChange);
+    PhotoManager.startChangeNotify();
+  }
+
+  @override
+  void dispose() {
+    PhotoManager.removeChangeCallback(_onGalleryChange);
+    super.dispose();
   }
 
   @override
