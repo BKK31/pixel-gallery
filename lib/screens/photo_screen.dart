@@ -36,12 +36,14 @@ class _PhotoScreenState extends State<PhotoScreen> {
   final Set<String> _selectedIds = {};
 
   Future<void> _init() async {
+    // Request permission then load initial assets for the specific album
     bool perm = await _service.requestPermission();
     await _trashService.init();
     if (!perm) {
       return;
     }
     final media = await _service.getMedia(album: widget.album, page: 0);
+    // Filter out assets that are currently in the trash
     final filteredMedia = media
         .where((p) => !_trashService.isTrashed(p.asset.id))
         .toList();
@@ -53,6 +55,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
   }
 
   Future<void> _loadMore() async {
+    // Load next page of assets and append to the list
     if (_isLoadingMore) return;
     setState(() {
       _isLoadingMore = true;
@@ -77,6 +80,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
   }
 
   List<dynamic> _groupedPhotos(List<PhotoModel> photos) {
+    // Group photos by date to display date headers
     String? lastDateLabel;
     List<dynamic> grouped = [];
     List<PhotoModel> currentDayPhotos = [];
@@ -106,17 +110,20 @@ class _PhotoScreenState extends State<PhotoScreen> {
   void _toggleSelection(String id) {
     setState(() {
       if (_selectedIds.contains(id)) {
+        // Deselect or exit selection mode if empty
         _selectedIds.remove(id);
         if (_selectedIds.isEmpty) {
           _isSelecting = false;
         }
       } else {
+        // Add item to selection
         _selectedIds.add(id);
       }
     });
   }
 
   Future<void> _deleteSelected() async {
+    // Move all selected items to trash
     for (var id in _selectedIds) {
       await _trashService.moveToTrash(id);
     }
@@ -124,7 +131,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
       _isSelecting = false;
       _selectedIds.clear();
     });
-    _init(); // Refresh list
+    _init(); // Refresh list to reflect removal
     if (mounted) {
       ScaffoldMessenger.of(
         context,
@@ -133,6 +140,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
   }
 
   Future<void> _shareSelected() async {
+    // Share selected items using available platform methods
     List<XFile> files = [];
     for (var id in _selectedIds) {
       final asset = await AssetEntity.fromId(id);
@@ -155,10 +163,12 @@ class _PhotoScreenState extends State<PhotoScreen> {
     super.initState();
     _init();
 
+    // Listen for external gallery changes (e.g., new photos)
     PhotoManager.addChangeCallback(_onGalleryChange);
     PhotoManager.startChangeNotify();
 
     _scrollController.addListener(() {
+      // Infinite scroll listener
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 500) {
         _loadMore();

@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadInitialSettings() async {
+    // Load startup preferences to determine which screen to show first (Photos or Albums)
     final bool startAlbum = await SettingsScreen.getStartupAtAlbums();
     setState(() {
       _selectedIndex = startAlbum ? 1 : 0;
@@ -41,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openSettings() {
+    // Navigate to settings and refresh theme on return
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const SettingsScreen()),
@@ -55,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
       future: _initSettings,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
+          // Show loading indicator while settings are being loaded
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );

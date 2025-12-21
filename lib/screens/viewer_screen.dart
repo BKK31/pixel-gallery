@@ -38,6 +38,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   final TrashService _trashService = TrashService();
 
   Future<void> _loadMore() async {
+    // Load more photos from the service when reaching the end of the list
     _page++;
     final media = await _service.getMedia(
       album: widget.sourceAlbums,
@@ -49,6 +50,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   Future<void> _toggleFavorite(PhotoModel photo) async {
+    // Toggle the favorite status of the photo using PhotoManager
     final bool oldStatus = photo.asset.isFavorite;
     final bool newStatus = !oldStatus;
 
@@ -59,6 +61,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
       );
     }
 
+    // Refresh asset state
     final newAsset = await AssetEntity.fromId(photo.asset.id);
     if (newAsset != null) {
       photo.asset = newAsset;
@@ -68,6 +71,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   Future<void> _deletePhoto(PhotoModel photo) async {
+    // Move the photo to trash and provide an undo option
     await _trashService.moveToTrash(photo.asset.id);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -85,6 +89,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   Future<void> _sharePhoto(PhotoModel photo) async {
+    // Share the photo using the system share sheet
     File? file = await photo.asset.file;
     if (file != null) {
       await Share.shareXFiles([XFile(file.path)]);
@@ -92,6 +97,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   Future<void> _showInfoBottomSheet(PhotoModel photo) async {
+    // Display file details in a bottom sheet
     File? file = await photo.asset.file;
     int? sizeBytes = await file?.length();
     String sizeStr = sizeBytes != null
@@ -171,6 +177,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 setState(() {
                   _currentIndex = index;
                 });
+                // Auto-load more photos when nearing the end
                 if (index >= _photos.length - 5) {
                   _loadMore();
                 }

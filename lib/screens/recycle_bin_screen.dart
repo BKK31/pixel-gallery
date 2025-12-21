@@ -20,24 +20,28 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
   final Set<String> _selectedIds = {};
 
   Future<void> _init() async {
+    // Initialize the trash service and fetch the current list of trashed IDs
     await _trashService.init();
     setState(() {
       _trashedIds = _trashService.trashedIds;
     });
 
     List<AssetEntity?> assets = [];
+    // Convert trashed IDs back to AssetEntity objects
     for (var id in _trashedIds) {
       final asset = await AssetEntity.fromId(id);
       assets.add(asset);
     }
+    // Update the UI with the validity filtering of trashed assets
     setState(() {
       _trashedAssets = assets.whereType<AssetEntity>().toList();
     });
   }
 
   Future<void> _restore(AssetEntity asset) async {
+    // Restore a single asset from trash
     await _trashService.restore(asset.id);
-    _init(); // Refresh list
+    _init(); // Refresh list to reflect changes
   }
 
   Future<void> _deletePermanently(AssetEntity asset) async {
@@ -49,20 +53,24 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
   void _toggleSelection(String id) {
     setState(() {
       if (_selectedIds.contains(id)) {
+        // Deselect if already selected; if none selected, exit selection mode
         _selectedIds.remove(id);
         if (_selectedIds.isEmpty) {
           _isSelecting = false;
         }
       } else {
+        // Add to selection
         _selectedIds.add(id);
       }
     });
   }
 
   Future<void> _restoreSelected() async {
+    // Restore all currently selected items
     for (var id in _selectedIds) {
       await _trashService.restore(id);
     }
+    // Clear selection and refresh the list
     setState(() {
       _isSelecting = false;
       _selectedIds.clear();
@@ -76,9 +84,11 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
   }
 
   Future<void> _deletePermanentlySelected() async {
+    // Permanently delete all currently selected items
     for (var id in _selectedIds) {
       await _trashService.deletePermanently(id);
     }
+    // Clear selection and refresh the list
     setState(() {
       _isSelecting = false;
       _selectedIds.clear();
