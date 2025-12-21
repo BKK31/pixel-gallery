@@ -9,6 +9,11 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:photo_view/photo_view.dart';
 import 'video_screen.dart';
+import 'package:motion_photos/motion_photos.dart';
+import 'package:video_player/video_player.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as latLng;
+import 'package:native_exif/native_exif.dart';
 
 class ViewerScreen extends StatefulWidget {
   final int index;
@@ -31,6 +36,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
   int _currentIndex = 0;
   bool _showUI = true;
   late List<PhotoModel> _photos;
+  bool _isMotionPhoto = false;
+  bool _isPlayingMotion = false;
+  VideoPlayerController? _motionController;
 
   int _page = 0;
 
@@ -97,49 +105,234 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   Future<void> _showInfoBottomSheet(PhotoModel photo) async {
-    // Display file details in a bottom sheet
     File? file = await photo.asset.file;
     int? sizeBytes = await file?.length();
     String sizeStr = sizeBytes != null
         ? "${(sizeBytes / (1024 * 1024)).toStringAsFixed(2)} MB"
         : "Unknown";
 
+    // Fetch location
+    final location = await photo.asset.latlngAsync();
+
+    // Fetch EXIF
+    Map<String, Object>? exifData;
+    try {
+      if (file != null) {
+        final exif = await Exif.fromPath(file.path);
+        exifData = await exif.getAttributes();
+        await exif.close();
+      }
+    } catch (e) {
+      debugPrint("Error reading EXIF: $e");
+    }
+
     if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // Allow it to be taller for the map
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return Container(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Details",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 10),
-              ListTile(
-                leading: Icon(Icons.image),
-                title: Text(photo.asset.title ?? "Unknown"),
-                subtitle: Text(
-                  "${photo.asset.width}x${photo.asset.height} • $sizeStr",
+        return DraggableScrollableSheet(
+          // Better scrolling behavior
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) => SingleChildScrollView(
+            controller: scrollController,
+            padding: EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Details",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-              ),
-              ListTile(
-                leading: Icon(Icons.calendar_today),
-                title: Text(DateFormat.yMMMd().format(photo.timeTaken)),
-              ),
-            ],
+                SizedBox(height: 20),
+
+                // ... Existing ListTiles ...
+                ListTile(
+                  leading: Icon(Icons.image),
+                  title: Text(photo.asset.title ?? "Unknown"),
+                  subtitle: Text(
+                    "${photo.asset.width}x${photo.asset.height} • $sizeStr",
+                  ),
+                ),
+                ListTile(
+                  leading: Icon(Icons.calendar_today),
+                  title: Text(DateFormat.yMMMd().format(photo.timeTaken)),
+                ),
+
+                // EXIF Section
+                if (exifData != null && exifData.isNotEmpty) ...[
+                  SizedBox(height: 20),
+                  Text(
+                    "Camera Info",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 10),
+                  if (exifData['Model'] != null || exifData['Make'] != null)
+                    ListTile(
+                      leading: Icon(Icons.camera_alt),
+                      title: Text(
+                        "${exifData['Make'] ?? ''} ${exifData['Model'] ?? ''}"
+                            .trim(),
+                      ),
+                      subtitle: Text("Camera"),
+                    ),
+                  if (exifData['FNumber'] != null ||
+                      exifData['ExposureTime'] != null ||
+                      exifData['ISOSpeedRatings'] != null)
+                    ListTile(
+                      leading: Icon(Icons.camera),
+                      title: Text(
+                        [
+                          if (exifData['FNumber'] != null)
+                            "ƒ/${exifData['FNumber']}",
+                          if (exifData['ExposureTime'] != null)
+                            "${exifData['ExposureTime']}s",
+                          if (exifData['ISOSpeedRatings'] != null)
+                            "ISO ${exifData['ISOSpeedRatings']}",
+                        ].join(" • "),
+                      ),
+                      subtitle: Text("Settings"),
+                    ),
+                ],
+
+                // NEW: Map Section
+                if (location != null &&
+                    location.latitude != 0 &&
+                    location.longitude != 0) ...[
+                  SizedBox(height: 20),
+                  Text(
+                    "Location",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 10),
+                  Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade800),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: FlutterMap(
+                      options: MapOptions(
+                        initialCenter: latLng.LatLng(
+                          location.latitude,
+                          location.longitude,
+                        ),
+                        initialZoom: 15.0,
+                        interactionOptions: InteractionOptions(
+                          flags: InteractiveFlag.all,
+                        ),
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.pixel.gallery',
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: latLng.LatLng(
+                                location.latitude,
+                                location.longitude,
+                              ),
+                              child: Icon(
+                                Icons.location_on,
+                                color: Colors.red,
+                                size: 40,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         );
       },
     );
+  }
+
+  Future<void> _checkMotionPhoto(int index) async {
+    if (mounted) setState(() => _isMotionPhoto = false);
+    final photo = _photos[index];
+    if (photo.asset.type == AssetType.video) {
+      setState(() => _isMotionPhoto = false);
+      return;
+    }
+
+    File? file = await photo.asset.file;
+    if (file != null) {
+      bool isMotion = false;
+      try {
+        // This library checks the XMP metadata
+        final motionPhotos = MotionPhotos(file.path);
+        isMotion = await motionPhotos.isMotionPhoto();
+      } catch (e) {
+        debugPrint("Error checking motion photo: $e");
+      }
+
+      if (mounted && _currentIndex == index) {
+        setState(() {
+          _isMotionPhoto = isMotion;
+        });
+      }
+    }
+  }
+
+  Future<void> _startMotionPlayback() async {
+    if (_isPlayingMotion) return;
+
+    final photo = _photos[_currentIndex];
+    final file = await photo.asset.file;
+    if (file == null) return;
+
+    try {
+      final motionPhotos = MotionPhotos(file.path);
+      final videoFile = await motionPhotos.getMotionVideoFile(
+        Directory.systemTemp,
+      );
+
+      _motionController = VideoPlayerController.file(videoFile);
+      await _motionController!.initialize();
+      await _motionController!.setLooping(true);
+      await _motionController!.play();
+
+      if (mounted) {
+        setState(() {
+          _isPlayingMotion = true;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error playing motion photo: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Could not play motion photo")));
+      }
+    }
+  }
+
+  void _stopMotionPlayback() {
+    _motionController?.pause();
+    _motionController?.dispose();
+    _motionController = null;
+    if (mounted) {
+      setState(() {
+        _isPlayingMotion = false;
+      });
+    }
   }
 
   @override
@@ -151,11 +344,13 @@ class _ViewerScreenState extends State<ViewerScreen> {
     _controller = PageController(initialPage: widget.index);
     _page = (widget.initialPhotos.length / 50).ceil() - 1;
     if (_page < 0) _page = 0;
+    _checkMotionPhoto(widget.index);
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _motionController?.dispose();
     super.dispose();
   }
 
@@ -171,9 +366,21 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 _showUI = !_showUI;
               });
             },
+            onLongPress: () {
+              if (_isMotionPhoto) {
+                _startMotionPlayback();
+              }
+            },
+            onLongPressEnd: (_) {
+              if (_isMotionPhoto && _isPlayingMotion) {
+                _stopMotionPlayback();
+              }
+            },
             child: PageView.builder(
               controller: _controller,
               onPageChanged: (index) {
+                _stopMotionPlayback();
+                _checkMotionPhoto(index);
                 setState(() {
                   _currentIndex = index;
                 });
@@ -188,8 +395,20 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
                 if (photo.asset.type == AssetType.video) {
                   return VideoScreen(
-                    videoFile: photo.asset,
+                    asset: photo.asset,
                     controlsVisible: _showUI,
+                  );
+                }
+
+                // Show motion video if playing, otherwise show photo
+                if (index == _currentIndex &&
+                    _isPlayingMotion &&
+                    _motionController?.value.isInitialized == true) {
+                  return Center(
+                    child: AspectRatio(
+                      aspectRatio: _motionController!.value.aspectRatio,
+                      child: VideoPlayer(_motionController!),
+                    ),
                   );
                 }
 
@@ -220,6 +439,20 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   onPressed: () => Navigator.pop(context),
                 ),
                 actions: [
+                  if (_isMotionPhoto)
+                    IconButton(
+                      onPressed: _isPlayingMotion
+                          ? _stopMotionPlayback
+                          : _startMotionPlayback,
+                      icon: Icon(
+                        _isPlayingMotion
+                            ? Icons.motion_photos_pause
+                            : Icons.motion_photos_on,
+                      ),
+                      tooltip: _isPlayingMotion
+                          ? "Stop Motion Photo"
+                          : "Play Motion Photo",
+                    ),
                   IconButton(
                     icon: Icon(Icons.info_outline),
                     onPressed: () {

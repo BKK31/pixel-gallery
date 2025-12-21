@@ -94,4 +94,4 @@ Contributions are welcome! If you have suggestions or want to report a bug, plea
 
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the GNU Public License GPL-3. See `LICENSE` for more information.

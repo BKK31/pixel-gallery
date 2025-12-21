@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final VoidCallback? onThemeChange;
+
+  const SettingsScreen({super.key, this.onThemeChange});
 
   static const String accentKey = 'material_you';
   static const String defaultPageKey = 'albums';
@@ -40,12 +42,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  void _saveSettings(String key, bool value) async {
+  Future<void> _saveSettings(String key, bool value) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool(key, value);
+
     setState(() {
-      if (key == SettingsScreen.accentKey) _materialYou = value;
-      if (key == SettingsScreen.defaultPageKey) _albums = value;
+      if (key == SettingsScreen.accentKey) {
+        _materialYou = value;
+        // Notify parent that theme changed
+        widget.onThemeChange?.call();
+      }
+      if (key == SettingsScreen.defaultPageKey) {
+        _albums = value;
+      }
     });
   }
 
@@ -59,44 +68,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: ListView(
         children: [
-          Container(
-            height: 50,
-            margin: EdgeInsets.only(left: 15),
-            child: Row(
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text("Material You")),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Switch(
-                    value: _materialYou,
-                    onChanged: (bool val) =>
-                        _saveSettings(SettingsScreen.accentKey, val),
-                  ),
-                ),
-              ],
+          SwitchListTile(
+            title: Text(
+              "Material You",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
-          ),
-          Container(
-            height: 50,
-            margin: EdgeInsets.only(left: 15),
-            child: Row(
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text("Startup at Albums")),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Switch(
-                    value: _albums,
-                    onChanged: (bool val) =>
-                        _saveSettings(SettingsScreen.defaultPageKey, val),
-                  ),
-                ),
-              ],
+            subtitle: Text(
+              "Use dynamic colors from wallpaper",
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
+            value: _materialYou,
+            onChanged: (bool val) =>
+                _saveSettings(SettingsScreen.accentKey, val),
+            activeColor: Theme.of(context).colorScheme.primary,
           ),
+          Divider(height: 1),
+          SwitchListTile(
+            title: Text(
+              "Startup at Albums",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            subtitle: Text(
+              "Start on Albums page instead of Photos",
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            value: _albums,
+            onChanged: (bool val) =>
+                _saveSettings(SettingsScreen.defaultPageKey, val),
+            activeColor: Theme.of(context).colorScheme.primary,
+          ),
+          Divider(height: 1),
         ],
       ),
     );

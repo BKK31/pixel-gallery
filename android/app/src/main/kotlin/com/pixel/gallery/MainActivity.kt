@@ -1,4 +1,4 @@
-package com.example.lumina_gallery
+package com.pixel.gallery
 
 import io.flutter.embedding.android.FlutterActivity
 

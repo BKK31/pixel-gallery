@@ -42,13 +42,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openSettings() {
-    // Navigate to settings and refresh theme on return
+    // Navigate to settings and pass the theme refresh callback
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const SettingsScreen()),
-    ).then((_) {
-      widget.onThemeRefresh?.call();
-    });
+      MaterialPageRoute(
+        builder: (context) =>
+            SettingsScreen(onThemeChange: widget.onThemeRefresh),
+      ),
+    );
   }
 
   @override
