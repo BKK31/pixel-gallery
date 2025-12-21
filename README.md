@@ -1,4 +1,4 @@
-# lumina_gallery
+# Pixel Gallery
 
 A new Flutter project.
 

@@ -46,6 +46,7 @@ class _MyAppState extends State<MyApp> {
         return DynamicColorBuilder(
           builder: (lightDynamic, darkDynamic) {
             return MaterialApp(
+              title: 'Pixel Gallery',
               theme: ThemeData(
                 colorScheme: (useMaterialYou && lightDynamic != null)
                     ? lightDynamic

@@ -22,6 +22,10 @@ class _PhotoScreenState extends State<PhotoScreen> {
   List<PhotoModel> _photos = [];
   bool _loading = true;
 
+  ScrollController _scrollController = ScrollController();
+  int _page = 0;
+  bool _isLoadingMore = false;
+
   Future<void> _init() async {
     bool perm = await _service.requestPermission();
     if (!perm) {
@@ -32,6 +36,27 @@ class _PhotoScreenState extends State<PhotoScreen> {
       _photos = media;
       _groupedItems = _groupedPhotos(media);
       _loading = false;
+    });
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore) return;
+    setState(() {
+      _isLoadingMore = true;
+    });
+    _page++;
+
+    final media = await _service.getMedia(album: widget.album, page: _page);
+
+    if (media.isNotEmpty) {
+      setState(() {
+        _photos.addAll(media);
+        _groupedItems = _groupedPhotos(_photos);
+      });
+    }
+
+    setState(() {
+      _isLoadingMore = false;
     });
   }
 
@@ -61,6 +86,19 @@ class _PhotoScreenState extends State<PhotoScreen> {
   void initState() {
     super.initState();
     _init();
+
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 500) {
+        _loadMore();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _scrollController.dispose();
   }
 
   @override
@@ -72,6 +110,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
       ),
       body: ListView.builder(
         itemCount: _groupedItems.length,
+        controller: _scrollController,
         itemBuilder: (context, index) {
           final item = _groupedItems[index];
 
@@ -109,11 +148,24 @@ class _PhotoScreenState extends State<PhotoScreen> {
                       ),
                     );
                   },
-                  child: AssetEntityImage(
-                    photo.asset,
-                    isOriginal: false,
-                    thumbnailSize: const ThumbnailSize.square(200),
-                    fit: BoxFit.cover,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      AssetEntityImage(
+                        photo.asset,
+                        isOriginal: false,
+                        thumbnailSize: const ThumbnailSize.square(200),
+                        fit: BoxFit.cover,
+                      ),
+                      if (photo.isVideo)
+                        const Center(
+                          child: Icon(
+                            Icons.play_circle_fill_outlined,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                    ],
                   ),
                 );
               },

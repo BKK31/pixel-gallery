@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:lumina_gallery/services/media_service.dart';
+import '../services/media_service.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
-import 'package:lumina_gallery/models/photo_model.dart';
+import '../models/photo_model.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:photo_view/photo_view.dart';
+import 'video_screen.dart';
 
 class ViewerScreen extends StatefulWidget {
   final int index;
@@ -126,6 +127,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.index;
     _photos = List.from(widget.initialPhotos);
     _controller = PageController(initialPage: widget.index);
     _page = (widget.initialPhotos.length / 50).ceil() - 1;
@@ -163,6 +165,14 @@ class _ViewerScreenState extends State<ViewerScreen> {
               itemCount: _photos.length,
               itemBuilder: (context, index) {
                 final photo = _photos[index];
+
+                if (photo.asset.type == AssetType.video) {
+                  return VideoScreen(
+                    videoFile: photo.asset,
+                    controlsVisible: _showUI,
+                  );
+                }
+
                 return PhotoView(
                   imageProvider: AssetEntityImageProvider(
                     photo.asset,

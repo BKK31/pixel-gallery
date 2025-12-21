@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text("Lumina Gallery"),
+            title: const Text("Pixel Gallery"),
             centerTitle: true,
             backgroundColor: Theme.of(context).colorScheme.inversePrimary,
             actions: [

@@ -96,12 +96,25 @@ class _RecentsScreenState extends State<RecentsScreen> {
                 ),
               );
             },
-            child: AssetEntityImage(
-              photo.asset,
-              isOriginal: false,
-              thumbnailSize: const ThumbnailSize.square(180),
-              thumbnailFormat: ThumbnailFormat.jpeg,
-              fit: BoxFit.cover,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                AssetEntityImage(
+                  photo.asset,
+                  isOriginal: false,
+                  thumbnailSize: const ThumbnailSize.square(180),
+                  thumbnailFormat: ThumbnailFormat.jpeg,
+                  fit: BoxFit.cover,
+                ),
+                if (photo.isVideo)
+                  const Center(
+                    child: Icon(
+                      Icons.play_circle_fill_outlined,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+              ],
             ),
           );
         },

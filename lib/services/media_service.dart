@@ -19,7 +19,7 @@ class MediaService {
 
   Future<List<AssetPathEntity>> getPhotos() async {
     final List<AssetPathEntity> paths = await PhotoManager.getAssetPathList(
-      type: RequestType.all,
+      type: RequestType.common,
       filterOption: _filterOption,
     );
     return paths;
