@@ -90,7 +90,8 @@ class _RecentsScreenState extends State<RecentsScreen> {
                 MaterialPageRoute(
                   builder: (context) => ViewerScreen(
                     index: index,
-                    photos: List.unmodifiable(_photos),
+                    initialPhotos: List.unmodifiable(_photos),
+                    sourceAlbums: _currentAlbum!,
                   ),
                 ),
               );

@@ -29,6 +29,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
     }
     final media = await _service.getMedia(album: widget.album, page: 0);
     setState(() {
+      _photos = media;
       _groupedItems = _groupedPhotos(media);
       _loading = false;
     });
@@ -94,14 +95,16 @@ class _PhotoScreenState extends State<PhotoScreen> {
               itemCount: item.length,
               itemBuilder: (context, index) {
                 final photo = item[index];
+                final globalIndex = _photos.indexOf(photo);
                 return GestureDetector(
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => ViewerScreen(
-                          index: index,
-                          photos: List.unmodifiable(item),
+                          index: globalIndex,
+                          initialPhotos: _photos,
+                          sourceAlbums: widget.album,
                         ),
                       ),
                     );

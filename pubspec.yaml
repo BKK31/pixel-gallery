@@ -35,6 +35,7 @@ dependencies:
   photo_manager_image_provider: ^2.2.0
   intl: ^0.20.2
   dynamic_color: ^1.8.1
+  share_plus: ^12.0.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

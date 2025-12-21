@@ -1,9 +1,8 @@
 import 'package:photo_manager/photo_manager.dart';
 
-
 class PhotoModel {
   final String uid;
-  final AssetEntity asset;
+  AssetEntity asset;
   final DateTime timeTaken;
   final bool isVideo;
 

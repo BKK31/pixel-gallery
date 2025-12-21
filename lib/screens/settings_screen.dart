@@ -59,17 +59,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: ListView(
         children: [
-          SwitchListTile(
-            title: const Text("Material You"),
-            value: _materialYou,
-            onChanged: (bool val) =>
-                _saveSettings(SettingsScreen.accentKey, val),
+          Container(
+            height: 50,
+            padding: EdgeInsets.all(20),
+            margin: EdgeInsets.only(left: 15),
+            child: Row(
+              children: [
+                Text("Material You"),
+                Switch(
+                  value: _materialYou,
+                  onChanged: (bool val) =>
+                      _saveSettings(SettingsScreen.accentKey, val),
+                ),
+              ],
+            ),
           ),
-          SwitchListTile(
-            title: const Text("Startup at Albums"),
-            value: _albums,
-            onChanged: (bool val) =>
-                _saveSettings(SettingsScreen.defaultPageKey, val),
+          Container(
+            height: 50,
+            padding: EdgeInsets.all(20),
+            margin: EdgeInsets.only(left: 15),
+            child: Row(
+              children: [
+                Text("Startup at Albums"),
+                Switch(
+                  value: _albums,
+                  onChanged: (bool val) =>
+                      _saveSettings(SettingsScreen.defaultPageKey, val),
+                ),
+              ],
+            ),
           ),
         ],
       ),

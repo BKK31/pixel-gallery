@@ -1,15 +1,22 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:lumina_gallery/services/media_service.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import 'package:lumina_gallery/models/photo_model.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:intl/intl.dart';
 
 class ViewerScreen extends StatefulWidget {
   final int index;
-  final List<PhotoModel> photos;
+  final List<PhotoModel> initialPhotos;
+  final AssetPathEntity sourceAlbums;
 
   const ViewerScreen({
-    super.key, 
+    super.key,
     required this.index,
-    required this.photos,
+    required this.initialPhotos,
+    required this.sourceAlbums,
   });
 
   @override
@@ -20,11 +27,108 @@ class _ViewerScreenState extends State<ViewerScreen> {
   late PageController _controller;
   int _currentIndex = 0;
   bool _showUI = true;
+  late List<PhotoModel> _photos;
+
+  int _page = 0;
+
+  final MediaService _service = MediaService();
+
+  Future<void> _loadMore() async {
+    _page++;
+    final media = await _service.getMedia(
+      album: widget.sourceAlbums,
+      page: _page,
+    );
+    setState(() {
+      _photos.addAll(media);
+    });
+  }
+
+  Future<void> _toggleFavorite(PhotoModel photo) async {
+    final bool oldStatus = photo.asset.isFavorite;
+    final bool newStatus = !oldStatus;
+
+    if (Platform.isAndroid) {
+      await PhotoManager.editor.android.favoriteAsset(
+        entity: photo.asset,
+        favorite: newStatus,
+      );
+    }
+
+    final newAsset = await AssetEntity.fromId(photo.asset.id);
+    if (newAsset != null) {
+      photo.asset = newAsset;
+    }
+
+    setState(() {});
+  }
+
+  Future<void> _deletePhoto(PhotoModel photo) async {
+    final res = await PhotoManager.editor.deleteWithIds([photo.asset.id]);
+    if (res.isNotEmpty) {
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> _sharePhoto(PhotoModel photo) async {
+    File? file = await photo.asset.file;
+    if (file != null) {
+      await Share.shareXFiles([XFile(file.path)]);
+    }
+  }
+
+  Future<void> _showInfoBottomSheet(PhotoModel photo) async {
+    File? file = await photo.asset.file;
+    int? sizeBytes = await file?.length();
+    String sizeStr = sizeBytes != null
+        ? "${(sizeBytes / (1024 * 1024)).toStringAsFixed(2)} MB"
+        : "Unknown";
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Details",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 10),
+              ListTile(
+                leading: Icon(Icons.image),
+                title: Text(photo.asset.title ?? "Unknown"),
+                subtitle: Text(
+                  "${photo.asset.width}x${photo.asset.height} • $sizeStr",
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.calendar_today),
+                title: Text(DateFormat.yMMMd().format(photo.timeTaken)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
     super.initState();
+    _photos = List.from(widget.initialPhotos);
     _controller = PageController(initialPage: widget.index);
+    _page = (widget.initialPhotos.length / 50).ceil() - 1;
+    if (_page < 0) _page = 0; 
   }
 
   @override
@@ -51,10 +155,13 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 setState(() {
                   _currentIndex = index;
                 });
+                if (index >= _photos.length - 5) {
+                  _loadMore();
+                }
               },
-              itemCount: widget.photos.length,
+              itemCount: _photos.length,
               itemBuilder: (context, index) {
-                final photo = widget.photos[index];
+                final photo = _photos[index];
                 return AssetEntityImage(
                   photo.asset,
                   isOriginal: true,
@@ -63,22 +170,70 @@ class _ViewerScreenState extends State<ViewerScreen> {
               },
             ),
           ),
+
           if (_showUI)
-            Align(
-              alignment: Alignment.topRight,
-              child: Container(
-                margin: EdgeInsets.only(right: 20, top: 50),
-                width: 50,
-                height: 50,
-                color: Colors.amber[50],
-                child: Center(
-                  child: Text(
-                    (_currentIndex + 1).toString(),
-                    style: TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.w900,
-                    ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AppBar(
+                backgroundColor: Colors.black.withOpacity(0.5),
+                iconTheme: IconThemeData(color: Colors.white),
+                elevation: 0,
+                leading: IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                actions: [
+                  IconButton(
+                    icon: Icon(Icons.info_outline),
+                    onPressed: () {
+                      final photo = _photos[_currentIndex];
+                      _showInfoBottomSheet(photo);
+                    },
                   ),
+                ],
+              ),
+            ),
+
+          if (_showUI)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                color: Colors.black.withOpacity(0.5),
+                margin: EdgeInsets.only(bottom: 15),
+                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.share, color: Colors.white),
+                      onPressed: () {
+                        _sharePhoto(_photos[_currentIndex]);
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        _photos[_currentIndex].asset.isFavorite
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: _photos[_currentIndex].asset.isFavorite
+                            ? Colors.red
+                            : Colors.white,
+                      ),
+                      onPressed: () {
+                        _toggleFavorite(_photos[_currentIndex]);
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete_outline, color: Colors.white),
+                      onPressed: () {
+                        _deletePhoto(_photos[_currentIndex]);
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
