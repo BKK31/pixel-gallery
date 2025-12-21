@@ -61,7 +61,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           Container(
             height: 50,
-            padding: EdgeInsets.all(20),
             margin: EdgeInsets.only(left: 15),
             child: Row(
               children: [
@@ -76,7 +75,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           Container(
             height: 50,
-            padding: EdgeInsets.all(20),
             margin: EdgeInsets.only(left: 15),
             child: Row(
               children: [
