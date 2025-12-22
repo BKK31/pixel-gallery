@@ -48,11 +48,31 @@
 
 ## 📱 Screenshots
 
-|                          Home Screen                           |                           Photo Viewer                            |                           Albums                            |                            Settings                             |
-| :------------------------------------------------------------: | :---------------------------------------------------------------: | :---------------------------------------------------------: | :-------------------------------------------------------------: |
-| <img src="screenshots/home.png" width="200" alt="Home Screen"> | <img src="screenshots/viewer.png" width="200" alt="Photo Viewer"> | <img src="screenshots/albums.png" width="200" alt="Albums"> | <img src="screenshots/settings.png" width="200" alt="Settings"> |
+|                              Home Screen                              |                               Photos Screen                               |                               Albums                               |
+| :-------------------------------------------------------------------: | :-----------------------------------------------------------------------: | :----------------------------------------------------------------: |
+| <img src="screenshots/home_screen.png" width="200" alt="Home Screen"> | <img src="screenshots/photos_screen.png" width="200" alt="Photos Screen"> | <img src="screenshots/albums_screen.png" width="200" alt="Albums"> |
 
-> _Note: Screenshots are placeholders. Please add actual screenshots to an `screenshots/` directory._
+|                               Viewer Screen                               |                                 Recycle Bin                                  |                                Settings                                |
+| :-----------------------------------------------------------------------: | :--------------------------------------------------------------------------: | :--------------------------------------------------------------------: |
+| <img src="screenshots/viewer_screen.png" width="200" alt="Viewer Screen"> | <img src="screenshots/recycle_bin_screen.png" width="200" alt="Recycle Bin"> | <img src="screenshots/settings_screen.png" width="200" alt="Settings"> |
+
+## 📸 Credits
+
+Sample photos used in screenshots are by the following authors on Unsplash:
+
+- [Ispywithmylittleeye](https://unsplash.com/@ispywithmylittleeye)
+- [Khouser01](https://unsplash.com/@khouser01)
+- [Teodor Drobota](https://unsplash.com/@teodordrobota)
+- [Wulcan](https://unsplash.com/@wulcan)
+- [Sardar Kamran](https://unsplash.com/@sardarkamran128)
+- [Fermin Rodriguez Penelas](https://unsplash.com/@ferminrp)
+- [Ivan Diaz](https://unsplash.com/@ivvndiaz)
+- [Gilley Aguilar](https://unsplash.com/@gilleyaguilar)
+- [NordWood Themes](https://unsplash.com/@nl_lehmann)
+- [Studio Mike Franca](https://unsplash.com/@studiomikefranca)
+- [Chandu 029](https://unsplash.com/@chandu029)
+- [Hanna Plants](https://unsplash.com/@hanna_plants)
+- [Joshua Kettle](https://unsplash.com/@joshuakettle)
 
 ## 🛠 Installation
 
