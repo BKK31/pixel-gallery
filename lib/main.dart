@@ -21,6 +21,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    // Fetch user preference on startup (Material You enabled/disabled)
     _materialYouFuture = SettingsScreen.getMaterialYou();
   }
 
@@ -36,6 +37,7 @@ class _MyAppState extends State<MyApp> {
       future: _materialYouFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
+          // Show loading screen while preferences are loading
           return const MaterialApp(
             home: Scaffold(body: Center(child: CircularProgressIndicator())),
           );
@@ -48,12 +50,14 @@ class _MyAppState extends State<MyApp> {
             return MaterialApp(
               title: 'Pixel Gallery',
               theme: ThemeData(
+                // Use dynamic scheme if enabled and available, else fallback to deepPurple
                 colorScheme: (useMaterialYou && lightDynamic != null)
                     ? lightDynamic
                     : ColorScheme.fromSeed(seedColor: Colors.deepPurple),
                 useMaterial3: useMaterialYou,
               ),
               darkTheme: ThemeData(
+                // Dark mode dynamic scheme
                 colorScheme: (useMaterialYou && darkDynamic != null)
                     ? darkDynamic
                     : ColorScheme.fromSeed(

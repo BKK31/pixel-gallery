@@ -20,6 +20,7 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
   bool _isSelecting = false;
   final Set<String> _selectedPaths = {};
 
+  // Initializes the screen: requests permissions (implied) and fetches trashed files.
   Future<void> _init() async {
     // Initialize the trash service and fetch the current list of trashed IDs
     await _trashService.init();
@@ -33,6 +34,7 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
     });
   }
 
+  // Restores a single file using the service and refreshes the list.
   Future<void> _restore(File file) async {
     // Restore a single asset from trash
     await _trashService.restore(file.path);
@@ -45,6 +47,7 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
   }
 
   // Multi-Selection Actions
+  // Toggles selection state for a file path.
   void _toggleSelection(String path) {
     setState(() {
       if (_selectedPaths.contains(path)) {
@@ -60,6 +63,7 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
     });
   }
 
+  // Restores all selected items to the gallery.
   Future<void> _restoreSelected() async {
     // Restore all currently selected items
     for (var path in _selectedPaths) {

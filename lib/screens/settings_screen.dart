@@ -9,11 +9,13 @@ class SettingsScreen extends StatefulWidget {
   static const String accentKey = 'material_you';
   static const String defaultPageKey = 'albums';
 
+  // Reads the 'Material You' preference (default: true).
   static Future<bool> getMaterialYou() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getBool(accentKey) ?? true;
   }
 
+  // Reads the 'Startup at Albums' preference (default: true).
   static Future<bool> getStartupAtAlbums() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getBool(defaultPageKey) ?? true;
@@ -42,6 +44,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  // Saves a boolean preference setting and updates local state.
+  // Triggers the onThemeChange callback if the theme setting is toggled.
   Future<void> _saveSettings(String key, bool value) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool(key, value);

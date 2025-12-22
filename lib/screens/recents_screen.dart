@@ -37,6 +37,7 @@ class _RecentsScreenState extends State<RecentsScreen> {
     if (!perm) {
       return;
     }
+    // Fetches the list of albums, defaulting to the first one (Recents).
     final albums = await _service.getPhotos();
     _currentAlbum = albums[0];
     final media = await _service.getMedia(album: _currentAlbum!, page: 0);
@@ -47,6 +48,8 @@ class _RecentsScreenState extends State<RecentsScreen> {
     });
   }
 
+  // Loads the next page of photos for the current album.
+  // Appends new photos to the existing list and updates UI.
   Future<void> _loadMore() async {
     if (_currentAlbum == null) return;
     _page++;
@@ -63,6 +66,7 @@ class _RecentsScreenState extends State<RecentsScreen> {
   }
 
   // Selection Logic
+  // Toggles selection for a given photo ID and updates selection mode state.
   void _toggleSelection(String id) {
     setState(() {
       if (_selectedIds.contains(id)) {
@@ -76,6 +80,7 @@ class _RecentsScreenState extends State<RecentsScreen> {
     });
   }
 
+  // Moves all selected photos to the trash and clears selection.
   Future<void> _deleteSelected() async {
     for (var id in _selectedIds) {
       final asset = await AssetEntity.fromId(id);

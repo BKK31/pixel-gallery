@@ -18,6 +18,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
   bool _loading = true;
   final MediaService _service = MediaService();
 
+  // Initializes the screen: requests permissions and fetches all albums.
   Future<void> _init() async {
     bool perm = await _service.requestPermission();
     if (!perm) {
@@ -50,6 +51,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Displays a grid of albums. Each album shows a cover image (first asset) and its name.
     return GridView.builder(
       padding: EdgeInsets.all(10),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

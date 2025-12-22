@@ -57,6 +57,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
     });
   }
 
+  // Toggles the favorite status of the current photo.
+  // Performs the actual update via PhotoManager and refreshes the UI.
   Future<void> _toggleFavorite(PhotoModel photo) async {
     final bool oldStatus = photo.asset.isFavorite;
     final bool newStatus = !oldStatus;
@@ -76,6 +78,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
     setState(() {});
   }
 
+  // Moves the current photo to the trash and closes the viewer.
+  // Shows a snackbar confirmation.
   Future<void> _deletePhoto(PhotoModel photo) async {
     await _trashService.moveToTrash(photo.asset);
 
@@ -95,6 +99,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
     }
   }
 
+  // Shows a bottom sheet with detailed metadata (EXIF) about the photo.
+  // Reads file size, dimensions, camera info, and location if available.
   Future<void> _showInfoBottomSheet(PhotoModel photo) async {
     File? file = await photo.asset.file;
     int? sizeBytes = await file?.length();
@@ -246,6 +252,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
     );
   }
 
+  // Checks if the photo at the given index is a Motion Photo.
+  // Loops are avoided by checking only the current index.
   Future<void> _checkMotionPhoto(int index) async {
     // Reset state for new page
     if (mounted) {
@@ -279,6 +287,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
     }
   }
 
+  // Plays the embedded video of a Motion Photo.
+  // Extracts the video to a temp file and initializes the player.
   Future<void> _playVideo() async {
     if (!_isMotionPhoto) return;
 

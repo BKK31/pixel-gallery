@@ -35,6 +35,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
   bool _isSelecting = false;
   final Set<String> _selectedIds = {};
 
+  // Initializes the screen by requesting permissions and loading initial assets.
   Future<void> _init() async {
     // Request permission then load initial assets for the specific album
     bool perm = await _service.requestPermission();
@@ -77,6 +78,8 @@ class _PhotoScreenState extends State<PhotoScreen> {
     });
   }
 
+  // Groups a flat list of photos by their date (Month-Day-Year).
+  // Returns a mixed list of Strings (headers) and List<PhotoModel> (grid rows).
   List<dynamic> _groupedPhotos(List<PhotoModel> photos) {
     // Group photos by date to display date headers
     String? lastDateLabel;
@@ -105,6 +108,8 @@ class _PhotoScreenState extends State<PhotoScreen> {
   }
 
   // Selection Logic
+  // Toggles selection for a specific asset ID.
+  // Updates UI to show selection circles and context bar.
   void _toggleSelection(String id) {
     setState(() {
       if (_selectedIds.contains(id)) {
@@ -120,6 +125,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
     });
   }
 
+  // Batch deletes all selected items by moving them to trash.
   Future<void> _deleteSelected() async {
     // Move all selected items to trash
     for (var id in _selectedIds) {

@@ -27,8 +27,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _initSettings = _loadInitialSettings();
   }
 
+  // Load startup preferences (which screen to show first: Photos or Albums)
+  // This is determined by the 'startup_at_albums' setting.
   Future<void> _loadInitialSettings() async {
-    // Load startup preferences to determine which screen to show first (Photos or Albums)
     final bool startAlbum = await SettingsScreen.getStartupAtAlbums();
     setState(() {
       _selectedIndex = startAlbum ? 1 : 0;
@@ -41,8 +42,9 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // Opens the Settings screen and passes the theme refresh callback
+  // so that if the user changes the theme (e.g. Material You), the app updates immediately.
   void _openSettings() {
-    // Navigate to settings and pass the theme refresh callback
     Navigator.push(
       context,
       MaterialPageRoute(

@@ -1,7 +1,10 @@
 import 'package:photo_manager/photo_manager.dart';
 import '../models/photo_model.dart';
 
+// Service responsible for fetching and managing media assets (photos/videos)
+// and albums using PhotoManager.
 class MediaService {
+  // Options for filtering and sorting assets (Date Descending).
   final FilterOptionGroup _filterOption = FilterOptionGroup(
     orders: [
       OrderOption(type: OrderOptionType.createDate, asc: false),
@@ -9,6 +12,8 @@ class MediaService {
     ],
   );
 
+  // Requests permissions to access the device's photo library.
+  // Returns true if access is granted.
   Future<bool> requestPermission() async {
     // Request permission to access photos and videos
     final PermissionState ps = await PhotoManager.requestPermissionExtend();
@@ -18,6 +23,7 @@ class MediaService {
     return true;
   }
 
+  // Fetches a list of asset paths (albums), typically starting with "Recent".
   Future<List<AssetPathEntity>> getPhotos() async {
     // Fetch recent assets (photos and videos) with the defined filter options
     final List<AssetPathEntity> paths = await PhotoManager.getAssetPathList(
@@ -27,6 +33,9 @@ class MediaService {
     return paths;
   }
 
+  // Fetches all albums, optionally excluding or sorting them.
+  // Currently sorts alphabetically and excludes the first album (typically "Recents")
+  // from the returned list.
   Future<List<AssetPathEntity>> getAlbums() async {
     // Fetch all albums, excluding the "Recent" album (usually the first one)
     final List<AssetPathEntity> paths = await PhotoManager.getAssetPathList(
@@ -47,6 +56,9 @@ class MediaService {
     return otherAlbums;
   }
 
+  // Fetches specific media assets from a given album.
+  // Supports pagination.
+  // Returns a list of PhotoModel objects.
   Future<List<PhotoModel>> getMedia({
     required AssetPathEntity album,
     required int page,

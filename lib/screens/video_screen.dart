@@ -25,6 +25,8 @@ class VideoScreen extends StatefulWidget {
 class _VideoScreenState extends State<VideoScreen> {
   VideoPlayerController? _controller;
 
+  // Initializes the video player.
+  // Determines source (AssetEntity or File), sets up controller, and starts playback.
   Future<void> _initVideo() async {
     File? videoFile;
     if (widget.asset != null) {
@@ -51,6 +53,7 @@ class _VideoScreenState extends State<VideoScreen> {
           });
   }
 
+  // Formats a duration into MM:SS string.
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final minutes = twoDigits(duration.inMinutes.remainder(60));
