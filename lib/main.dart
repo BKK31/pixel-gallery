@@ -1,3 +1,6 @@
+import 'package:flutter/services.dart';
+import 'package:lumina_gallery/screens/single_viewer_screen.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:lumina_gallery/screens/home_screen.dart';
 import 'package:dynamic_color/dynamic_color.dart';
@@ -17,12 +20,28 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late Future<bool> _materialYouFuture;
+  static const platform = MethodChannel('com.pixel.gallery/open_file');
+  String? _initialFilePath;
 
   @override
   void initState() {
     super.initState();
     // Fetch user preference on startup (Material You enabled/disabled)
     _materialYouFuture = SettingsScreen.getMaterialYou();
+    _checkInitialFile();
+  }
+
+  Future<void> _checkInitialFile() async {
+    try {
+      final String? filePath = await platform.invokeMethod('getInitialFile');
+      if (filePath != null) {
+        setState(() {
+          _initialFilePath = filePath;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error checking initial file: $e");
+    }
   }
 
   void _refreshTheme() {
@@ -67,7 +86,9 @@ class _MyAppState extends State<MyApp> {
                 useMaterial3: useMaterialYou,
               ),
               debugShowCheckedModeBanner: false,
-              home: HomeScreen(onThemeRefresh: _refreshTheme),
+              home: _initialFilePath != null
+                  ? SingleViewerScreen(file: File(_initialFilePath!))
+                  : HomeScreen(onThemeRefresh: _refreshTheme),
             );
           },
         );
