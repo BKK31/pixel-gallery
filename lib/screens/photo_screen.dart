@@ -44,9 +44,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
     }
     final media = await _service.getMedia(album: widget.album, page: 0);
     // Filter out assets that are currently in the trash
-    final filteredMedia = media
-        .where((p) => !_trashService.isTrashed(p.asset.id))
-        .toList();
+    final filteredMedia = media.toList();
     setState(() {
       _photos = filteredMedia;
       _groupedItems = _groupedPhotos(filteredMedia);
@@ -125,7 +123,10 @@ class _PhotoScreenState extends State<PhotoScreen> {
   Future<void> _deleteSelected() async {
     // Move all selected items to trash
     for (var id in _selectedIds) {
-      await _trashService.moveToTrash(id);
+      final asset = await AssetEntity.fromId(id);
+      if (asset != null) {
+        await _trashService.moveToTrash(asset);
+      }
     }
     setState(() {
       _isSelecting = false;

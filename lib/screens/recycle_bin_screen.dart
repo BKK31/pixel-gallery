@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import '../services/trash_service.dart';
@@ -11,70 +12,60 @@ class RecycleBinScreen extends StatefulWidget {
 }
 
 class _RecycleBinScreenState extends State<RecycleBinScreen> {
-  List<String> _trashedIds = [];
-  List<AssetEntity> _trashedAssets = [];
+  List<String> _trashedPaths = [];
+  List<File> _trashedFiles = [];
   final TrashService _trashService = TrashService();
 
   // Selection
   bool _isSelecting = false;
-  final Set<String> _selectedIds = {};
+  final Set<String> _selectedPaths = {};
 
   Future<void> _init() async {
     // Initialize the trash service and fetch the current list of trashed IDs
     await _trashService.init();
     setState(() {
-      _trashedIds = _trashService.trashedIds;
-    });
+      _trashedPaths = _trashService.trashedPaths;
 
-    List<AssetEntity?> assets = [];
-    // Convert trashed IDs back to AssetEntity objects
-    for (var id in _trashedIds) {
-      final asset = await AssetEntity.fromId(id);
-      assets.add(asset);
-    }
-    // Update the UI with the validity filtering of trashed assets
-    setState(() {
-      _trashedAssets = assets.whereType<AssetEntity>().toList();
+      _trashedFiles = _trashedPaths
+          .map((path) => File(path))
+          .where((file) => file.existsSync())
+          .toList();
     });
   }
 
-  Future<void> _restore(AssetEntity asset) async {
+  Future<void> _restore(File file) async {
     // Restore a single asset from trash
-    await _trashService.restore(asset.id);
+    await _trashService.restore(file.path);
     _init(); // Refresh list to reflect changes
   }
 
-  Future<void> _deletePermanently(AssetEntity asset) async {
-    await _trashService.deletePermanently(asset.id);
+  Future<void> _deletePermanently(File file) async {
+    await _trashService.deletePermanently(file.path);
     _init(); // Refresh list
   }
 
   // Multi-Selection Actions
-  void _toggleSelection(String id) {
+  void _toggleSelection(String path) {
     setState(() {
-      if (_selectedIds.contains(id)) {
+      if (_selectedPaths.contains(path)) {
         // Deselect if already selected; if none selected, exit selection mode
-        _selectedIds.remove(id);
-        if (_selectedIds.isEmpty) {
+        _selectedPaths.remove(path);
+        if (_selectedPaths.isEmpty) {
           _isSelecting = false;
         }
       } else {
         // Add to selection
-        _selectedIds.add(id);
+        _selectedPaths.add(path);
       }
     });
   }
 
   Future<void> _restoreSelected() async {
     // Restore all currently selected items
-    for (var id in _selectedIds) {
-      await _trashService.restore(id);
+    for (var path in _selectedPaths) {
+      await _trashService.restore(path);
     }
-    // Clear selection and refresh the list
-    setState(() {
-      _isSelecting = false;
-      _selectedIds.clear();
-    });
+    _clearSelection();
     _init();
     if (mounted) {
       ScaffoldMessenger.of(
@@ -85,20 +76,23 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
 
   Future<void> _deletePermanentlySelected() async {
     // Permanently delete all currently selected items
-    for (var id in _selectedIds) {
-      await _trashService.deletePermanently(id);
+    for (var path in _selectedPaths) {
+      await _trashService.deletePermanently(path);
     }
-    // Clear selection and refresh the list
-    setState(() {
-      _isSelecting = false;
-      _selectedIds.clear();
-    });
+    _clearSelection();
     _init();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Permanently deleted selected items")),
       );
     }
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _isSelecting = false;
+      _selectedPaths.clear();
+    });
   }
 
   @override
@@ -112,20 +106,11 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
     return Scaffold(
       appBar: AppBar(
         title: _isSelecting
-            ? Text("${_selectedIds.length} Selected")
+            ? Text("${_selectedPaths.length} Selected")
             : Text("Recycle Bin"),
         centerTitle: true,
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         leading: _isSelecting
-            ? IconButton(
-                icon: Icon(Icons.close),
-                onPressed: () {
-                  setState(() {
-                    _isSelecting = false;
-                    _selectedIds.clear();
-                  });
-                },
-              )
+            ? IconButton(icon: Icon(Icons.close), onPressed: _clearSelection)
             : null,
         actions: _isSelecting
             ? [
@@ -140,51 +125,46 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
               ]
             : [],
       ),
-      body: _trashedAssets.isEmpty
+      body: _trashedFiles.isEmpty
           ? Center(child: Text("Recycle Bin is empty"))
           : GridView.builder(
-              itemCount: _trashedAssets.length,
+              itemCount: _trashedFiles.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
+                crossAxisCount: 3, // Increased size slightly
                 mainAxisSpacing: 2,
                 crossAxisSpacing: 2,
               ),
               itemBuilder: (context, index) {
-                final asset = _trashedAssets[index];
-                final isSelected = _selectedIds.contains(asset.id);
-
+                final file = _trashedFiles[index];
+                final isSelected = _selectedPaths.contains(file.path);
                 return GestureDetector(
                   onLongPress: () {
                     if (!_isSelecting) {
-                      setState(() {
-                        _isSelecting = true;
-                      });
-                      _toggleSelection(asset.id);
+                      setState(() => _isSelecting = true);
+                      _toggleSelection(file.path);
                     }
                   },
                   onTap: () {
                     if (_isSelecting) {
-                      _toggleSelection(asset.id);
+                      _toggleSelection(file.path);
                     } else {
-                      // Show Dialog to Restore or Delete
+                      // Show Dialog
                       showDialog(
                         context: context,
                         builder: (_) => AlertDialog(
                           title: Text("Actions"),
-                          content: Text(
-                            "Do you want to restore or permanently delete this item?",
-                          ),
+                          content: Text("Restore or Delete?"),
                           actions: [
                             TextButton(
                               onPressed: () {
-                                _restore(asset);
+                                _restore(file);
                                 Navigator.pop(context);
                               },
                               child: Text("Restore"),
                             ),
                             TextButton(
                               onPressed: () {
-                                _deletePermanently(asset);
+                                _deletePermanently(file);
                                 Navigator.pop(context);
                               },
                               child: Text(
@@ -200,11 +180,18 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      AssetEntityImage(
-                        asset,
-                        isOriginal: false,
-                        thumbnailSize: ThumbnailSize.square(200),
+                      Image.file(
+                        file,
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[900],
+                            child: Icon(
+                              Icons.broken_image,
+                              color: Colors.white,
+                            ),
+                          );
+                        },
                       ),
                       if (isSelected)
                         Container(

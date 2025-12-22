@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:lumina_gallery/services/trash_service.dart';
 import '../services/media_service.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -46,7 +47,6 @@ class _ViewerScreenState extends State<ViewerScreen> {
   final TrashService _trashService = TrashService();
 
   Future<void> _loadMore() async {
-    // Load more photos from the service when reaching the end of the list
     _page++;
     final media = await _service.getMedia(
       album: widget.sourceAlbums,
@@ -58,7 +58,6 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   Future<void> _toggleFavorite(PhotoModel photo) async {
-    // Toggle the favorite status of the photo using PhotoManager
     final bool oldStatus = photo.asset.isFavorite;
     final bool newStatus = !oldStatus;
 
@@ -69,7 +68,6 @@ class _ViewerScreenState extends State<ViewerScreen> {
       );
     }
 
-    // Refresh asset state
     final newAsset = await AssetEntity.fromId(photo.asset.id);
     if (newAsset != null) {
       photo.asset = newAsset;
@@ -79,25 +77,18 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   Future<void> _deletePhoto(PhotoModel photo) async {
-    // Move the photo to trash and provide an undo option
-    await _trashService.moveToTrash(photo.asset.id);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Moved to trash"),
-        action: SnackBarAction(
-          label: "Undo",
-          onPressed: () async {
-            await _trashService.restore(photo.asset.id);
-            setState(() {});
-          },
-        ),
-      ),
-    );
+    await _trashService.moveToTrash(photo.asset);
+
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Moved to trash")));
+    }
+
     Navigator.pop(context);
   }
 
   Future<void> _sharePhoto(PhotoModel photo) async {
-    // Share the photo using the system share sheet
     File? file = await photo.asset.file;
     if (file != null) {
       await Share.shareXFiles([XFile(file.path)]);
@@ -111,10 +102,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
         ? "${(sizeBytes / (1024 * 1024)).toStringAsFixed(2)} MB"
         : "Unknown";
 
-    // Fetch location
     final location = await photo.asset.latlngAsync();
 
-    // Fetch EXIF
     Map<String, Object>? exifData;
     try {
       if (file != null) {
@@ -130,14 +119,13 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // Allow it to be taller for the map
+      isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
         return DraggableScrollableSheet(
-          // Better scrolling behavior
           initialChildSize: 0.6,
           minChildSize: 0.4,
           maxChildSize: 0.9,
@@ -153,8 +141,6 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 20),
-
-                // ... Existing ListTiles ...
                 ListTile(
                   leading: Icon(Icons.image),
                   title: Text(photo.asset.title ?? "Unknown"),
@@ -166,8 +152,6 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   leading: Icon(Icons.calendar_today),
                   title: Text(DateFormat.yMMMd().format(photo.timeTaken)),
                 ),
-
-                // EXIF Section
                 if (exifData != null && exifData.isNotEmpty) ...[
                   SizedBox(height: 20),
                   Text(
@@ -202,8 +186,6 @@ class _ViewerScreenState extends State<ViewerScreen> {
                       subtitle: Text("Settings"),
                     ),
                 ],
-
-                // NEW: Map Section
                 if (location != null &&
                     location.latitude != 0 &&
                     location.longitude != 0) ...[
@@ -265,19 +247,25 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   Future<void> _checkMotionPhoto(int index) async {
-    if (mounted) setState(() => _isMotionPhoto = false);
-    final photo = _photos[index];
-    if (photo.asset.type == AssetType.video) {
-      setState(() => _isMotionPhoto = false);
-      return;
+    // Reset state for new page
+    if (mounted) {
+      setState(() {
+        _isMotionPhoto = false;
+        _isPlayingMotion = false;
+        _motionController?.dispose();
+        _motionController = null;
+      });
     }
+
+    final photo = _photos[index];
+    if (photo.asset.type == AssetType.video) return;
 
     File? file = await photo.asset.file;
     if (file != null) {
       bool isMotion = false;
       try {
-        // This library checks the XMP metadata
         final motionPhotos = MotionPhotos(file.path);
+        // Using logic from example:
         isMotion = await motionPhotos.isMotionPhoto();
       } catch (e) {
         debugPrint("Error checking motion photo: $e");
@@ -291,8 +279,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
     }
   }
 
-  Future<void> _startMotionPlayback() async {
-    if (_isPlayingMotion) return;
+  Future<void> _playVideo() async {
+    if (!_isMotionPhoto) return;
 
     final photo = _photos[_currentIndex];
     final file = await photo.asset.file;
@@ -301,7 +289,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     try {
       final motionPhotos = MotionPhotos(file.path);
       final videoFile = await motionPhotos.getMotionVideoFile(
-        Directory.systemTemp,
+        await getTemporaryDirectory(),
       );
 
       _motionController = VideoPlayerController.file(videoFile);
@@ -315,16 +303,11 @@ class _ViewerScreenState extends State<ViewerScreen> {
         });
       }
     } catch (e) {
-      debugPrint("Error playing motion photo: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Could not play motion photo")));
-      }
+      debugPrint("Error playing video: $e");
     }
   }
 
-  void _stopMotionPlayback() {
+  void _stopVideo() {
     _motionController?.pause();
     _motionController?.dispose();
     _motionController = null;
@@ -368,23 +351,22 @@ class _ViewerScreenState extends State<ViewerScreen> {
             },
             onLongPress: () {
               if (_isMotionPhoto) {
-                _startMotionPlayback();
+                _playVideo();
               }
             },
             onLongPressEnd: (_) {
-              if (_isMotionPhoto && _isPlayingMotion) {
-                _stopMotionPlayback();
+              if (_isMotionPhoto) {
+                _stopVideo();
               }
             },
             child: PageView.builder(
               controller: _controller,
               onPageChanged: (index) {
-                _stopMotionPlayback();
+                _stopVideo(); // Stop any playing video
                 _checkMotionPhoto(index);
                 setState(() {
                   _currentIndex = index;
                 });
-                // Auto-load more photos when nearing the end
                 if (index >= _photos.length - 5) {
                   _loadMore();
                 }
@@ -400,26 +382,34 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   );
                 }
 
-                // Show motion video if playing, otherwise show photo
-                if (index == _currentIndex &&
-                    _isPlayingMotion &&
-                    _motionController?.value.isInitialized == true) {
-                  return Center(
-                    child: AspectRatio(
-                      aspectRatio: _motionController!.value.aspectRatio,
-                      child: VideoPlayer(_motionController!),
+                // Stack Logic: Photo is base, Video is overlay
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    PhotoView(
+                      imageProvider: AssetEntityImageProvider(
+                        photo.asset,
+                        isOriginal: true,
+                      ),
+                      minScale: PhotoViewComputedScale.contained,
+                      maxScale: PhotoViewComputedScale.covered * 4,
+                      heroAttributes: PhotoViewHeroAttributes(
+                        tag: photo.asset.id,
+                      ),
                     ),
-                  );
-                }
-
-                return PhotoView(
-                  imageProvider: AssetEntityImageProvider(
-                    photo.asset,
-                    isOriginal: true,
-                  ),
-                  minScale: PhotoViewComputedScale.contained,
-                  maxScale: PhotoViewComputedScale.covered * 4,
-                  heroAttributes: PhotoViewHeroAttributes(tag: photo.asset.id),
+                    if (index == _currentIndex &&
+                        _isPlayingMotion &&
+                        _motionController != null &&
+                        _motionController!.value.isInitialized)
+                      Positioned.fill(
+                        child: Center(
+                          child: AspectRatio(
+                            aspectRatio: _motionController!.value.aspectRatio,
+                            child: VideoPlayer(_motionController!),
+                          ),
+                        ),
+                      ),
+                  ],
                 );
               },
             ),
@@ -441,17 +431,18 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 actions: [
                   if (_isMotionPhoto)
                     IconButton(
-                      onPressed: _isPlayingMotion
-                          ? _stopMotionPlayback
-                          : _startMotionPlayback,
                       icon: Icon(
                         _isPlayingMotion
                             ? Icons.motion_photos_pause
                             : Icons.motion_photos_on,
                       ),
-                      tooltip: _isPlayingMotion
-                          ? "Stop Motion Photo"
-                          : "Play Motion Photo",
+                      onPressed: () {
+                        if (_isPlayingMotion) {
+                          _stopVideo();
+                        } else {
+                          _playVideo();
+                        }
+                      },
                     ),
                   IconButton(
                     icon: Icon(Icons.info_outline),

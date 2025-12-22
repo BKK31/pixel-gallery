@@ -1,6 +1,10 @@
 # Pixel Gallery
 
 <p align="center">
+  <img src="screenshots/logo.png" width="120" alt="Pixel Gallery Logo">
+</p>
+
+<p align="center">
   <b>A modern, open-source gallery app built for Android with Flutter.</b>
 </p>
 
@@ -29,14 +33,16 @@
 
 ## 📖 About
 
-**Pixel Gallery** is a sleek, privacy-focused gallery application designed to provide a premium user experience. It leverages the power of **Material You** dynamic theming to adapt to your device's wallpaper, ensuring a seamless and personalized look. From managing your photo albums to viewing motion photos, Pixel Gallery creates a beautiful home for your memories.
+**Pixel Gallery** is a sleek, privacy-focused gallery application designed to provide a premium user experience. It leverages the power of **Material You** dynamic theming to adapt to your device's wallpaper, ensuring a seamless and personalized look. From managing your photo albums to viewing motion photos and map locations, Pixel Gallery creates a beautiful home for your memories.
 
 ## ✨ Features
 
 - **🎨 Material You Design** - Fully adapts to your device's system colors (Android 12+).
 - **📂 Smart Organization** - Automatically categorizes your media into Albums, Recents, and Videos.
 - **🗑️ Recycle Bin** - Safely recover deleted photos and videos or permanently remove them.
-- **🎞️ Motion Photos** - View the video component of your motion photos (Live Photos) locally.
+- **🎞️ Motion Photos** - Detects and plays the video component of Motion Photos (Live Photos).
+- **📍 Location Map** - View exactly where your photos were taken on an interactive OpenStreetMap.
+- **📷 EXIF Details** - View detailed camera metadata (Model, Aperture, ISO, Shutter Speed).
 - **⚡ Fast & Responsive** - Built with performance in mind using Flutter's rendering engine.
 - **🔒 Privacy First** - Your photos stay on your device. No cloud uploads, no tracking.
 
@@ -79,6 +85,9 @@ Pixel Gallery is built with a curated list of top-tier libraries:
 - [**dynamic_color**](https://pub.dev/packages/dynamic_color) - Material You theming.
 - [**video_player**](https://pub.dev/packages/video_player) - Video playback support.
 - [**photo_view**](https://pub.dev/packages/photo_view) - Zoomable image viewer.
+- [**flutter_map**](https://pub.dev/packages/flutter_map) + [**latlong2**](https://pub.dev/packages/latlong2) - OpenStreetMap integration.
+- [**native_exif**](https://pub.dev/packages/native_exif) - Efficient EXIF metadata reading.
+- [**motion_photos**](https://pub.dev/packages/motion_photos) - Motion photo extracting.
 - [**share_plus**](https://pub.dev/packages/share_plus) - Native sharing capabilities.
 - [**intl**](https://pub.dev/packages/intl) - Internationalization and date formatting.
 

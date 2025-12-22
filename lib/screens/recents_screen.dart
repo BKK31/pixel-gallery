@@ -40,9 +40,7 @@ class _RecentsScreenState extends State<RecentsScreen> {
     final albums = await _service.getPhotos();
     _currentAlbum = albums[0];
     final media = await _service.getMedia(album: _currentAlbum!, page: 0);
-    final filteredMedia = media
-        .where((p) => !_trashService.isTrashed(p.asset.id))
-        .toList();
+    final filteredMedia = media.toList();
     setState(() {
       _photos = filteredMedia;
       _loading = false;
@@ -53,9 +51,7 @@ class _RecentsScreenState extends State<RecentsScreen> {
     if (_currentAlbum == null) return;
     _page++;
     final media = await _service.getMedia(album: _currentAlbum!, page: _page);
-    final filteredMedia = media
-        .where((p) => !_trashService.isTrashed(p.asset.id))
-        .toList();
+    final filteredMedia = media.toList();
 
     setState(() {
       _photos.addAll(filteredMedia);
@@ -82,13 +78,17 @@ class _RecentsScreenState extends State<RecentsScreen> {
 
   Future<void> _deleteSelected() async {
     for (var id in _selectedIds) {
-      await _trashService.moveToTrash(id);
+      final asset = await AssetEntity.fromId(id);
+      if (asset != null) {
+        await _trashService.moveToTrash(asset);
+      }
     }
     setState(() {
       _isSelecting = false;
       _selectedIds.clear();
     });
-    _init(); // Refresh list
+    // Refresh to show removed files gone
+    _init();
 
     if (mounted) {
       ScaffoldMessenger.of(

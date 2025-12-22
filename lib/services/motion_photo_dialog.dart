@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:motion_photos/motion_photos.dart';
+import 'package:path_provider/path_provider.dart';
 
 class MotionPhotoDialog extends StatefulWidget {
   final File motionPhotoFile;
@@ -32,7 +33,7 @@ class _MotionPhotoDialogState extends State<MotionPhotoDialog> {
     try {
       final motionPhotos = MotionPhotos(widget.motionPhotoFile.path);
       final videoFile = await motionPhotos.getMotionVideoFile(
-        Directory.systemTemp,
+        await getTemporaryDirectory(),
       );
 
       _controller = VideoPlayerController.file(videoFile);
