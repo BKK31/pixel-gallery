@@ -74,6 +74,8 @@ Sample photos used in screenshots are by the following authors on Unsplash:
 - [Hanna Plants](https://unsplash.com/@hanna_plants)
 - [Joshua Kettle](https://unsplash.com/@joshuakettle)
 
+Icons generated using [icon.kitchen](icon.kitchen)
+
 ## 🛠 Installation
 
 To run Pixel Gallery locally, you'll need [Flutter](https://flutter.dev/docs/get-started/install) installed.
