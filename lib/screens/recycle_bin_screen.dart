@@ -113,6 +113,7 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
             ? Text("${_selectedPaths.length} Selected")
             : Text("Recycle Bin"),
         centerTitle: true,
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         leading: _isSelecting
             ? IconButton(icon: Icon(Icons.close), onPressed: _clearSelection)
             : null,
