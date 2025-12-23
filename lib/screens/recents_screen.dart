@@ -34,6 +34,9 @@ class _RecentsScreenState extends State<RecentsScreen> {
   Future<void> _init() async {
     bool perm = await _service.requestPermission();
     await _trashService.init();
+    // Request All Files Access for Trash moving
+    await _trashService.requestPermission();
+
     if (!perm) {
       return;
     }
@@ -184,6 +187,8 @@ class _RecentsScreenState extends State<RecentsScreen> {
           controller: _scrollController,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 4,
+            crossAxisSpacing: 2,
+            mainAxisSpacing: 2,
           ),
           itemCount: _photos.length,
           itemBuilder: (context, index) {

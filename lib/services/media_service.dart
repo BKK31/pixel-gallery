@@ -37,23 +37,30 @@ class MediaService {
   // Currently sorts alphabetically and excludes the first album (typically "Recents")
   // from the returned list.
   Future<List<AssetPathEntity>> getAlbums() async {
-    // Fetch all albums, excluding the "Recent" album (usually the first one)
+    // Fetch all albums, utilizing RequestType.common to include ONLY images and videos (no audio)
     final List<AssetPathEntity> paths = await PhotoManager.getAssetPathList(
-      type: RequestType.all,
+      type: RequestType.common,
       filterOption: _filterOption,
     );
 
     if (paths.isEmpty) return [];
 
-    // Remove the first album (Recents) to avoid duplication if needed, or strict filtering
-    final otherAlbums = paths.sublist(1);
+    final List<AssetPathEntity> filteredAlbums = [];
+
+    for (final path in paths) {
+      // Use assetCountAsync as assetCount is deprecated/removed in newer versions
+      final int count = await path.assetCountAsync;
+      if (count > 0 && !path.isAll) {
+        filteredAlbums.add(path);
+      }
+    }
 
     // Sort albums alphabetically by name
-    otherAlbums.sort(
+    filteredAlbums.sort(
       (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
     );
 
-    return otherAlbums;
+    return filteredAlbums;
   }
 
   // Fetches specific media assets from a given album.

@@ -37,7 +37,20 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
   // Restores a single file using the service and refreshes the list.
   Future<void> _restore(File file) async {
     // Restore a single asset from trash
-    await _trashService.restore(file.path);
+    final success = await _trashService.restore(file.path);
+    if (success) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Restored successfully")));
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to restore item. Check permissions.")),
+        );
+      }
+    }
     _init(); // Refresh list to reflect changes
   }
 
@@ -66,15 +79,21 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
   // Restores all selected items to the gallery.
   Future<void> _restoreSelected() async {
     // Restore all currently selected items
+    int successCount = 0;
+    int failCount = 0;
     for (var path in _selectedPaths) {
-      await _trashService.restore(path);
+      bool result = await _trashService.restore(path);
+      if (result)
+        successCount++;
+      else
+        failCount++;
     }
     _clearSelection();
     _init();
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Restored selected items")));
+      String msg = "Restored $successCount items";
+      if (failCount > 0) msg += ", failed $failCount";
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 

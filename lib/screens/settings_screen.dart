@@ -15,10 +15,10 @@ class SettingsScreen extends StatefulWidget {
     return prefs.getBool(accentKey) ?? true;
   }
 
-  // Reads the 'Startup at Albums' preference (default: true).
+  // Reads the 'Startup at Albums' preference (default: false).
   static Future<bool> getStartupAtAlbums() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(defaultPageKey) ?? true;
+    return prefs.getBool(defaultPageKey) ?? false;
   }
 
   @override

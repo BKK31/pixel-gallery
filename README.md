@@ -111,6 +111,8 @@ Pixel Gallery is built with a curated list of top-tier libraries:
 - [**native_exif**](https://pub.dev/packages/native_exif) - Efficient EXIF metadata reading.
 - [**motion_photos**](https://pub.dev/packages/motion_photos) - Motion photo extracting.
 - [**share_plus**](https://pub.dev/packages/share_plus) - Native sharing capabilities.
+- [**permission_handler**](https://pub.dev/packages/permission_handler) - Cross-platform permission handling.
+- [**device_info_plus**](https://pub.dev/packages/device_info_plus) - Device version checking.
 - [**intl**](https://pub.dev/packages/intl) - Internationalization and date formatting.
 
 ## 🤝 Contributing

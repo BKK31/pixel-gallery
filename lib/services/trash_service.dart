@@ -1,130 +1,227 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-// Service responsible for handling moved-to-trash assets.
-// Instead of a "dot-file" approach, this service copies files to a private
-// app directory ('trash') and then deletes them from the system gallery.
-// It maintains a list of trashed file paths in SharedPreferences to support restoration.
+class TrashItem {
+  final String trashPath;
+  final String originalPath;
+  final int? dateDeletedMs;
+
+  TrashItem({
+    required this.trashPath,
+    required this.originalPath,
+    this.dateDeletedMs,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'trashPath': trashPath,
+    'originalPath': originalPath,
+    'dateDeletedMs': dateDeletedMs,
+  };
+
+  static TrashItem fromJson(Map<String, dynamic> json) {
+    return TrashItem(
+      trashPath: json['trashPath'] as String,
+      originalPath: json['originalPath'] as String,
+      dateDeletedMs: json['dateDeletedMs'] as int?,
+    );
+  }
+}
+
 class TrashService {
-  static const String _key = 'trash_paths';
-
-  List<String> _trashedPaths = [];
+  static const String _storageKey = 'trash_inventory';
+  List<TrashItem> _trashedItems = [];
 
   // Initializes the service by loading trashed paths from SharedPreferences.
   Future<void> init() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    _trashedPaths = prefs.getStringList(_key) ?? [];
+    final List<String>? storedList = prefs.getStringList(_storageKey);
+    if (storedList != null) {
+      _trashedItems = storedList
+          .map((e) => TrashItem.fromJson(jsonDecode(e)))
+          .toList();
+    }
+
+    // Validate inventory: remove items where trash file is missing
+    _trashedItems.removeWhere((item) => !File(item.trashPath).existsSync());
+    await _saveInventory(prefs);
   }
 
-  // Checks if a given asset ID (or path in some contexts) is currently in the trash.
-  // Note: This implementation currently checks against stored paths.
-  bool isTrashed(String id) {
-    return _trashedPaths.contains(id);
+  Future<void> _saveInventory([SharedPreferences? prefs]) async {
+    prefs ??= await SharedPreferences.getInstance();
+    final List<String> encoded = _trashedItems
+        .map((e) => jsonEncode(e.toJson()))
+        .toList();
+    await prefs.setStringList(_storageKey, encoded);
   }
 
-  // Moves an asset to the internal trash directory and deletes it from the device gallery.
-  // Steps:
-  // 1. Copy the original file to specific private 'trash' directory.
-  // 2. Request system deletion of the original asset.
-  // 3. If successful, save the new path to SharedPreferences.
+  bool isTrashed(String pathOrId) {
+    return _trashedItems.any((it) => it.trashPath == pathOrId);
+  }
+
+  List<String> get trashedPaths =>
+      _trashedItems.map((e) => e.trashPath).toList();
+
+  // Request Manage External Storage Permission
+  Future<bool> requestPermission() async {
+    if (Platform.isAndroid) {
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      if (androidInfo.version.sdkInt >= 30) {
+        var status = await Permission.manageExternalStorage.status;
+        if (!status.isGranted) {
+          status = await Permission.manageExternalStorage.request();
+        }
+        return status.isGranted;
+      }
+    }
+    // For older Android, standard storage permissions are usually enough
+    return await Permission.storage.request().isGranted;
+  }
+
+  // Gets the designated hidden trash directory
+  // We place it in the SAME partition root to ensure "rename" (move) works instantly.
+  // E.g. /storage/emulated/0/.lumina_trash
+  Future<Directory> _getTrashDirectoryFor(String originalPath) async {
+    String rootPath = '/storage/emulated/0/';
+
+    if (originalPath.startsWith('/storage/emulated/0/')) {
+      rootPath = '/storage/emulated/0/';
+    } else {
+      // Try to find the root of the SD card if applicable
+      // Simple heuristic: Take the first 3 segments ?
+      // For now, default to internal storage root which covers 99% of cases
+    }
+
+    final Directory trashDir = Directory(path.join(rootPath, '.pixel_trash'));
+    if (!await trashDir.exists()) {
+      await trashDir.create(recursive: true);
+    }
+    return trashDir;
+  }
+
   Future<void> moveToTrash(AssetEntity asset) async {
+    // 1. Ensure permission
+    if (!await requestPermission()) {
+      print("Permission denied for Manage External Storage");
+      return;
+    }
+
     final File? originalFile = await asset.file;
     if (originalFile == null) return;
 
+    final String originalPath = originalFile.path;
+    print("Moving to trash: $originalPath");
+
     try {
-      // 1. Get Private 'trash' directory
-      final appDir = await getApplicationDocumentsDirectory();
-      final trashDir = Directory('${appDir.path}/trash');
-      if (!await trashDir.exists()) {
-        await trashDir.create(recursive: true);
-      }
+      final Directory trashDir = await _getTrashDirectoryFor(originalPath);
+      final String filename = path.basename(originalPath);
 
-      // 2. Copy file to private trash
-      final String filename = path.basename(originalFile.path);
-      final String newPath = path.join(trashDir.path, filename);
+      // Create a unique name to avoid collisions in trash
+      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final String uniqueName = "${timestamp}_$filename";
+      final String trashPath = path.join(trashDir.path, uniqueName);
 
-      // Copy to private dir
-      await originalFile.copy(newPath);
+      // 2. Perform the Move (Rename)
+      // This is the key: rename() preserves metadata if on same partition
+      final File file = File(originalPath);
+      await file.rename(trashPath);
 
-      // 3. Delete original from Gallery (triggers system perm dialog)
-      final List<String> result = await PhotoManager.editor.deleteWithIds([
-        asset.id,
-      ]);
+      // 3. Update Inventory
+      _trashedItems.add(
+        TrashItem(
+          trashPath: trashPath,
+          originalPath: originalPath,
+          dateDeletedMs: DateTime.now().millisecondsSinceEpoch,
+        ),
+      );
+      await _saveInventory();
 
-      // 4. If deletion successful, verify and track
-      if (result.isNotEmpty) {
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
-        _trashedPaths.add(newPath);
-        await prefs.setStringList(_key, _trashedPaths);
-      } else {
-        // If user cancelled, delete our backup
-        final backupFile = File(newPath);
-        if (await backupFile.exists()) {
-          await backupFile.delete();
-        }
-      }
+      print("Moved to trash successfully: $trashPath");
+
+      // Note: We do NOT call deleteWithIds anymore, because the file has been moved (renamed).
+      // PhotoManager might still show it in cache until refreshed.
     } catch (e) {
       print("Error moving to trash: $e");
     }
   }
 
-  // Restores a file from the trash back to the device gallery.
-  // Steps:
-  // 1. Identifies if the file is an image or video.
-  // 2. Uses PhotoManager to save it back to the public gallery.
-  // 3. Deletes the private backup file and updates SharedPreferences.
-  Future<void> restore(String filePath) async {
-    final File file = File(filePath);
-    if (!await file.exists()) return;
+  Future<bool> restore(String trashPath) async {
+    final int index = _trashedItems.indexWhere(
+      (it) => it.trashPath == trashPath,
+    );
+    if (index == -1) return false;
+
+    final TrashItem item = _trashedItems[index];
+    final File trashFile = File(item.trashPath);
+
+    if (!await trashFile.exists()) {
+      _trashedItems.removeAt(index);
+      await _saveInventory();
+      return false;
+    }
 
     try {
-      final String name = path.basename(filePath);
-      // Determine if image or video based on extension (simple check)
-      final bool isVideo =
-          name.toLowerCase().endsWith('.mp4') ||
-          name.toLowerCase().endsWith('.mov') ||
-          name.toLowerCase().endsWith('.wmv') ||
-          name.toLowerCase().endsWith('.avi') ||
-          name.toLowerCase().endsWith('.mkv');
+      // 1. Restore (Rename back)
+      final File originalFile = File(item.originalPath);
+      final Directory parentDir = originalFile.parent;
+      if (!await parentDir.exists()) {
+        await parentDir.create(recursive: true);
+      }
 
-      AssetEntity? restoredAsset;
-      if (isVideo) {
-        restoredAsset = await PhotoManager.editor.saveVideo(file, title: name);
-      } else {
-        // Assume image
-        restoredAsset = await PhotoManager.editor.saveImageWithPath(
-          filePath,
-          title: name,
+      await trashFile.rename(item.originalPath);
+
+      // 2. Trigger Scan (Partial)
+      // Use saveImageWithPath as a trigger to tell MediaStore "Hey, a file is here"
+      // This is a bit of a hack, but standard way to force index update.
+      try {
+        if (_isVideo(item.originalPath)) {
+          await PhotoManager.editor.saveVideo(
+            File(item.originalPath),
+            title: path.basename(item.originalPath),
+          );
+        } else {
+          await PhotoManager.editor.saveImageWithPath(
+            item.originalPath,
+            title: path.basename(item.originalPath),
+          );
+        }
+      } catch (scanError) {
+        print(
+          "Scan trigger error (might be ignored if file exists): $scanError",
         );
       }
 
-      if (restoredAsset != null) {
-        // Remove local backup
-        await file.delete();
+      // 3. Update Inventory
+      _trashedItems.removeAt(index);
+      await _saveInventory();
 
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
-        _trashedPaths.remove(filePath);
-        await prefs.setStringList(_key, _trashedPaths);
-      }
+      print("Restored successfully to: ${item.originalPath}");
+      return true;
     } catch (e) {
       print("Error restoring: $e");
+      return false;
     }
   }
 
-  // Permanently deletes a file from the trash (private storage).
-  // This action is irreversible.
-  Future<void> deletePermanently(String filePath) async {
-    final File file = File(filePath);
+  Future<void> deletePermanently(String trashPath) async {
+    final File file = File(trashPath);
     if (await file.exists()) {
       await file.delete();
     }
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    _trashedPaths.remove(filePath);
-    await prefs.setStringList(_key, _trashedPaths);
+    _trashedItems.removeWhere((it) => it.trashPath == trashPath);
+    await _saveInventory();
   }
 
-  List<String> get trashedPaths => _trashedPaths;
+  bool _isVideo(String name) {
+    final n = name.toLowerCase();
+    return n.endsWith('.mp4') ||
+        n.endsWith('.mov') ||
+        n.endsWith('.wmv') ||
+        n.endsWith('.avi') ||
+        n.endsWith('.mkv');
+  }
 }
