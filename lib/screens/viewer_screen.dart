@@ -472,8 +472,14 @@ class _ViewerScreenState extends State<ViewerScreen> {
               right: 0,
               child: Container(
                 color: Colors.black.withOpacity(0.5),
-                margin: EdgeInsets.only(bottom: 15),
-                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                // Remove margin to allow background to extend if needed, or keep it but ensure padding handles safe area
+                // Using padding ensures the buttons are pushed up above the nav bar
+                padding: EdgeInsets.only(
+                  top: 10,
+                  left: 20,
+                  right: 20,
+                  bottom: MediaQuery.of(context).padding.bottom + 10,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [

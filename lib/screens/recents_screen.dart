@@ -218,7 +218,7 @@ class _RecentsScreenState extends State<RecentsScreen> {
                       ),
                     ),
                   );
-                  _init();
+                  setState(() {});
                 }
               },
               child: Stack(

@@ -272,7 +272,8 @@ class _PhotoScreenState extends State<PhotoScreen> {
                           ),
                         ),
                       );
-                      _init();
+                      // Update UI to reflect changes (e.g. favorites) without resetting scroll
+                      setState(() {});
                     }
                   },
                   child: Stack(
