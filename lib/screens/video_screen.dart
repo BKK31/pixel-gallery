@@ -24,6 +24,9 @@ class VideoScreen extends StatefulWidget {
 
 class _VideoScreenState extends State<VideoScreen> {
   VideoPlayerController? _controller;
+  bool _isDragging = false;
+  double _dragValue = 0;
+  DateTime? _lastSeekTime;
 
   // Initializes the video player.
   // Determines source (AssetEntity or File), sets up controller, and starts playback.
@@ -48,7 +51,9 @@ class _VideoScreenState extends State<VideoScreen> {
             _controller!.play();
             // Add listener to update seekbar
             _controller!.addListener(() {
-              if (mounted) setState(() {});
+              if (mounted && !_isDragging) {
+                setState(() {});
+              }
             });
           });
   }
@@ -76,6 +81,10 @@ class _VideoScreenState extends State<VideoScreen> {
   @override
   Widget build(BuildContext context) {
     if (_controller != null && _controller!.value.isInitialized) {
+      final currentPosition = _isDragging
+          ? Duration(seconds: _dragValue.toInt())
+          : _controller!.value.position;
+
       return Stack(
         fit: StackFit.expand,
         children: [
@@ -126,20 +135,48 @@ class _VideoScreenState extends State<VideoScreen> {
                     Row(
                       children: [
                         Text(
-                          _formatDuration(_controller!.value.position),
+                          _formatDuration(currentPosition),
                           style: TextStyle(color: Colors.white, fontSize: 12),
                         ),
                         Expanded(
                           child: Slider(
-                            value: _controller!.value.position.inSeconds
-                                .toDouble(),
+                            value: _isDragging
+                                ? _dragValue
+                                : _controller!.value.position.inSeconds
+                                      .toDouble(),
                             min: 0.0,
                             max: _controller!.value.duration.inSeconds
                                 .toDouble(),
+                            onChangeStart: (value) {
+                              setState(() {
+                                _isDragging = true;
+                                _dragValue = value;
+                              });
+                            },
                             onChanged: (value) {
-                              _controller!.seekTo(
-                                Duration(seconds: value.toInt()),
-                              );
+                              setState(() {
+                                _dragValue = value;
+                              });
+                              // Throttled seek for visual feedback (scrubbing)
+                              final now = DateTime.now();
+                              if (_lastSeekTime == null ||
+                                  now.difference(_lastSeekTime!) >
+                                      const Duration(milliseconds: 50)) {
+                                _lastSeekTime = now;
+                                _controller!.seekTo(
+                                  Duration(seconds: value.toInt()),
+                                );
+                              }
+                            },
+                            onChangeEnd: (value) {
+                              // Ensure final position is accurate and resume UI updates
+                              _controller!
+                                  .seekTo(Duration(seconds: value.toInt()))
+                                  .then((_) {
+                                    setState(() {
+                                      _isDragging = false;
+                                    });
+                                  });
                             },
                             activeColor: Colors.white,
                             inactiveColor: Colors.white.withOpacity(0.3),

@@ -5,6 +5,7 @@ import 'package:photo_manager/photo_manager.dart';
 import 'package:path/path.dart' as path;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/services.dart';
 
 class TrashItem {
   final String trashPath;
@@ -173,22 +174,15 @@ class TrashService {
       }
 
       await trashFile.rename(item.originalPath);
+      print("File renamed back to: ${item.originalPath}");
 
       // 2. Trigger Scan (Partial)
-      // Use saveImageWithPath as a trigger to tell MediaStore "Hey, a file is here"
-      // This is a bit of a hack, but standard way to force index update.
+      // Use a native scanFile call to inform MediaStore about the restored file.
+      // This avoids photo_manager's saveImageWithPath which creates a duplicate copy.
       try {
-        if (_isVideo(item.originalPath)) {
-          await PhotoManager.editor.saveVideo(
-            File(item.originalPath),
-            title: path.basename(item.originalPath),
-          );
-        } else {
-          await PhotoManager.editor.saveImageWithPath(
-            item.originalPath,
-            title: path.basename(item.originalPath),
-          );
-        }
+        final platform = MethodChannel('com.pixel.gallery/open_file');
+        await platform.invokeMethod('scanFile', {'path': item.originalPath});
+        print("Native scan triggered for: ${item.originalPath}");
       } catch (scanError) {
         print(
           "Scan trigger error (might be ignored if file exists): $scanError",
@@ -214,14 +208,5 @@ class TrashService {
     }
     _trashedItems.removeWhere((it) => it.trashPath == trashPath);
     await _saveInventory();
-  }
-
-  bool _isVideo(String name) {
-    final n = name.toLowerCase();
-    return n.endsWith('.mp4') ||
-        n.endsWith('.mov') ||
-        n.endsWith('.wmv') ||
-        n.endsWith('.avi') ||
-        n.endsWith('.mkv');
   }
 }

@@ -22,10 +22,22 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
-            if (call.method == "getInitialFile") {
-                result.success(sharedFilePath)
-            } else {
-                result.notImplemented()
+            when (call.method) {
+                "getInitialFile" -> {
+                    result.success(sharedFilePath)
+                }
+                "scanFile" -> {
+                    val path = call.argument<String>("path")
+                    if (path != null) {
+                        android.media.MediaScannerConnection.scanFile(this, arrayOf(path), null) { _, _ -> }
+                        result.success(true)
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Path is null", null)
+                    }
+                }
+                else -> {
+                    result.notImplemented()
+                }
             }
         }
 
