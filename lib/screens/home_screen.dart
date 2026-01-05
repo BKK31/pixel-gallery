@@ -138,68 +138,80 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _buildAppBar(context),
-      body: FutureBuilder<void>(
-        future: _initSettings,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return PopScope(
+      canPop: !_isSelecting,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_isSelecting) {
+          _clearSelection();
+        }
+      },
+      child: Scaffold(
+        appBar: _buildAppBar(context),
+        body: FutureBuilder<void>(
+          future: _initSettings,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          return BottomBar(
-            fit: StackFit.expand,
-            icon: (width, height) =>
-                Center(child: Icon(Icons.arrow_upward_rounded, size: width)),
-            borderRadius: BorderRadius.circular(500),
-            duration: const Duration(seconds: 1),
-            curve: Curves.decelerate,
-            showIcon: true,
-            width: MediaQuery.of(context).size.width * 0.8,
-            barColor: Theme.of(
-              context,
-            ).colorScheme.inversePrimary.withOpacity(0.2),
-            start: 2,
-            end: 0,
-            offset: 10,
-            barAlignment: Alignment.bottomCenter,
-            iconHeight: 35,
-            iconWidth: 35,
-            hideOnScroll: true,
-            respectSafeArea: true,
-            body: (context, controller) => TabBarView(
-              controller: _tabController,
-              dragStartBehavior: DragStartBehavior.down,
-              physics: const BouncingScrollPhysics(),
-              children: _pages,
-            ),
-            child: TabBar(
-              controller: _tabController,
-              onTap: _navigateBottomBar,
-              dividerColor: Colors.transparent,
-              indicatorPadding: const EdgeInsets.symmetric(horizontal: 6),
-              indicator: UnderlineTabIndicator(
-                borderSide: BorderSide(
-                  color: Theme.of(context).colorScheme.primary,
-                  width: 4,
-                ),
-                insets: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            return BottomBar(
+              fit: StackFit.expand,
+              icon: (width, height) =>
+                  Center(child: Icon(Icons.arrow_upward_rounded, size: width)),
+              borderRadius: BorderRadius.circular(500),
+              duration: const Duration(seconds: 1),
+              curve: Curves.decelerate,
+              showIcon: true,
+              width: MediaQuery.of(context).size.width * 0.8,
+              barColor: Color.lerp(
+                Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.surface,
+                0.92,
+              )!,
+              start: 2,
+              end: 0,
+              offset: 10,
+              barAlignment: Alignment.bottomCenter,
+              iconHeight: 35,
+              iconWidth: 35,
+              hideOnScroll: true,
+              onBottomBarHidden: () {},
+              respectSafeArea: true,
+              body: (context, controller) => TabBarView(
+                controller: _tabController,
+                dragStartBehavior: DragStartBehavior.down,
+                physics: const BouncingScrollPhysics(),
+                children: _pages,
               ),
-              tabs: const [
-                SizedBox(
-                  height: 55,
-                  width: 40,
-                  child: Center(child: Icon(Icons.photo)),
+              child: TabBar(
+                controller: _tabController,
+                onTap: _navigateBottomBar,
+                dividerColor: Colors.transparent,
+                indicatorPadding: const EdgeInsets.symmetric(horizontal: 6),
+                indicator: UnderlineTabIndicator(
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 4,
+                  ),
+                  insets: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 ),
-                SizedBox(
-                  height: 55,
-                  width: 40,
-                  child: Center(child: Icon(Icons.photo_album)),
-                ),
-              ],
-            ),
-          );
-        },
+                tabs: const [
+                  SizedBox(
+                    height: 55,
+                    width: 40,
+                    child: Center(child: Icon(Icons.photo)),
+                  ),
+                  SizedBox(
+                    height: 55,
+                    width: 40,
+                    child: Center(child: Icon(Icons.photo_album)),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

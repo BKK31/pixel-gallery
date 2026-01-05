@@ -193,133 +193,158 @@ class _PhotoScreenState extends State<PhotoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBarM3E(
-        title: _isSelecting
-            ? Text(
-                "${_selectedIds.length} Selected",
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-              )
-            : Text(
-                widget.album.name,
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-              ),
-        centerTitle: false,
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        leading: _isSelecting
-            ? IconButton(
-                icon: Icon(Icons.close),
-                onPressed: () {
-                  setState(() {
-                    _isSelecting = false;
-                    _selectedIds.clear();
-                  });
-                },
-              )
-            : null,
-        actions: _isSelecting
-            ? [
-                IconButton(onPressed: _shareSelected, icon: Icon(Icons.share)),
-                IconButton(
-                  onPressed: _deleteSelected,
-                  icon: Icon(Icons.delete),
+    return PopScope(
+      canPop: !_isSelecting,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_isSelecting) {
+          setState(() {
+            _isSelecting = false;
+            _selectedIds.clear();
+          });
+        }
+      },
+      child: Scaffold(
+        appBar: AppBarM3E(
+          title: _isSelecting
+              ? Text(
+                  "${_selectedIds.length} Selected",
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
+              : Text(
+                  widget.album.name,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ]
-            : [],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(5),
-        child: ListView.builder(
-          itemCount: _groupedItems.length,
-          controller: _scrollController,
-          itemBuilder: (context, index) {
-            final item = _groupedItems[index];
+          centerTitle: false,
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          leading: _isSelecting
+              ? IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    setState(() {
+                      _isSelecting = false;
+                      _selectedIds.clear();
+                    });
+                  },
+                )
+              : null,
+          actions: _isSelecting
+              ? [
+                  IconButton(
+                    onPressed: _shareSelected,
+                    icon: const Icon(Icons.share),
+                  ),
+                  IconButton(
+                    onPressed: _deleteSelected,
+                    icon: const Icon(Icons.delete),
+                  ),
+                ]
+              : [],
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(5),
+          child: ListView.builder(
+            itemCount: _groupedItems.length,
+            controller: _scrollController,
+            itemBuilder: (context, index) {
+              final item = _groupedItems[index];
 
-            if (item is String) {
-              return Container(
-                padding: EdgeInsets.all(12),
-                child: Text(
-                  item,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              );
-            } else if (item is List<PhotoModel>) {
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 3,
-                  mainAxisSpacing: 3,
-                ),
-                itemCount: item.length,
-                itemBuilder: (context, index) {
-                  final photo = item[index];
-                  final globalIndex = _photos.indexOf(photo);
-                  final isSelected = _selectedIds.contains(photo.asset.id);
+              if (item is String) {
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    item,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              } else if (item is List<PhotoModel>) {
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 3,
+                    mainAxisSpacing: 3,
+                  ),
+                  itemCount: item.length,
+                  itemBuilder: (context, index) {
+                    final photo = item[index];
+                    final globalIndex = _photos.indexOf(photo);
+                    final isSelected = _selectedIds.contains(photo.asset.id);
 
-                  return GestureDetector(
-                    onLongPress: () {
-                      if (!_isSelecting) {
-                        setState(() {
-                          _isSelecting = true;
-                        });
-                        _toggleSelection(photo.asset.id);
-                      }
-                    },
-                    onTap: () async {
-                      if (_isSelecting) {
-                        _toggleSelection(photo.asset.id);
-                      } else {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ViewerScreen(
-                              index: globalIndex,
-                              initialPhotos: _photos,
-                              sourceAlbums: widget.album,
+                    return GestureDetector(
+                      onLongPress: () {
+                        if (!_isSelecting) {
+                          setState(() {
+                            _isSelecting = true;
+                          });
+                          _toggleSelection(photo.asset.id);
+                        }
+                      },
+                      onTap: () async {
+                        if (_isSelecting) {
+                          _toggleSelection(photo.asset.id);
+                        } else {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ViewerScreen(
+                                index: globalIndex,
+                                initialPhotos: _photos,
+                                sourceAlbums: widget.album,
+                              ),
                             ),
+                          );
+                          // Update UI to reflect changes (e.g. favorites) without resetting scroll
+                          setState(() {});
+                        }
+                      },
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          AssetEntityImage(
+                            photo.asset,
+                            isOriginal: false,
+                            thumbnailSize: const ThumbnailSize.square(200),
+                            fit: BoxFit.cover,
                           ),
-                        );
-                        // Update UI to reflect changes (e.g. favorites) without resetting scroll
-                        setState(() {});
-                      }
-                    },
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        AssetEntityImage(
-                          photo.asset,
-                          isOriginal: false,
-                          thumbnailSize: const ThumbnailSize.square(200),
-                          fit: BoxFit.cover,
-                        ),
-                        if (isSelected)
-                          Container(
-                            color: Colors.black.withOpacity(0.4),
-                            child: const Center(
+                          if (isSelected)
+                            Container(
+                              color: Colors.black.withOpacity(0.4),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.check_circle,
+                                  color: Colors.blue,
+                                  size: 30,
+                                ),
+                              ),
+                            ),
+                          if (photo.isVideo && !isSelected)
+                            const Center(
                               child: Icon(
-                                Icons.check_circle,
-                                color: Colors.blue,
+                                Icons.play_circle_fill_outlined,
+                                color: Colors.white,
                                 size: 30,
                               ),
                             ),
-                          ),
-                        if (photo.isVideo && !isSelected)
-                          const Center(
-                            child: Icon(
-                              Icons.play_circle_fill_outlined,
-                              color: Colors.white,
-                              size: 30,
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            }
-          },
+                        ],
+                      ),
+                    );
+                  },
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ),
       ),
     );

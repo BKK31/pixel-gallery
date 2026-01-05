@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -84,7 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButtonM3E(
-            icon: Icon(Icons.code),
+            icon: const Icon(FontAwesomeIcons.github),
             tooltip: "Source Code",
             onPressed: _openSourceCode,
           ),

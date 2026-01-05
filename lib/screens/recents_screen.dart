@@ -30,8 +30,7 @@ class RecentsScreenState extends State<RecentsScreen> {
   final Set<String> _selectedIds = {};
 
   int _page = 0;
-  bool _hasMore = true;
-  bool _loadingMore = false;
+  bool _isLoadingMore = false;
 
   Future<void> _init() async {
     final perm = await _service.requestPermission();
@@ -40,6 +39,7 @@ class RecentsScreenState extends State<RecentsScreen> {
 
     if (!perm) return;
 
+    _page = 0;
     final albums = await _service.getPhotos();
     _currentAlbum = albums.first;
 
@@ -48,6 +48,26 @@ class RecentsScreenState extends State<RecentsScreen> {
     setState(() {
       _photos = media.toList();
       _loading = false;
+    });
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore) return;
+    setState(() {
+      _isLoadingMore = true;
+    });
+    _page++;
+
+    final media = await _service.getMedia(album: _currentAlbum!, page: _page);
+
+    if (media.isNotEmpty) {
+      setState(() {
+        _photos.addAll(media);
+      });
+    }
+
+    setState(() {
+      _isLoadingMore = false;
     });
   }
 
@@ -115,6 +135,13 @@ class RecentsScreenState extends State<RecentsScreen> {
 
     PhotoManager.addChangeCallback((MethodCall call) => _init());
     PhotoManager.startChangeNotify();
+
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 500) {
+        _loadMore();
+      }
+    });
   }
 
   @override
