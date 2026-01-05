@@ -10,7 +10,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:photo_view/photo_view.dart';
 import 'video_screen.dart';
-import 'package:motion_photos/motion_photos.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latLng;
@@ -37,9 +36,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
   int _currentIndex = 0;
   bool _showUI = true;
   late List<PhotoModel> _photos;
-  bool _isMotionPhoto = false;
-  bool _isPlayingMotion = false;
-  VideoPlayerController? _motionController;
+  bool _isZoomed = false;
+  VideoPlayerController? _videoController;
 
   int _page = 0;
 
@@ -55,6 +53,25 @@ class _ViewerScreenState extends State<ViewerScreen> {
     setState(() {
       _photos.addAll(media);
     });
+  }
+
+  Future<void> _initializeVideoController(int index) async {
+    _videoController?.dispose();
+    _videoController = null;
+
+    final photo = _photos[index];
+    if (photo.asset.type == AssetType.video) {
+      final file = await photo.asset.file;
+      if (file != null) {
+        _videoController = VideoPlayerController.file(file);
+        await _videoController!.initialize();
+        await _videoController!.setLooping(true);
+        if (_currentIndex == index) {
+          await _videoController!.play();
+          setState(() {});
+        }
+      }
+    }
   }
 
   // Toggles the favorite status of the current photo.
@@ -252,82 +269,6 @@ class _ViewerScreenState extends State<ViewerScreen> {
     );
   }
 
-  // Checks if the photo at the given index is a Motion Photo.
-  // Loops are avoided by checking only the current index.
-  Future<void> _checkMotionPhoto(int index) async {
-    // Reset state for new page
-    if (mounted) {
-      setState(() {
-        _isMotionPhoto = false;
-        _isPlayingMotion = false;
-        _motionController?.dispose();
-        _motionController = null;
-      });
-    }
-
-    final photo = _photos[index];
-    if (photo.asset.type == AssetType.video) return;
-
-    File? file = await photo.asset.file;
-    if (file != null) {
-      bool isMotion = false;
-      try {
-        final motionPhotos = MotionPhotos(file.path);
-        // Using logic from example:
-        isMotion = await motionPhotos.isMotionPhoto();
-      } catch (e) {
-        debugPrint("Error checking motion photo: $e");
-      }
-
-      if (mounted && _currentIndex == index) {
-        setState(() {
-          _isMotionPhoto = isMotion;
-        });
-      }
-    }
-  }
-
-  // Plays the embedded video of a Motion Photo.
-  // Extracts the video to a temp file and initializes the player.
-  Future<void> _playVideo() async {
-    if (!_isMotionPhoto) return;
-
-    final photo = _photos[_currentIndex];
-    final file = await photo.asset.file;
-    if (file == null) return;
-
-    try {
-      final motionPhotos = MotionPhotos(file.path);
-      final videoFile = await motionPhotos.getMotionVideoFile(
-        await getTemporaryDirectory(),
-      );
-
-      _motionController = VideoPlayerController.file(videoFile);
-      await _motionController!.initialize();
-      await _motionController!.setLooping(true);
-      await _motionController!.play();
-
-      if (mounted) {
-        setState(() {
-          _isPlayingMotion = true;
-        });
-      }
-    } catch (e) {
-      debugPrint("Error playing video: $e");
-    }
-  }
-
-  void _stopVideo() {
-    _motionController?.pause();
-    _motionController?.dispose();
-    _motionController = null;
-    if (mounted) {
-      setState(() {
-        _isPlayingMotion = false;
-      });
-    }
-  }
-
   @override
   void initState() {
     super.initState();
@@ -337,13 +278,13 @@ class _ViewerScreenState extends State<ViewerScreen> {
     _controller = PageController(initialPage: widget.index);
     _page = (widget.initialPhotos.length / 50).ceil() - 1;
     if (_page < 0) _page = 0;
-    _checkMotionPhoto(widget.index);
+    _initializeVideoController(widget.index);
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    _motionController?.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
 
@@ -359,24 +300,16 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 _showUI = !_showUI;
               });
             },
-            onLongPress: () {
-              if (_isMotionPhoto) {
-                _playVideo();
-              }
-            },
-            onLongPressEnd: (_) {
-              if (_isMotionPhoto) {
-                _stopVideo();
-              }
-            },
             child: PageView.builder(
+              physics: _isZoomed
+                  ? const NeverScrollableScrollPhysics()
+                  : const PageScrollPhysics(),
               controller: _controller,
               onPageChanged: (index) {
-                _stopVideo(); // Stop any playing video
-                _checkMotionPhoto(index);
                 setState(() {
                   _currentIndex = index;
                 });
+                _initializeVideoController(index);
                 if (index >= _photos.length - 5) {
                   _loadMore();
                 }
@@ -389,42 +322,29 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   return VideoScreen(
                     asset: photo.asset,
                     controlsVisible: _showUI,
+                    videoController: _videoController,
                   );
                 }
 
-                // Stack Logic: Photo is base, Video is overlay
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    PhotoView(
-                      imageProvider: AssetEntityImageProvider(
-                        photo.asset,
-                        isOriginal: true,
-                      ),
-                      minScale: PhotoViewComputedScale.contained,
-                      maxScale: PhotoViewComputedScale.covered * 4,
-                      heroAttributes: PhotoViewHeroAttributes(
-                        tag: photo.asset.id,
-                      ),
-                    ),
-                    if (index == _currentIndex &&
-                        _isPlayingMotion &&
-                        _motionController != null &&
-                        _motionController!.value.isInitialized)
-                      Positioned.fill(
-                        child: Center(
-                          child: AspectRatio(
-                            aspectRatio: _motionController!.value.aspectRatio,
-                            child: VideoPlayer(_motionController!),
-                          ),
-                        ),
-                      ),
-                  ],
+                return PhotoView(
+                  scaleStateChangedCallback: (state) {
+                    setState(() {
+                      _isZoomed = state != PhotoViewScaleState.initial;
+                    });
+                  },
+                  imageProvider: AssetEntityImageProvider(
+                    photo.asset,
+                    isOriginal: true,
+                  ),
+                  minScale: PhotoViewComputedScale.contained,
+                  maxScale: PhotoViewComputedScale.covered * 4,
+                  heroAttributes: PhotoViewHeroAttributes(
+                    tag: photo.asset.id,
+                  ),
                 );
               },
             ),
           ),
-
           if (_showUI)
             Positioned(
               top: 0,
@@ -439,21 +359,6 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   onPressed: () => Navigator.pop(context),
                 ),
                 actions: [
-                  if (_isMotionPhoto)
-                    IconButton(
-                      icon: Icon(
-                        _isPlayingMotion
-                            ? Icons.motion_photos_pause
-                            : Icons.motion_photos_on,
-                      ),
-                      onPressed: () {
-                        if (_isPlayingMotion) {
-                          _stopVideo();
-                        } else {
-                          _playVideo();
-                        }
-                      },
-                    ),
                   IconButton(
                     icon: Icon(Icons.info_outline),
                     onPressed: () {
@@ -464,7 +369,6 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 ],
               ),
             ),
-
           if (_showUI)
             Positioned(
               bottom: 0,
@@ -472,8 +376,6 @@ class _ViewerScreenState extends State<ViewerScreen> {
               right: 0,
               child: Container(
                 color: Colors.black.withOpacity(0.5),
-                // Remove margin to allow background to extend if needed, or keep it but ensure padding handles safe area
-                // Using padding ensures the buttons are pushed up above the nav bar
                 padding: EdgeInsets.only(
                   top: 10,
                   left: 20,

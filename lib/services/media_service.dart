@@ -87,4 +87,38 @@ class MediaService {
         )
         .toList();
   }
+
+  // Fetches all assets marked as favorites across all albums.
+  Future<List<PhotoModel>> getFavorites() async {
+    final List<AssetPathEntity> paths = await PhotoManager.getAssetPathList(
+      type: RequestType.common,
+      filterOption: FilterOptionGroup(
+        orders: [OrderOption(type: OrderOptionType.createDate, asc: false)],
+        containsPathModified: true,
+      ),
+    );
+
+    if (paths.isEmpty) return [];
+
+    // The first path is usually "Recent" (all assets)
+    final AssetPathEntity allPath = paths.first;
+
+    // We fetch a large number or all, but for now let's fetch a reasonable amount
+    // or use a more specific filter if possible.
+    final List<AssetEntity> assets = await allPath.getAssetListRange(
+      start: 0,
+      end: 10000,
+    );
+    return assets
+        .where((asset) => asset.isFavorite)
+        .map(
+          (asset) => PhotoModel(
+            uid: asset.id,
+            asset: asset,
+            timeTaken: asset.createDateTime,
+            isVideo: asset.type == AssetType.video,
+          ),
+        )
+        .toList();
+  }
 }

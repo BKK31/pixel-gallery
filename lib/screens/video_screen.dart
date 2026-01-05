@@ -4,61 +4,26 @@ import 'package:photo_manager/photo_manager.dart';
 import 'package:video_player/video_player.dart';
 
 class VideoScreen extends StatefulWidget {
-  final AssetEntity? asset;
-  final File? file;
+  final AssetEntity asset;
   final bool controlsVisible;
+  final VideoPlayerController? videoController;
 
   const VideoScreen({
     super.key,
-    this.asset,
-    this.file,
+    required this.asset,
     required this.controlsVisible,
-  }) : assert(
-         asset != null || file != null,
-         "Either asset or file must be provided",
-       );
+    required this.videoController,
+  });
 
   @override
   State<VideoScreen> createState() => _VideoScreenState();
 }
 
 class _VideoScreenState extends State<VideoScreen> {
-  VideoPlayerController? _controller;
   bool _isDragging = false;
   double _dragValue = 0;
   DateTime? _lastSeekTime;
 
-  // Initializes the video player.
-  // Determines source (AssetEntity or File), sets up controller, and starts playback.
-  Future<void> _initVideo() async {
-    File? videoFile;
-    if (widget.asset != null) {
-      videoFile = await widget.asset!.file;
-    } else {
-      videoFile = widget.file;
-    }
-
-    if (videoFile == null) return;
-
-    _controller =
-        VideoPlayerController.file(
-            videoFile,
-            videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-          )
-          ..initialize().then((_) {
-            setState(() {});
-            _controller!.setLooping(true);
-            _controller!.play();
-            // Add listener to update seekbar
-            _controller!.addListener(() {
-              if (mounted && !_isDragging) {
-                setState(() {});
-              }
-            });
-          });
-  }
-
-  // Formats a duration into MM:SS string.
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final minutes = twoDigits(duration.inMinutes.remainder(60));
@@ -69,45 +34,42 @@ class _VideoScreenState extends State<VideoScreen> {
   @override
   void initState() {
     super.initState();
-    _initVideo();
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
+    widget.videoController?.addListener(() {
+      if (mounted && !_isDragging) {
+        setState(() {});
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_controller != null && _controller!.value.isInitialized) {
+    if (widget.videoController != null &&
+        widget.videoController!.value.isInitialized) {
       final currentPosition = _isDragging
           ? Duration(seconds: _dragValue.toInt())
-          : _controller!.value.position;
+          : widget.videoController!.value.position;
 
       return Stack(
         fit: StackFit.expand,
         children: [
-          // Video player centered
           Center(
             child: AspectRatio(
-              aspectRatio: _controller!.value.aspectRatio,
+              aspectRatio: widget.videoController!.value.aspectRatio,
               child: Stack(
                 children: [
-                  VideoPlayer(_controller!),
-                  // Play/Pause button in center of video
+                  VideoPlayer(widget.videoController!),
                   if (widget.controlsVisible)
                     Positioned.fill(
                       child: Center(
                         child: IconButton(
                           onPressed: () {
                             setState(() {
-                              _controller!.value.isPlaying
-                                  ? _controller!.pause()
-                                  : _controller!.play();
+                              widget.videoController!.value.isPlaying
+                                  ? widget.videoController!.pause()
+                                  : widget.videoController!.play();
                             });
                           },
-                          icon: _controller!.value.isPlaying
+                          icon: widget.videoController!.value.isPlaying
                               ? Icon(Icons.pause_circle)
                               : Icon(Icons.play_circle),
                           iconSize: 50,
@@ -119,11 +81,9 @@ class _VideoScreenState extends State<VideoScreen> {
               ),
             ),
           ),
-
-          // Seekbar and controls at bottom of screen
           if (widget.controlsVisible)
             Positioned(
-              bottom: 80, // Above your bottom overlay
+              bottom: 80,
               left: 0,
               right: 0,
               child: Container(
@@ -131,7 +91,6 @@ class _VideoScreenState extends State<VideoScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Seekbar
                     Row(
                       children: [
                         Text(
@@ -142,10 +101,12 @@ class _VideoScreenState extends State<VideoScreen> {
                           child: Slider(
                             value: _isDragging
                                 ? _dragValue
-                                : _controller!.value.position.inSeconds
-                                      .toDouble(),
+                                : widget.videoController!.value.position
+                                    .inSeconds
+                                    .toDouble(),
                             min: 0.0,
-                            max: _controller!.value.duration.inSeconds
+                            max: widget.videoController!.value.duration
+                                .inSeconds
                                 .toDouble(),
                             onChangeStart: (value) {
                               setState(() {
@@ -157,51 +118,51 @@ class _VideoScreenState extends State<VideoScreen> {
                               setState(() {
                                 _dragValue = value;
                               });
-                              // Throttled seek for visual feedback (scrubbing)
                               final now = DateTime.now();
                               if (_lastSeekTime == null ||
                                   now.difference(_lastSeekTime!) >
                                       const Duration(milliseconds: 50)) {
                                 _lastSeekTime = now;
-                                _controller!.seekTo(
+                                widget.videoController!.seekTo(
                                   Duration(seconds: value.toInt()),
                                 );
                               }
                             },
                             onChangeEnd: (value) {
-                              // Ensure final position is accurate and resume UI updates
-                              _controller!
+                              widget.videoController!
                                   .seekTo(Duration(seconds: value.toInt()))
                                   .then((_) {
-                                    setState(() {
-                                      _isDragging = false;
-                                    });
-                                  });
+                                setState(() {
+                                  _isDragging = false;
+                                });
+                              });
                             },
                             activeColor: Colors.white,
                             inactiveColor: Colors.white.withOpacity(0.3),
                           ),
                         ),
                         Text(
-                          _formatDuration(_controller!.value.duration),
+                          _formatDuration(
+                              widget.videoController!.value.duration),
                           style: TextStyle(color: Colors.white, fontSize: 12),
                         ),
                       ],
                     ),
-                    // Volume button
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         IconButton(
-                          icon: _controller!.value.volume == 0
+                          icon: widget.videoController!.value.volume == 0
                               ? Icon(Icons.volume_off)
                               : Icon(Icons.volume_up),
                           color: Colors.white,
                           iconSize: 28,
                           onPressed: () {
                             setState(() {
-                              _controller!.setVolume(
-                                _controller!.value.volume == 0 ? 1 : 0,
+                              widget.videoController!.setVolume(
+                                widget.videoController!.value.volume == 0
+                                    ? 1
+                                    : 0,
                               );
                             });
                           },
