@@ -35,6 +35,9 @@
 
 **Pixel Gallery** is a sleek, privacy-focused gallery application designed to provide a premium user experience. It leverages the power of **Material You** dynamic theming to adapt to your device's wallpaper, ensuring a seamless and personalized look. From managing your photo albums to viewing motion photos and map locations, Pixel Gallery creates a beautiful home for your memories.
 
+> [!NOTE]
+> This app implements a **Material 3 Expressive** aesthetic using community-developed packages. As official support for Material 3 Expressive is not yet provided by the Flutter team, the implementation relies on custom and community components which may differ slightly from the official specifications.
+
 ## ✨ Features
 
 - **🎨 Material You Design** - Fully adapts to your device's system colors (Android 12+).
@@ -114,6 +117,11 @@ Pixel Gallery is built with a curated list of top-tier libraries:
 - [**permission_handler**](https://pub.dev/packages/permission_handler) - Cross-platform permission handling.
 - [**device_info_plus**](https://pub.dev/packages/device_info_plus) - Device version checking.
 - [**intl**](https://pub.dev/packages/intl) - Internationalization and date formatting.
+- [**m3e_collection**](https://pub.dev/packages/m3e_collection) - Material 3 Expressive components.
+- [**flutter_floating_bottom_bar**](https://pub.dev/packages/flutter_floating_bottom_bar) - Interactive floating navigation.
+- [**font_awesome_flutter**](https://pub.dev/packages/font_awesome_flutter) - Brand icons (GitHub, etc.).
+- [**path_provider**](https://pub.dev/packages/path_provider) - Local file system access.
+- [**url_launcher**](https://pub.dev/packages/url_launcher) - Opening external links.
 
 ## 🤝 Contributing
 
