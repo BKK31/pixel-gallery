@@ -8,6 +8,7 @@ import '../screens/viewer_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/trash_service.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
 class FavouritesScreen extends StatefulWidget {
   const FavouritesScreen({super.key});
@@ -129,11 +130,17 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppBarM3E(
         title: _isSelecting
-            ? Text("${_selectedIds.length} Selected")
-            : const Text("Favourites"),
-        centerTitle: true,
+            ? Text(
+                "${_selectedIds.length} Selected",
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              )
+            : Text(
+                "Favourites",
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              ),
+        centerTitle: false,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         leading: _isSelecting
             ? IconButton(

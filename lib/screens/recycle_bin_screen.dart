@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import '../services/trash_service.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -127,15 +128,24 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppBarM3E(
         title: _isSelecting
-            ? Text("${_selectedPaths.length} Selected")
-            : Text("Recycle Bin"),
-        centerTitle: true,
+            ? Text(
+                "${_selectedPaths.length} Selected",
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              )
+            : Text(
+                "Recycle Bin",
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              ),
+        centerTitle: false,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         leading: _isSelecting
             ? IconButton(icon: Icon(Icons.close), onPressed: _clearSelection)
-            : null,
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
+              ),
         actions: _isSelecting
             ? [
                 IconButton(
@@ -151,87 +161,90 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
       ),
       body: _trashedFiles.isEmpty
           ? Center(child: Text("Recycle Bin is empty"))
-          : GridView.builder(
-              itemCount: _trashedFiles.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3, // Increased size slightly
-                mainAxisSpacing: 2,
-                crossAxisSpacing: 2,
-              ),
-              itemBuilder: (context, index) {
-                final file = _trashedFiles[index];
-                final isSelected = _selectedPaths.contains(file.path);
-                return GestureDetector(
-                  onLongPress: () {
-                    if (!_isSelecting) {
-                      setState(() => _isSelecting = true);
-                      _toggleSelection(file.path);
-                    }
-                  },
-                  onTap: () {
-                    if (_isSelecting) {
-                      _toggleSelection(file.path);
-                    } else {
-                      // Show Dialog
-                      showDialog(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: Text("Actions"),
-                          content: Text("Restore or Delete?"),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                _restore(file);
-                                Navigator.pop(context);
-                              },
-                              child: Text("Restore"),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                _deletePermanently(file);
-                                Navigator.pop(context);
-                              },
-                              child: Text(
-                                "Delete",
-                                style: TextStyle(color: Colors.red),
+          : Padding(
+              padding: const EdgeInsets.all(5),
+              child: GridView.builder(
+                itemCount: _trashedFiles.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3, // Increased size slightly
+                  mainAxisSpacing: 3,
+                  crossAxisSpacing: 3,
+                ),
+                itemBuilder: (context, index) {
+                  final file = _trashedFiles[index];
+                  final isSelected = _selectedPaths.contains(file.path);
+                  return GestureDetector(
+                    onLongPress: () {
+                      if (!_isSelecting) {
+                        setState(() => _isSelecting = true);
+                        _toggleSelection(file.path);
+                      }
+                    },
+                    onTap: () {
+                      if (_isSelecting) {
+                        _toggleSelection(file.path);
+                      } else {
+                        // Show Dialog
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: Text("Actions"),
+                            content: Text("Restore or Delete?"),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  _restore(file);
+                                  Navigator.pop(context);
+                                },
+                                child: Text("Restore"),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  _deletePermanently(file);
+                                  Navigator.pop(context);
+                                },
+                                child: Text(
+                                  "Delete",
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    },
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.file(
+                          file,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[900],
+                              child: Icon(
+                                Icons.broken_image,
+                                color: Colors.white,
+                              ),
+                            );
+                          },
+                        ),
+                        if (isSelected)
+                          Container(
+                            color: Colors.black.withOpacity(0.4),
+                            child: const Center(
+                              child: Icon(
+                                Icons.check_circle,
+                                color: Colors.blue,
+                                size: 30,
                               ),
                             ),
-                          ],
-                        ),
-                      );
-                    }
-                  },
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.file(
-                        file,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[900],
-                            child: Icon(
-                              Icons.broken_image,
-                              color: Colors.white,
-                            ),
-                          );
-                        },
-                      ),
-                      if (isSelected)
-                        Container(
-                          color: Colors.black.withOpacity(0.4),
-                          child: const Center(
-                            child: Icon(
-                              Icons.check_circle,
-                              color: Colors.blue,
-                              size: 30,
-                            ),
                           ),
-                        ),
-                    ],
-                  ),
-                );
-              },
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
     );
   }

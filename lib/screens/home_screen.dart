@@ -19,11 +19,24 @@ class _HomeScreenState extends State<HomeScreen>
   late int _selectedIndex;
   late Future<void> _initSettings;
   late TabController _tabController;
-  final List<Widget> _pages = [RecentsScreen(), AlbumsScreen()];
+
+  bool _isSelecting = false;
+  int _selectedCount = 0;
+
+  late final GlobalKey<RecentsScreenState> _recentsKey;
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
+
+    _recentsKey = GlobalKey<RecentsScreenState>();
+
+    _pages = [
+      RecentsScreen(key: _recentsKey, onSelectionChanged: _onSelectionChanged),
+      const AlbumsScreen(),
+    ];
+
     _initSettings = _loadInitialSettings();
     _tabController = TabController(length: 2, vsync: this);
   }
@@ -34,6 +47,29 @@ class _HomeScreenState extends State<HomeScreen>
       _selectedIndex = startAlbum ? 1 : 0;
       _tabController.index = _selectedIndex;
     });
+  }
+
+  void _onSelectionChanged(bool selecting, int count) {
+    setState(() {
+      _isSelecting = selecting;
+      _selectedCount = count;
+    });
+  }
+
+  void _clearSelection() {
+    _recentsKey.currentState?.clearSelections();
+    setState(() {
+      _isSelecting = false;
+      _selectedCount = 0;
+    });
+  }
+
+  void _deleteSelected() {
+    _recentsKey.currentState?.deleteSelected();
+  }
+
+  void _shareSelected() {
+    _recentsKey.currentState?.shareSelected();
   }
 
   void _navigateBottomBar(int index) {
@@ -47,9 +83,50 @@ class _HomeScreenState extends State<HomeScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            SettingsScreen(onThemeChange: widget.onThemeRefresh),
+        builder: (_) => SettingsScreen(onThemeChange: widget.onThemeRefresh),
       ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBarM3E(
+      title: _isSelecting
+          ? Text(
+              "${_selectedCount} Selected",
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            )
+          : Text(
+              "Pixel Gallery",
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            ),
+      centerTitle: _isSelecting ? false : true,
+      shapeFamily: AppBarM3EShapeFamily.round,
+      density: AppBarM3EDensity.regular,
+      backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      automaticallyImplyLeading: false,
+      leading: _isSelecting
+          ? IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: _clearSelection,
+            )
+          : const Icon(null),
+      actions: _isSelecting
+          ? [
+              IconButton(
+                icon: const Icon(Icons.share),
+                onPressed: _shareSelected,
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete),
+                onPressed: _deleteSelected,
+              ),
+            ]
+          : [
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: _openSettings,
+              ),
+            ],
     );
   }
 
@@ -61,61 +138,35 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<void>(
-      future: _initSettings,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    return Scaffold(
+      appBar: _buildAppBar(context),
+      body: FutureBuilder<void>(
+        future: _initSettings,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        return Scaffold(
-          appBar: AppBarM3E(
-            title: const Text(
-              "Pixel Gallery",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            centerTitle: true,
-            shapeFamily: AppBarM3EShapeFamily.round,
-            density: AppBarM3EDensity.regular,
-            backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-            actions: [
-              IconButton(
-                onPressed: () {
-                  _openSettings();
-                },
-                icon: const Icon(Icons.settings),
-              ),
-            ],
-          ),
-          body: BottomBar(
+          return BottomBar(
             fit: StackFit.expand,
-            icon: (width, height) => Center(
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                onPressed: null,
-                icon: Icon(Icons.arrow_upward_rounded, size: width),
-              ),
-            ),
+            icon: (width, height) =>
+                Center(child: Icon(Icons.arrow_upward_rounded, size: width)),
             borderRadius: BorderRadius.circular(500),
             duration: const Duration(seconds: 1),
             curve: Curves.decelerate,
             showIcon: true,
             width: MediaQuery.of(context).size.width * 0.8,
-            barColor: Theme.of(context).colorScheme.surface,
+            barColor: Theme.of(
+              context,
+            ).colorScheme.inversePrimary.withOpacity(0.2),
             start: 2,
             end: 0,
             offset: 10,
             barAlignment: Alignment.bottomCenter,
             iconHeight: 35,
             iconWidth: 35,
-            reverse: false,
             hideOnScroll: true,
-            scrollOpposite: false,
             respectSafeArea: true,
-            onBottomBarHidden: () {},
-            onBottomBarShown: () {},
             body: (context, controller) => TabBarView(
               controller: _tabController,
               dragStartBehavior: DragStartBehavior.down,
@@ -125,7 +176,8 @@ class _HomeScreenState extends State<HomeScreen>
             child: TabBar(
               controller: _tabController,
               onTap: _navigateBottomBar,
-              indicatorPadding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
+              dividerColor: Colors.transparent,
+              indicatorPadding: const EdgeInsets.symmetric(horizontal: 6),
               indicator: UnderlineTabIndicator(
                 borderSide: BorderSide(
                   color: Theme.of(context).colorScheme.primary,
@@ -146,9 +198,9 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ],
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

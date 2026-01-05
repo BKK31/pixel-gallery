@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback? onThemeChange;
@@ -62,13 +64,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  Future<void> _openSourceCode() async {
+    const url = 'https://github.com/bkk31/pixel-gallery';
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw 'Could not launch $url';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Settings"),
+      appBar: AppBarM3E(
+        title: const Text(
+          "Settings",
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButtonM3E(
+            icon: Icon(Icons.code),
+            tooltip: "Source Code",
+            onPressed: _openSourceCode,
+          ),
+        ],
       ),
       body: ListView(
         children: [

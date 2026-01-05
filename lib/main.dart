@@ -1,12 +1,12 @@
-import 'package:flutter/services.dart';
-import 'package:lumina_gallery/screens/single_viewer_screen.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:lumina_gallery/screens/home_screen.dart';
+import 'package:flutter/services.dart';
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:lumina_gallery/screens/home_screen.dart';
+import 'package:lumina_gallery/screens/single_viewer_screen.dart';
 import 'screens/settings_screen.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
@@ -20,44 +20,43 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late Future<bool> _materialYouFuture;
-  static const platform = MethodChannel('com.pixel.gallery/open_file');
-  static const eventChannel = EventChannel(
+
+  static const MethodChannel platform = MethodChannel(
+    'com.pixel.gallery/open_file',
+  );
+  static const EventChannel eventChannel = EventChannel(
     'com.pixel.gallery/open_file_events',
   );
-  String? _initialFilePath;
 
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  String? _initialFilePath;
+
+  /// Default fallback seed color when Material You is OFF
+  static const Color _defaultSeedColor = Color(0xFFB2C5FF);
 
   @override
   void initState() {
     super.initState();
-    // Fetch user preference on startup (Material You enabled/disabled)
+
     _materialYouFuture = SettingsScreen.getMaterialYou();
 
-    // Check initial file (cold start)
     _checkInitialFile();
 
-    // Listen for new intent events while app is running (hot start)
     eventChannel.receiveBroadcastStream().listen(
       (event) {
         if (event is String) {
-          debugPrint("Received new file intent: $event");
-          // Directly navigate using the key, bypassing `setState` / `home` swap issues
           navigatorKey.currentState?.pushAndRemoveUntil(
             MaterialPageRoute(
-              builder: (context) =>
+              builder: (_) =>
                   SingleViewerScreen(key: ValueKey(event), file: File(event)),
             ),
-            (route) =>
-                false, // Clear stack: Back button exits app or returns to Home?
-            // Ideally we want Back -> Home? If so, push on top of Home.
-            // But "getInitialFile" logic suggests SingleViewer is the ROOT if file exists.
-            // Let's stick to "SingleViewer is the only screen" for this session to match standard gallery behavior.
+            (route) => false,
           );
         }
       },
-      onError: (dynamic error) {
-        debugPrint('Received error: ${error.message}');
+      onError: (error) {
+        debugPrint('Event channel error: $error');
       },
     );
   }
@@ -81,14 +80,33 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  /// Locks switch visuals so Material You only changes colors
+  SwitchThemeData _buildSwitchTheme(ColorScheme scheme) {
+    return SwitchThemeData(
+      thumbColor: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.selected)) {
+          return scheme.primary;
+        }
+        return scheme.outline;
+      }),
+      trackColor: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.selected)) {
+          return scheme.primary.withOpacity(0.5);
+        }
+        return scheme.surfaceVariant;
+      }),
+      overlayColor: MaterialStateProperty.all(Colors.transparent),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
       future: _materialYouFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          // Show loading screen while preferences are loading
           return const MaterialApp(
+            debugShowCheckedModeBanner: false,
             home: Scaffold(body: Center(child: CircularProgressIndicator())),
           );
         }
@@ -97,32 +115,41 @@ class _MyAppState extends State<MyApp> {
 
         return DynamicColorBuilder(
           builder: (lightDynamic, darkDynamic) {
+            final ColorScheme lightScheme =
+                (useMaterialYou && lightDynamic != null)
+                ? lightDynamic
+                : ColorScheme.fromSeed(seedColor: _defaultSeedColor);
+
+            final ColorScheme darkScheme =
+                (useMaterialYou && darkDynamic != null)
+                ? darkDynamic
+                : ColorScheme.fromSeed(
+                    seedColor: _defaultSeedColor,
+                    brightness: Brightness.dark,
+                  );
+
             return MaterialApp(
               navigatorKey: navigatorKey,
-              title: 'Pixel Gallery',
-              theme: ThemeData(
-                // Use dynamic scheme if enabled and available, else fallback to deepPurple
-                colorScheme: (useMaterialYou && lightDynamic != null)
-                    ? lightDynamic
-                    : ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-                useMaterial3: useMaterialYou,
-              ),
-              darkTheme: ThemeData(
-                // Dark mode dynamic scheme
-                colorScheme: (useMaterialYou && darkDynamic != null)
-                    ? darkDynamic
-                    : ColorScheme.fromSeed(
-                        seedColor: Colors.deepPurple,
-                        brightness: Brightness.dark,
-                      ),
-                useMaterial3: useMaterialYou,
-              ),
               debugShowCheckedModeBanner: false,
+              title: 'Pixel Gallery',
+
+              /// 🌞 LIGHT THEME
+              theme: ThemeData(
+                useMaterial3: true,
+                colorScheme: lightScheme,
+                switchTheme: _buildSwitchTheme(lightScheme),
+              ),
+
+              /// 🌙 DARK THEME
+              darkTheme: ThemeData(
+                useMaterial3: true,
+                colorScheme: darkScheme,
+                switchTheme: _buildSwitchTheme(darkScheme),
+              ),
+
               home: _initialFilePath != null
                   ? SingleViewerScreen(
-                      key: ValueKey(
-                        _initialFilePath,
-                      ), // Force rebuild on new file
+                      key: ValueKey(_initialFilePath),
                       file: File(_initialFilePath!),
                     )
                   : HomeScreen(onThemeRefresh: _refreshTheme),

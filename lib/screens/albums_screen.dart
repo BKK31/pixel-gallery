@@ -62,7 +62,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.only(
-              left: 5,
+              left: 10,
               right: 10,
               top: 10,
               bottom: 10,
