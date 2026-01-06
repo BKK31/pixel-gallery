@@ -12,10 +12,14 @@ class RecycleBinScreen extends StatefulWidget {
   State<RecycleBinScreen> createState() => _RecycleBinScreenState();
 }
 
-class _RecycleBinScreenState extends State<RecycleBinScreen> {
+class _RecycleBinScreenState extends State<RecycleBinScreen>
+    with AutomaticKeepAliveClientMixin {
   List<String> _trashedPaths = [];
   List<File> _trashedFiles = [];
   final TrashService _trashService = TrashService();
+
+  @override
+  bool get wantKeepAlive => true;
 
   // Selection
   bool _isSelecting = false;
@@ -127,6 +131,7 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return PopScope(
       canPop: !_isSelecting,
       onPopInvokedWithResult: (didPop, result) {
@@ -178,90 +183,114 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
         ),
         body: _trashedFiles.isEmpty
             ? const Center(child: Text("Recycle Bin is empty"))
-            : Padding(
-                padding: const EdgeInsets.all(5),
-                child: GridView.builder(
-                  itemCount: _trashedFiles.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3, // Increased size slightly
-                    mainAxisSpacing: 3,
-                    crossAxisSpacing: 3,
+            : Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${_trashedFiles.length} items',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                   ),
-                  itemBuilder: (context, index) {
-                    final file = _trashedFiles[index];
-                    final isSelected = _selectedPaths.contains(file.path);
-                    return GestureDetector(
-                      onLongPress: () {
-                        if (!_isSelecting) {
-                          setState(() => _isSelecting = true);
-                          _toggleSelection(file.path);
-                        }
-                      },
-                      onTap: () {
-                        if (_isSelecting) {
-                          _toggleSelection(file.path);
-                        } else {
-                          // Show Dialog
-                          showDialog(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text("Actions"),
-                              content: const Text("Restore or Delete?"),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    _restore(file);
-                                    Navigator.pop(context);
-                                  },
-                                  child: const Text("Restore"),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    _deletePermanently(file);
-                                    Navigator.pop(context);
-                                  },
-                                  child: const Text(
-                                    "Delete",
-                                    style: TextStyle(color: Colors.red),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(5),
+                      child: GridView.builder(
+                        itemCount: _trashedFiles.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3, // Increased size slightly
+                              mainAxisSpacing: 3,
+                              crossAxisSpacing: 3,
+                            ),
+                        itemBuilder: (context, index) {
+                          final file = _trashedFiles[index];
+                          final isSelected = _selectedPaths.contains(file.path);
+                          return GestureDetector(
+                            onLongPress: () {
+                              if (!_isSelecting) {
+                                setState(() => _isSelecting = true);
+                                _toggleSelection(file.path);
+                              }
+                            },
+                            onTap: () {
+                              if (_isSelecting) {
+                                _toggleSelection(file.path);
+                              } else {
+                                // Show Dialog
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text("Actions"),
+                                    content: const Text("Restore or Delete?"),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          _restore(file);
+                                          Navigator.pop(context);
+                                        },
+                                        child: const Text("Restore"),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          _deletePermanently(file);
+                                          Navigator.pop(context);
+                                        },
+                                        child: const Text(
+                                          "Delete",
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
                                   ),
+                                );
+                              }
+                            },
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.file(
+                                  file,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey[900],
+                                      child: const Icon(
+                                        Icons.broken_image,
+                                        color: Colors.white,
+                                      ),
+                                    );
+                                  },
                                 ),
+                                if (isSelected)
+                                  Container(
+                                    color: Colors.black.withOpacity(0.4),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.check_circle,
+                                        color: Colors.blue,
+                                        size: 30,
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
                           );
-                        }
-                      },
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.file(
-                            file,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey[900],
-                                child: const Icon(
-                                  Icons.broken_image,
-                                  color: Colors.white,
-                                ),
-                              );
-                            },
-                          ),
-                          if (isSelected)
-                            Container(
-                              color: Colors.black.withOpacity(0.4),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.check_circle,
-                                  color: Colors.blue,
-                                  size: 30,
-                                ),
-                              ),
-                            ),
-                        ],
+                        },
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                ],
               ),
       ),
     );

@@ -14,6 +14,7 @@ import 'package:video_player/video_player.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latLng;
 import 'package:native_exif/native_exif.dart';
+import 'package:motion_photos/motion_photos.dart';
 
 class ViewerScreen extends StatefulWidget {
   final int index;
@@ -38,6 +39,11 @@ class _ViewerScreenState extends State<ViewerScreen> {
   late List<PhotoModel> _photos;
   bool _isZoomed = false;
   VideoPlayerController? _videoController;
+
+  // Motion Photo state
+  bool _isMotionPhoto = false;
+  bool _isPlayingMotion = false;
+  VideoPlayerController? _motionController;
 
   int _page = 0;
 
@@ -71,6 +77,77 @@ class _ViewerScreenState extends State<ViewerScreen> {
           setState(() {});
         }
       }
+    }
+  }
+
+  Future<void> _checkMotionPhoto(int index) async {
+    // Reset state for new page
+    if (mounted) {
+      setState(() {
+        _isMotionPhoto = false;
+        _isPlayingMotion = false;
+        _motionController?.dispose();
+        _motionController = null;
+      });
+    }
+
+    final photo = _photos[index];
+    if (photo.asset.type == AssetType.video) return;
+
+    File? file = await photo.asset.file;
+    if (file != null) {
+      bool isMotion = false;
+      try {
+        final motionPhotos = MotionPhotos(file.path);
+        isMotion = await motionPhotos.isMotionPhoto();
+      } catch (e) {
+        debugPrint("Error checking motion photo: $e");
+      }
+
+      if (mounted && _currentIndex == index) {
+        setState(() {
+          _isMotionPhoto = isMotion;
+        });
+      }
+    }
+  }
+
+  Future<void> _playVideo() async {
+    if (!_isMotionPhoto) return;
+
+    final photo = _photos[_currentIndex];
+    final file = await photo.asset.file;
+    if (file == null) return;
+
+    try {
+      final motionPhotos = MotionPhotos(file.path);
+      final videoFile = await motionPhotos.getMotionVideoFile(
+        await getTemporaryDirectory(),
+      );
+
+      _motionController = VideoPlayerController.file(videoFile);
+      await _motionController!.initialize();
+      await _motionController!.setLooping(true);
+      await _motionController!.play();
+
+      if (mounted) {
+        setState(() {
+          _isPlayingMotion = true;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error playing video: $e");
+    }
+  }
+
+  void _stopVideo() {
+    _motionController?.pause();
+    _motionController?.dispose();
+    _motionController = null;
+    if (mounted) {
+      setState(() {
+        _isPlayingMotion = false;
+      });
     }
   }
 
@@ -279,12 +356,14 @@ class _ViewerScreenState extends State<ViewerScreen> {
     _page = (widget.initialPhotos.length / 50).ceil() - 1;
     if (_page < 0) _page = 0;
     _initializeVideoController(widget.index);
+    _checkMotionPhoto(widget.index);
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _videoController?.dispose();
+    _motionController?.dispose();
     super.dispose();
   }
 
@@ -306,10 +385,12 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   : const PageScrollPhysics(),
               controller: _controller,
               onPageChanged: (index) {
+                _stopVideo(); // Stop any playing motion video
                 setState(() {
                   _currentIndex = index;
                 });
                 _initializeVideoController(index);
+                _checkMotionPhoto(index);
                 if (index >= _photos.length - 5) {
                   _loadMore();
                 }
@@ -326,21 +407,39 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   );
                 }
 
-                return PhotoView(
-                  scaleStateChangedCallback: (state) {
-                    setState(() {
-                      _isZoomed = state != PhotoViewScaleState.initial;
-                    });
-                  },
-                  imageProvider: AssetEntityImageProvider(
-                    photo.asset,
-                    isOriginal: true,
-                  ),
-                  minScale: PhotoViewComputedScale.contained,
-                  maxScale: PhotoViewComputedScale.covered * 4,
-                  heroAttributes: PhotoViewHeroAttributes(
-                    tag: photo.asset.id,
-                  ),
+                // Stack Logic: Photo is base, Video is overlay for Motion Photos
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    PhotoView(
+                      scaleStateChangedCallback: (state) {
+                        setState(() {
+                          _isZoomed = state != PhotoViewScaleState.initial;
+                        });
+                      },
+                      imageProvider: AssetEntityImageProvider(
+                        photo.asset,
+                        isOriginal: true,
+                      ),
+                      minScale: PhotoViewComputedScale.contained,
+                      maxScale: PhotoViewComputedScale.covered * 4,
+                      heroAttributes: PhotoViewHeroAttributes(
+                        tag: photo.asset.id,
+                      ),
+                    ),
+                    if (index == _currentIndex &&
+                        _isPlayingMotion &&
+                        _motionController != null &&
+                        _motionController!.value.isInitialized)
+                      Positioned.fill(
+                        child: Center(
+                          child: AspectRatio(
+                            aspectRatio: _motionController!.value.aspectRatio,
+                            child: VideoPlayer(_motionController!),
+                          ),
+                        ),
+                      ),
+                  ],
                 );
               },
             ),
@@ -359,6 +458,21 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   onPressed: () => Navigator.pop(context),
                 ),
                 actions: [
+                  if (_isMotionPhoto)
+                    IconButton(
+                      icon: Icon(
+                        _isPlayingMotion
+                            ? Icons.motion_photos_pause
+                            : Icons.motion_photos_on,
+                      ),
+                      onPressed: () {
+                        if (_isPlayingMotion) {
+                          _stopVideo();
+                        } else {
+                          _playVideo();
+                        }
+                      },
+                    ),
                   IconButton(
                     icon: Icon(Icons.info_outline),
                     onPressed: () {

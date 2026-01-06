@@ -17,20 +17,22 @@ class RecentsScreen extends StatefulWidget {
   RecentsScreenState createState() => RecentsScreenState();
 }
 
-class RecentsScreenState extends State<RecentsScreen> {
+class RecentsScreenState extends State<RecentsScreen>
+    with AutomaticKeepAliveClientMixin {
   final MediaService _service = MediaService();
   final TrashService _trashService = TrashService();
   final ScrollController _scrollController = ScrollController();
 
   List<PhotoModel> _photos = [];
+  List<dynamic> _groupedItems = [];
   AssetPathEntity? _currentAlbum;
 
   bool _loading = true;
   bool _isSelecting = false;
   final Set<String> _selectedIds = {};
 
-  int _page = 0;
-  bool _isLoadingMore = false;
+  @override
+  bool get wantKeepAlive => true;
 
   Future<void> _init() async {
     final perm = await _service.requestPermission();
@@ -39,35 +41,15 @@ class RecentsScreenState extends State<RecentsScreen> {
 
     if (!perm) return;
 
-    _page = 0;
     final albums = await _service.getPhotos();
     _currentAlbum = albums.first;
 
-    final media = await _service.getMedia(album: _currentAlbum!, page: 0);
+    final media = await _service.getAllMedia(album: _currentAlbum!);
 
     setState(() {
       _photos = media.toList();
+      _groupedItems = MediaService.groupPhotosByDate(_photos);
       _loading = false;
-    });
-  }
-
-  Future<void> _loadMore() async {
-    if (_isLoadingMore) return;
-    setState(() {
-      _isLoadingMore = true;
-    });
-    _page++;
-
-    final media = await _service.getMedia(album: _currentAlbum!, page: _page);
-
-    if (media.isNotEmpty) {
-      setState(() {
-        _photos.addAll(media);
-      });
-    }
-
-    setState(() {
-      _isLoadingMore = false;
     });
   }
 
@@ -135,13 +117,6 @@ class RecentsScreenState extends State<RecentsScreen> {
 
     PhotoManager.addChangeCallback((MethodCall call) => _init());
     PhotoManager.startChangeNotify();
-
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 500) {
-        _loadMore();
-      }
-    });
   }
 
   @override
@@ -153,75 +128,135 @@ class RecentsScreenState extends State<RecentsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(5),
-      child: GridView.builder(
-        controller: _scrollController,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          crossAxisSpacing: 3,
-          mainAxisSpacing: 3,
-        ),
-        itemCount: _photos.length,
-        itemBuilder: (context, index) {
-          final photo = _photos[index];
-          final isSelected = _selectedIds.contains(photo.asset.id);
-
-          return GestureDetector(
-            onLongPress: () => _toggleSelection(photo.asset.id),
-            onTap: () async {
-              if (_isSelecting) {
-                _toggleSelection(photo.asset.id);
-              } else {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ViewerScreen(
-                      index: index,
-                      initialPhotos: List.unmodifiable(_photos),
-                      sourceAlbums: _currentAlbum!,
+    return Column(
+      children: [
+        if (_currentAlbum != null)
+          FutureBuilder<int>(
+            future: _currentAlbum!.assetCountAsync,
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${snapshot.data} photos',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 );
               }
+              return const SizedBox.shrink();
             },
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                AssetEntityImage(
-                  photo.asset,
-                  thumbnailSize: const ThumbnailSize.square(180),
-                  thumbnailFormat: ThumbnailFormat.jpeg,
-                  fit: BoxFit.cover,
-                ),
-                if (isSelected)
-                  Container(
-                    color: Colors.black.withOpacity(0.4),
-                    child: const Center(
-                      child: Icon(
-                        Icons.check_circle,
-                        color: Colors.blue,
-                        size: 30,
+          ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5),
+            child: ListView.builder(
+              cacheExtent: 1500,
+              controller: _scrollController,
+              itemCount: _groupedItems.length,
+              itemBuilder: (context, index) {
+                final item = _groupedItems[index];
+
+                if (item is String) {
+                  return Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      item,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                if (photo.isVideo && !isSelected)
-                  const Center(
-                    child: Icon(
-                      Icons.play_circle_fill_outlined,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
-              ],
+                  );
+                } else if (item is List<PhotoModel>) {
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 3,
+                          mainAxisSpacing: 3,
+                        ),
+                    itemCount: item.length,
+                    itemBuilder: (context, idx) {
+                      final photo = item[idx];
+                      final globalIndex = _photos.indexOf(photo);
+                      final isSelected = _selectedIds.contains(photo.asset.id);
+
+                      return GestureDetector(
+                        onLongPress: () => _toggleSelection(photo.asset.id),
+                        onTap: () async {
+                          if (_isSelecting) {
+                            _toggleSelection(photo.asset.id);
+                          } else {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ViewerScreen(
+                                  index: globalIndex,
+                                  initialPhotos: List.unmodifiable(_photos),
+                                  sourceAlbums: _currentAlbum!,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            AssetEntityImage(
+                              photo.asset,
+                              thumbnailSize: const ThumbnailSize.square(180),
+                              thumbnailFormat: ThumbnailFormat.jpeg,
+                              fit: BoxFit.cover,
+                            ),
+                            if (isSelected)
+                              Container(
+                                color: Colors.black.withOpacity(0.4),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.check_circle,
+                                    color: Colors.blue,
+                                    size: 30,
+                                  ),
+                                ),
+                              ),
+                            if (photo.isVideo && !isSelected)
+                              const Center(
+                                child: Icon(
+                                  Icons.play_circle_fill_outlined,
+                                  color: Colors.white,
+                                  size: 30,
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                }
+                return const SizedBox.shrink();
+              },
             ),
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -5,7 +5,6 @@ import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import '../services/media_service.dart';
 import '../models/photo_model.dart';
-import 'package:intl/intl.dart';
 import '../screens/viewer_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -27,8 +26,6 @@ class _PhotoScreenState extends State<PhotoScreen> {
   bool _loading = true;
 
   ScrollController _scrollController = ScrollController();
-  int _page = 0;
-  bool _isLoadingMore = false;
 
   final TrashService _trashService = TrashService();
 
@@ -44,64 +41,14 @@ class _PhotoScreenState extends State<PhotoScreen> {
     if (!perm) {
       return;
     }
-    final media = await _service.getMedia(album: widget.album, page: 0);
+    final media = await _service.getAllMedia(album: widget.album);
     // Filter out assets that are currently in the trash
     final filteredMedia = media.toList();
     setState(() {
       _photos = filteredMedia;
-      _groupedItems = _groupedPhotos(filteredMedia);
+      _groupedItems = MediaService.groupPhotosByDate(filteredMedia);
       _loading = false;
     });
-  }
-
-  Future<void> _loadMore() async {
-    // Load next page of assets and append to the list
-    if (_isLoadingMore) return;
-    setState(() {
-      _isLoadingMore = true;
-    });
-    _page++;
-
-    final media = await _service.getMedia(album: widget.album, page: _page);
-    final filteredMedia = media
-        .where((p) => !_trashService.isTrashed(p.asset.id))
-        .toList();
-
-    if (media.isNotEmpty) {
-      setState(() {
-        _photos.addAll(filteredMedia);
-        _groupedItems = _groupedPhotos(_photos);
-      });
-    }
-
-    setState(() {
-      _isLoadingMore = false;
-    });
-  }
-
-  // Groups a flat list of photos by their date (Month-Day-Year).
-  // Returns a mixed list of Strings (headers) and List<PhotoModel> (grid rows).
-  List<dynamic> _groupedPhotos(List<PhotoModel> photos) {
-    // Group photos by date to display date headers
-    String? lastDateLabel;
-    List<dynamic> grouped = [];
-    List<PhotoModel> currentDayPhotos = [];
-    for (var photo in photos) {
-      var dateLabel = DateFormat('MMMM d, yyyy').format(photo.timeTaken);
-      if (dateLabel != lastDateLabel) {
-        if (currentDayPhotos.isNotEmpty) {
-          grouped.add(List<PhotoModel>.from(currentDayPhotos));
-          currentDayPhotos.clear();
-        }
-        grouped.add(dateLabel);
-        lastDateLabel = dateLabel;
-      }
-      currentDayPhotos.add(photo);
-    }
-    if (currentDayPhotos.isNotEmpty) {
-      grouped.add(currentDayPhotos);
-    }
-    return grouped;
   }
 
   void _onGalleryChange(MethodCall call) {
@@ -174,14 +121,6 @@ class _PhotoScreenState extends State<PhotoScreen> {
     // Listen for external gallery changes (e.g., new photos)
     PhotoManager.addChangeCallback(_onGalleryChange);
     PhotoManager.startChangeNotify();
-
-    _scrollController.addListener(() {
-      // Infinite scroll listener
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 500) {
-        _loadMore();
-      }
-    });
   }
 
   @override
@@ -247,104 +186,141 @@ class _PhotoScreenState extends State<PhotoScreen> {
                 ]
               : [],
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(5),
-          child: ListView.builder(
-            itemCount: _groupedItems.length,
-            controller: _scrollController,
-            itemBuilder: (context, index) {
-              final item = _groupedItems[index];
-
-              if (item is String) {
-                return Container(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(
-                    item,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+        body: Column(
+          children: [
+            FutureBuilder<int>(
+              future: widget.album.assetCountAsync,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
-                  ),
-                );
-              } else if (item is List<PhotoModel>) {
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    crossAxisSpacing: 3,
-                    mainAxisSpacing: 3,
-                  ),
-                  itemCount: item.length,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${snapshot.data} items',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(5),
+                child: ListView.builder(
+                  cacheExtent: 1500,
+                  itemCount: _groupedItems.length,
+                  controller: _scrollController,
                   itemBuilder: (context, index) {
-                    final photo = item[index];
-                    final globalIndex = _photos.indexOf(photo);
-                    final isSelected = _selectedIds.contains(photo.asset.id);
+                    final item = _groupedItems[index];
 
-                    return GestureDetector(
-                      onLongPress: () {
-                        if (!_isSelecting) {
-                          setState(() {
-                            _isSelecting = true;
-                          });
-                          _toggleSelection(photo.asset.id);
-                        }
-                      },
-                      onTap: () async {
-                        if (_isSelecting) {
-                          _toggleSelection(photo.asset.id);
-                        } else {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ViewerScreen(
-                                index: globalIndex,
-                                initialPhotos: _photos,
-                                sourceAlbums: widget.album,
-                              ),
+                    if (item is String) {
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                          item,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    } else if (item is List<PhotoModel>) {
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 4,
+                              crossAxisSpacing: 3,
+                              mainAxisSpacing: 3,
+                            ),
+                        itemCount: item.length,
+                        itemBuilder: (context, index) {
+                          final photo = item[index];
+                          final globalIndex = _photos.indexOf(photo);
+                          final isSelected = _selectedIds.contains(
+                            photo.asset.id,
+                          );
+
+                          return GestureDetector(
+                            onLongPress: () {
+                              if (!_isSelecting) {
+                                setState(() {
+                                  _isSelecting = true;
+                                });
+                                _toggleSelection(photo.asset.id);
+                              }
+                            },
+                            onTap: () async {
+                              if (_isSelecting) {
+                                _toggleSelection(photo.asset.id);
+                              } else {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ViewerScreen(
+                                      index: globalIndex,
+                                      initialPhotos: _photos,
+                                      sourceAlbums: widget.album,
+                                    ),
+                                  ),
+                                );
+                                // Update UI to reflect changes (e.g. favorites) without resetting scroll
+                                setState(() {});
+                              }
+                            },
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                AssetEntityImage(
+                                  photo.asset,
+                                  isOriginal: false,
+                                  thumbnailSize: const ThumbnailSize.square(
+                                    200,
+                                  ),
+                                  fit: BoxFit.cover,
+                                ),
+                                if (isSelected)
+                                  Container(
+                                    color: Colors.black.withOpacity(0.4),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.check_circle,
+                                        color: Colors.blue,
+                                        size: 30,
+                                      ),
+                                    ),
+                                  ),
+                                if (photo.isVideo && !isSelected)
+                                  const Center(
+                                    child: Icon(
+                                      Icons.play_circle_fill_outlined,
+                                      color: Colors.white,
+                                      size: 30,
+                                    ),
+                                  ),
+                              ],
                             ),
                           );
-                          // Update UI to reflect changes (e.g. favorites) without resetting scroll
-                          setState(() {});
-                        }
-                      },
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          AssetEntityImage(
-                            photo.asset,
-                            isOriginal: false,
-                            thumbnailSize: const ThumbnailSize.square(200),
-                            fit: BoxFit.cover,
-                          ),
-                          if (isSelected)
-                            Container(
-                              color: Colors.black.withOpacity(0.4),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.check_circle,
-                                  color: Colors.blue,
-                                  size: 30,
-                                ),
-                              ),
-                            ),
-                          if (photo.isVideo && !isSelected)
-                            const Center(
-                              child: Icon(
-                                Icons.play_circle_fill_outlined,
-                                color: Colors.white,
-                                size: 30,
-                              ),
-                            ),
-                        ],
-                      ),
-                    );
+                        },
+                      );
+                    }
+                    return const SizedBox.shrink();
                   },
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

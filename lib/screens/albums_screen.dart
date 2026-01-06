@@ -14,10 +14,14 @@ class AlbumsScreen extends StatefulWidget {
   State<AlbumsScreen> createState() => _AlbumsScreenState();
 }
 
-class _AlbumsScreenState extends State<AlbumsScreen> {
+class _AlbumsScreenState extends State<AlbumsScreen>
+    with AutomaticKeepAliveClientMixin {
   List<AssetPathEntity> _albums = [];
   bool _loading = true;
   final MediaService _service = MediaService();
+
+  @override
+  bool get wantKeepAlive => true;
 
   // Initializes the screen: requests permissions and fetches all albums.
   Future<void> _init() async {
@@ -33,6 +37,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
   }
 
   void _onGalleryChange(MethodCall call) {
+    _service.clearCache();
     _init();
   }
 
@@ -52,6 +57,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }

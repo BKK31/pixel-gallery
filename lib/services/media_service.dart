@@ -1,9 +1,18 @@
 import 'package:photo_manager/photo_manager.dart';
 import '../models/photo_model.dart';
+import 'package:intl/intl.dart';
 
 // Service responsible for fetching and managing media assets (photos/videos)
 // and albums using PhotoManager.
 class MediaService {
+  // Singleton instance
+  static final MediaService _instance = MediaService._internal();
+  factory MediaService() => _instance;
+  MediaService._internal();
+
+  // Cache for albums to provide instant access
+  List<AssetPathEntity>? _cachedAlbums;
+
   // Options for filtering and sorting assets (Date Descending).
   final FilterOptionGroup _filterOption = FilterOptionGroup(
     orders: [
@@ -11,6 +20,11 @@ class MediaService {
       OrderOption(type: OrderOptionType.updateDate, asc: false),
     ],
   );
+
+  // Clears the internal cache, useful when gallery changes are detected.
+  void clearCache() {
+    _cachedAlbums = null;
+  }
 
   // Requests permissions to access the device's photo library.
   // Returns true if access is granted.
@@ -25,11 +39,13 @@ class MediaService {
 
   // Fetches a list of asset paths (albums), typically starting with "Recent".
   Future<List<AssetPathEntity>> getPhotos() async {
+    if (_cachedAlbums != null) return _cachedAlbums!;
     // Fetch recent assets (photos and videos) with the defined filter options
     final List<AssetPathEntity> paths = await PhotoManager.getAssetPathList(
       type: RequestType.common,
       filterOption: _filterOption,
     );
+    _cachedAlbums = paths;
     return paths;
   }
 
@@ -37,11 +53,7 @@ class MediaService {
   // Currently sorts alphabetically and excludes the first album (typically "Recents")
   // from the returned list.
   Future<List<AssetPathEntity>> getAlbums() async {
-    // Fetch all albums, utilizing RequestType.common to include ONLY images and videos (no audio)
-    final List<AssetPathEntity> paths = await PhotoManager.getAssetPathList(
-      type: RequestType.common,
-      filterOption: _filterOption,
-    );
+    final List<AssetPathEntity> paths = await getPhotos();
 
     if (paths.isEmpty) return [];
 
@@ -49,6 +61,7 @@ class MediaService {
 
     for (final path in paths) {
       // Use assetCountAsync as assetCount is deprecated/removed in newer versions
+      // We don't cache counts as they change, but we load them once per fetch
       final int count = await path.assetCountAsync;
       if (count > 0 && !path.isAll) {
         filteredAlbums.add(path);
@@ -63,6 +76,26 @@ class MediaService {
     return filteredAlbums;
   }
 
+  // Fetches all media assets from a given album at once.
+  // This enables continuous scrolling without pagination breaks.
+  Future<List<PhotoModel>> getAllMedia({required AssetPathEntity album}) async {
+    final int count = await album.assetCountAsync;
+    final List<AssetEntity> assets = await album.getAssetListRange(
+      start: 0,
+      end: count,
+    );
+    return assets
+        .map(
+          (asset) => PhotoModel(
+            uid: asset.id,
+            asset: asset,
+            timeTaken: asset.createDateTime,
+            isVideo: asset.type == AssetType.video,
+          ),
+        )
+        .toList();
+  }
+
   // Fetches specific media assets from a given album.
   // Supports pagination.
   // Returns a list of PhotoModel objects.
@@ -71,7 +104,6 @@ class MediaService {
     required int page,
     int size = 50,
   }) async {
-    // Fetch a page of assets from a specific album and map them to PhotoModel
     final List<AssetEntity> assets = await album.getAssetListPaged(
       page: page,
       size: size,
@@ -120,5 +152,29 @@ class MediaService {
           ),
         )
         .toList();
+  }
+
+  // Groups a flat list of photos by their date (Month-Day-Year).
+  // Returns a mixed list of Strings (headers) and List<PhotoModel> (grid rows).
+  static List<dynamic> groupPhotosByDate(List<PhotoModel> photos) {
+    String? lastDateLabel;
+    List<dynamic> grouped = [];
+    List<PhotoModel> currentDayPhotos = [];
+    for (var photo in photos) {
+      var dateLabel = DateFormat('MMMM d, yyyy').format(photo.timeTaken);
+      if (dateLabel != lastDateLabel) {
+        if (currentDayPhotos.isNotEmpty) {
+          grouped.add(List<PhotoModel>.from(currentDayPhotos));
+          currentDayPhotos.clear();
+        }
+        grouped.add(dateLabel);
+        lastDateLabel = dateLabel;
+      }
+      currentDayPhotos.add(photo);
+    }
+    if (currentDayPhotos.isNotEmpty) {
+      grouped.add(currentDayPhotos);
+    }
+    return grouped;
   }
 }
