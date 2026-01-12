@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lumina_gallery/models/photo_model.dart';
 import 'package:lumina_gallery/screens/viewer_screen.dart';
 import 'package:lumina_gallery/services/media_service.dart';
 import 'package:lumina_gallery/services/trash_service.dart';
-import 'package:photo_manager/photo_manager.dart';
-import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
+import 'package:lumina_gallery/models/album_model.dart';
+import 'package:lumina_gallery/widgets/aves_entry_image.dart';
 import 'package:share_plus/share_plus.dart';
+import 'dart:async';
 
 class RecentsScreen extends StatefulWidget {
   final Function(bool, int)? onSelectionChanged;
@@ -25,32 +25,122 @@ class RecentsScreenState extends State<RecentsScreen>
 
   List<PhotoModel> _photos = [];
   List<dynamic> _groupedItems = [];
-  AssetPathEntity? _currentAlbum;
+  AlbumModel? _currentAlbum;
 
   bool _loading = true;
   bool _isSelecting = false;
   final Set<String> _selectedIds = {};
 
+  StreamSubscription? _mediaSubscription;
+  StreamSubscription? _updateSubscription;
+  StreamSubscription? _deleteSubscription;
+  StreamSubscription? _albumSubscription;
+  Timer? _updateTimer;
+
   @override
   bool get wantKeepAlive => true;
+
+  Future<void> refresh() => _init();
 
   Future<void> _init() async {
     final perm = await _service.requestPermission();
     await _trashService.init();
     await _trashService.requestPermission();
 
-    if (!perm) return;
+    if (!perm) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
+      return;
+    }
 
+    // 1. Initial Load from memory/DB cache
     final albums = await _service.getPhotos();
-    _currentAlbum = albums.first;
+    final recentAlbum = albums.firstWhere(
+      (a) => a.id == 'recent',
+      orElse: () => albums.first,
+    );
 
-    final media = await _service.getAllMedia(album: _currentAlbum!);
+    if (mounted) {
+      setState(() {
+        _currentAlbum = recentAlbum;
+        _photos = recentAlbum.entries
+            .map(
+              (entry) => PhotoModel(
+                uid: entry.id,
+                asset: entry,
+                timeTaken: entry.bestDate ?? DateTime.now(),
+                isVideo: entry.isVideo,
+              ),
+            )
+            .toList();
+        // Sort photos by date descending for consistency with Viewer and Grouping
+        _photos.sort((a, b) => b.timeTaken.compareTo(a.timeTaken));
+        _groupedItems = MediaService.groupPhotosByDate(_photos);
+        _loading = false;
+      });
+    }
 
-    setState(() {
-      _photos = media.toList();
-      _groupedItems = MediaService.groupPhotosByDate(_photos);
-      _loading = false;
+    // 2. Setup reactive listeners
+    _updateSubscription?.cancel();
+    _updateSubscription = _service.entryUpdateStream.listen((entry) {
+      if (!mounted) return;
+      final index = _photos.indexWhere((p) => p.uid == entry.id);
+      if (index != -1) {
+        setState(() {
+          _photos[index] = PhotoModel(
+            uid: entry.id,
+            asset: entry,
+            timeTaken: entry.bestDate ?? DateTime.now(),
+            isVideo: entry.isVideo,
+          );
+          _groupedItems = MediaService.groupPhotosByDate(_photos);
+        });
+      }
     });
+
+    _deleteSubscription?.cancel();
+    _deleteSubscription = _service.entryDeletedStream.listen((id) {
+      if (!mounted) return;
+      setState(() {
+        _photos.removeWhere((p) => p.uid == id.toString());
+        _groupedItems = MediaService.groupPhotosByDate(_photos);
+      });
+    });
+
+    _albumSubscription?.cancel();
+    _albumSubscription = _service.albumUpdateStream.listen((_) {
+      // For album updates, we just need to re-fetch the latest lists
+      // but since we focus on 'recent', we can just re-group if _photos changed
+      // or re-fetch from service if it's a structural change.
+      _service.getPhotos().then((updatedAlbums) {
+        if (!mounted) return;
+        final latestRecent = updatedAlbums.firstWhere(
+          (a) => a.id == 'recent',
+          orElse: () => updatedAlbums.first,
+        );
+        setState(() {
+          _photos = latestRecent.entries
+              .map(
+                (entry) => PhotoModel(
+                  uid: entry.id,
+                  asset: entry,
+                  timeTaken: entry.bestDate ?? DateTime.now(),
+                  isVideo: entry.isVideo,
+                ),
+              )
+              .toList();
+          _photos.sort((a, b) => b.timeTaken.compareTo(a.timeTaken));
+          _groupedItems = MediaService.groupPhotosByDate(_photos);
+        });
+      });
+    });
+
+    // 3. Start background sync (if not already running)
+    // This will notify via entryUpdateStream/entryDeletedStream/albumUpdateStream
+    unawaited(_service.getMediaStream().drain());
   }
 
   void _toggleSelection(String id) {
@@ -77,9 +167,12 @@ class RecentsScreenState extends State<RecentsScreen>
 
   Future<void> deleteSelected() async {
     for (final id in _selectedIds) {
-      final asset = await AssetEntity.fromId(id);
-      if (asset != null) {
-        await _trashService.moveToTrash(asset);
+      final photo = _photos.cast<PhotoModel?>().firstWhere(
+        (p) => p?.uid == id,
+        orElse: () => null,
+      );
+      if (photo != null) {
+        await _trashService.moveToTrash(photo.asset);
       }
     }
     clearSelections();
@@ -96,10 +189,15 @@ class RecentsScreenState extends State<RecentsScreen>
     final List<XFile> files = [];
 
     for (final id in _selectedIds) {
-      final asset = await AssetEntity.fromId(id);
-      final file = await asset?.file;
-      if (file != null) {
-        files.add(XFile(file.path));
+      final photo = _photos.cast<PhotoModel?>().firstWhere(
+        (p) => p?.uid == id,
+        orElse: () => null,
+      );
+      if (photo != null) {
+        final file = await photo.asset.file;
+        if (file != null) {
+          files.add(XFile(file.path));
+        }
       }
     }
 
@@ -110,19 +208,30 @@ class RecentsScreenState extends State<RecentsScreen>
     clearSelections();
   }
 
+  List<int> getVisibleEntryIds() {
+    // Aves-style: just take the top entries from the collection
+    // This provides a consistent "Recent" experience on cold boot.
+    return _photos
+        .take(40)
+        .map((p) => p.asset.contentId)
+        .whereType<int>()
+        .toList();
+  }
+
   @override
   void initState() {
     super.initState();
     _init();
-
-    PhotoManager.addChangeCallback((MethodCall call) => _init());
-    PhotoManager.startChangeNotify();
   }
 
   @override
   void dispose() {
-    PhotoManager.removeChangeCallback((_) {});
     _scrollController.dispose();
+    _mediaSubscription?.cancel();
+    _updateSubscription?.cancel();
+    _deleteSubscription?.cancel();
+    _albumSubscription?.cancel();
+    _updateTimer?.cancel();
     super.dispose();
   }
 
@@ -136,31 +245,20 @@ class RecentsScreenState extends State<RecentsScreen>
 
     return Column(
       children: [
-        if (_currentAlbum != null)
-          FutureBuilder<int>(
-            future: _currentAlbum!.assetCountAsync,
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '${snapshot.data} photos',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
+        if (_photos.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '${_photos.length} photos',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           ),
         Expanded(
           child: Padding(
@@ -174,7 +272,10 @@ class RecentsScreenState extends State<RecentsScreen>
 
                 if (item is String) {
                   return Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                     child: Text(
                       item,
                       style: const TextStyle(
@@ -184,71 +285,23 @@ class RecentsScreenState extends State<RecentsScreen>
                     ),
                   );
                 } else if (item is List<PhotoModel>) {
-                  return GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          crossAxisSpacing: 3,
-                          mainAxisSpacing: 3,
-                        ),
-                    itemCount: item.length,
-                    itemBuilder: (context, idx) {
-                      final photo = item[idx];
-                      final globalIndex = _photos.indexOf(photo);
-                      final isSelected = _selectedIds.contains(photo.asset.id);
-
-                      return GestureDetector(
-                        onLongPress: () => _toggleSelection(photo.asset.id),
-                        onTap: () async {
-                          if (_isSelecting) {
-                            _toggleSelection(photo.asset.id);
-                          } else {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ViewerScreen(
-                                  index: globalIndex,
-                                  initialPhotos: List.unmodifiable(_photos),
-                                  sourceAlbums: _currentAlbum!,
-                                ),
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 1.5),
+                    child: Row(
+                      children: [
+                        for (int i = 0; i < 4; i++)
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 1.5,
                               ),
-                            );
-                          }
-                        },
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            AssetEntityImage(
-                              photo.asset,
-                              thumbnailSize: const ThumbnailSize.square(180),
-                              thumbnailFormat: ThumbnailFormat.jpeg,
-                              fit: BoxFit.cover,
+                              child: i < item.length
+                                  ? _buildPhotoItem(item[i])
+                                  : const SizedBox.shrink(),
                             ),
-                            if (isSelected)
-                              Container(
-                                color: Colors.black.withOpacity(0.4),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.check_circle,
-                                    color: Colors.blue,
-                                    size: 30,
-                                  ),
-                                ),
-                              ),
-                            if (photo.isVideo && !isSelected)
-                              const Center(
-                                child: Icon(
-                                  Icons.play_circle_fill_outlined,
-                                  color: Colors.white,
-                                  size: 30,
-                                ),
-                              ),
-                          ],
-                        ),
-                      );
-                    },
+                          ),
+                      ],
+                    ),
                   );
                 }
                 return const SizedBox.shrink();
@@ -257,6 +310,62 @@ class RecentsScreenState extends State<RecentsScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPhotoItem(PhotoModel photo) {
+    final isSelected = _selectedIds.contains(photo.uid);
+
+    return GestureDetector(
+      onLongPress: () => _toggleSelection(photo.uid),
+      onTap: () async {
+        if (_isSelecting) {
+          _toggleSelection(photo.uid);
+        } else {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ViewerScreen(
+                index: photo.index ?? 0,
+                initialPhotos: List.unmodifiable(_photos),
+                sourceAlbums: _currentAlbum!,
+              ),
+            ),
+          );
+          // Update UI if needed
+          setState(() {});
+        }
+      },
+      child: AspectRatio(
+        aspectRatio: 1.0,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            AvesEntryImage(entry: photo.asset, extent: 200, fit: BoxFit.cover),
+            if (isSelected)
+              Container(
+                color: Colors.black.withOpacity(0.4),
+                child: const Center(
+                  child: Icon(Icons.check_circle, color: Colors.blue, size: 30),
+                ),
+              ),
+            if (photo.isVideo && !isSelected)
+              const Center(
+                child: Icon(
+                  Icons.play_circle_fill_outlined,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+            if (photo.asset.isFavorite && !isSelected)
+              const Positioned(
+                top: 5,
+                right: 5,
+                child: Icon(Icons.favorite, color: Colors.red, size: 18),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

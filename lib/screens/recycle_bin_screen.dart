@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:m3e_collection/m3e_collection.dart';
-import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import '../services/trash_service.dart';
-import 'package:photo_manager/photo_manager.dart';
 
 class RecycleBinScreen extends StatefulWidget {
   const RecycleBinScreen({super.key});
@@ -29,14 +27,16 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
   Future<void> _init() async {
     // Initialize the trash service and fetch the current list of trashed IDs
     await _trashService.init();
-    setState(() {
-      _trashedPaths = _trashService.trashedPaths;
+    if (mounted) {
+      setState(() {
+        _trashedPaths = _trashService.trashedPaths;
 
-      _trashedFiles = _trashedPaths
-          .map((path) => File(path))
-          .where((file) => file.existsSync())
-          .toList();
-    });
+        _trashedFiles = _trashedPaths
+            .map((path) => File(path))
+            .where((file) => file.existsSync())
+            .toList();
+      });
+    }
   }
 
   // Restores a single file using the service and refreshes the list.
@@ -47,12 +47,14 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Restored successfully")));
+        ).showSnackBar(const SnackBar(content: Text("Restored successfully")));
       }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to restore item. Check permissions.")),
+          const SnackBar(
+            content: Text("Failed to restore item. Check permissions."),
+          ),
         );
       }
     }
@@ -88,10 +90,11 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
     int failCount = 0;
     for (var path in _selectedPaths) {
       bool result = await _trashService.restore(path);
-      if (result)
+      if (result) {
         successCount++;
-      else
+      } else {
         failCount++;
+      }
     }
     _clearSelection();
     _init();
@@ -111,7 +114,7 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
     _init();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Permanently deleted selected items")),
+        const SnackBar(content: Text("Permanently deleted selected items")),
       );
     }
   }
@@ -150,12 +153,9 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
                     fontWeight: FontWeight.bold,
                   ),
                 )
-              : Text(
+              : const Text(
                   "Recycle Bin",
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                 ),
           centerTitle: false,
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -262,6 +262,9 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
                                 Image.file(
                                   file,
                                   fit: BoxFit.cover,
+                                  cacheWidth:
+                                      200, // Optimization: Avoid decoding full image
+                                  cacheHeight: 200,
                                   errorBuilder: (context, error, stackTrace) {
                                     return Container(
                                       color: Colors.grey[900],

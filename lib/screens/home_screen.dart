@@ -3,6 +3,9 @@ import 'package:flutter/gestures.dart';
 import 'package:lumina_gallery/screens/albums_screen.dart';
 import 'package:lumina_gallery/screens/recents_screen.dart';
 import 'package:lumina_gallery/screens/settings_screen.dart';
+import 'package:lumina_gallery/services/media_service.dart';
+import 'package:lumina_gallery/services/trash_service.dart';
+import 'package:lumina_gallery/services/settings_service.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
@@ -15,7 +18,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late int _selectedIndex;
   late Future<void> _initSettings;
   late TabController _tabController;
@@ -39,6 +42,41 @@ class _HomeScreenState extends State<HomeScreen>
 
     _initSettings = _loadInitialSettings();
     _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addObserver(this);
+
+    _initPermissions();
+  }
+
+  Future<void> _initPermissions() async {
+    final mediaService = MediaService();
+    final trashService = TrashService();
+
+    // 1. Request Media Permissions first
+    await mediaService.requestPermission();
+
+    // 2. Then request Trash/File Management permissions
+    await trashService.requestPermission();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Refresh recents if needed
+      _recentsKey.currentState?.refresh();
+    } else if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      _saveTopEntries();
+    }
+  }
+
+  void _saveTopEntries() {
+    final recentsState = _recentsKey.currentState;
+    if (recentsState != null) {
+      final visibleIds = recentsState.getVisibleEntryIds();
+      if (visibleIds.isNotEmpty) {
+        SettingsService().topEntryIds = visibleIds;
+      }
+    }
   }
 
   Future<void> _loadInitialSettings() async {
@@ -133,6 +171,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 

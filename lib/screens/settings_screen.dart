@@ -3,6 +3,7 @@ import 'package:m3e_collection/m3e_collection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:lumina_gallery/screens/licenses_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback? onThemeChange;
@@ -121,6 +122,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: (bool val) =>
                 _saveSettings(SettingsScreen.defaultPageKey, val),
             activeColor: Theme.of(context).colorScheme.primary,
+          ),
+          Divider(height: 1),
+          ListTile(
+            title: const Text(
+              "Open Source Licenses",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            subtitle: Text(
+              "Credits and license information",
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LicensesScreen()),
+              );
+            },
           ),
           Divider(height: 1),
         ],

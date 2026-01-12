@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:lumina_gallery/services/trash_service.dart';
 import 'package:m3e_collection/m3e_collection.dart';
-import 'package:photo_manager/photo_manager.dart';
-import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import '../services/media_service.dart';
 import '../models/photo_model.dart';
+import '../models/album_model.dart';
+import '../widgets/aves_entry_image.dart';
 import '../screens/viewer_screen.dart';
-import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 class PhotoScreen extends StatefulWidget {
-  final AssetPathEntity album;
+  final AlbumModel album;
 
   const PhotoScreen({super.key, required this.album});
 
@@ -25,13 +25,18 @@ class _PhotoScreenState extends State<PhotoScreen> {
   List<PhotoModel> _photos = [];
   bool _loading = true;
 
-  ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController = ScrollController();
 
   final TrashService _trashService = TrashService();
 
   // Selection
   bool _isSelecting = false;
   final Set<String> _selectedIds = {};
+  StreamSubscription? _deleteSubscription;
+  StreamSubscription? _albumSubscription;
+  StreamSubscription? _updateSubscription;
+
+  Future<void> refresh() => _init();
 
   // Initializes the screen by requesting permissions and loading initial assets.
   Future<void> _init() async {
@@ -39,20 +44,88 @@ class _PhotoScreenState extends State<PhotoScreen> {
     bool perm = await _service.requestPermission();
     await _trashService.init();
     if (!perm) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
       return;
     }
-    final media = await _service.getAllMedia(album: widget.album);
-    // Filter out assets that are currently in the trash
-    final filteredMedia = media.toList();
-    setState(() {
-      _photos = filteredMedia;
-      _groupedItems = MediaService.groupPhotosByDate(filteredMedia);
-      _loading = false;
-    });
-  }
 
-  void _onGalleryChange(MethodCall call) {
-    _init();
+    // 1. Initial Load from memory/DB cache
+    final albums = await _service.getPhotos();
+    final latestAlbum = albums.firstWhere(
+      (a) => a.id == widget.album.id,
+      orElse: () => widget.album,
+    );
+
+    if (mounted) {
+      setState(() {
+        _photos = latestAlbum.entries
+            .map(
+              (entry) => PhotoModel(
+                uid: entry.id,
+                asset: entry,
+                timeTaken: entry.bestDate ?? DateTime.now(),
+                isVideo: entry.isVideo,
+              ),
+            )
+            .toList();
+        _groupedItems = MediaService.groupPhotosByDate(_photos);
+        _loading = false;
+      });
+    }
+
+    // 2. Reactive listeners
+    _updateSubscription?.cancel();
+    _updateSubscription = _service.entryUpdateStream.listen((entry) {
+      if (!mounted) return;
+      final index = _photos.indexWhere((p) => p.uid == entry.id);
+      if (index != -1) {
+        setState(() {
+          _photos[index] = PhotoModel(
+            uid: entry.id,
+            asset: entry,
+            timeTaken: entry.bestDate ?? DateTime.now(),
+            isVideo: entry.isVideo,
+          );
+          _groupedItems = MediaService.groupPhotosByDate(_photos);
+        });
+      }
+    });
+
+    _deleteSubscription?.cancel();
+    _deleteSubscription = _service.entryDeletedStream.listen((id) {
+      if (!mounted) return;
+      setState(() {
+        _photos.removeWhere((p) => p.uid == id.toString());
+        _groupedItems = MediaService.groupPhotosByDate(_photos);
+      });
+    });
+
+    _albumSubscription?.cancel();
+    _albumSubscription = _service.albumUpdateStream.listen((_) {
+      _service.getPhotos().then((updatedAlbums) {
+        if (!mounted) return;
+        final updatedOne = updatedAlbums.firstWhere(
+          (a) => a.id == widget.album.id,
+          orElse: () => widget.album,
+        );
+        setState(() {
+          _photos = updatedOne.entries
+              .map(
+                (entry) => PhotoModel(
+                  uid: entry.id,
+                  asset: entry,
+                  timeTaken: entry.bestDate ?? DateTime.now(),
+                  isVideo: entry.isVideo,
+                ),
+              )
+              .toList();
+          _groupedItems = MediaService.groupPhotosByDate(_photos);
+        });
+      });
+    });
   }
 
   // Selection Logic
@@ -77,9 +150,12 @@ class _PhotoScreenState extends State<PhotoScreen> {
   Future<void> _deleteSelected() async {
     // Move all selected items to trash
     for (var id in _selectedIds) {
-      final asset = await AssetEntity.fromId(id);
-      if (asset != null) {
-        await _trashService.moveToTrash(asset);
+      final photo = _photos.cast<PhotoModel?>().firstWhere(
+        (p) => p?.uid == id,
+        orElse: () => null,
+      );
+      if (photo != null) {
+        await _trashService.moveToTrash(photo.asset);
       }
     }
     setState(() {
@@ -88,9 +164,9 @@ class _PhotoScreenState extends State<PhotoScreen> {
     });
     _init(); // Refresh list to reflect removal
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Moved selected items to trash")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Moved selected items to trash")),
+      );
     }
   }
 
@@ -98,9 +174,12 @@ class _PhotoScreenState extends State<PhotoScreen> {
     // Share selected items using available platform methods
     List<XFile> files = [];
     for (var id in _selectedIds) {
-      final asset = await AssetEntity.fromId(id);
-      if (asset != null) {
-        final file = await asset.file;
+      final photo = _photos.cast<PhotoModel?>().firstWhere(
+        (p) => p?.uid == id,
+        orElse: () => null,
+      );
+      if (photo != null) {
+        final file = await photo.asset.file;
         if (file != null) files.add(XFile(file.path));
       }
     }
@@ -117,16 +196,14 @@ class _PhotoScreenState extends State<PhotoScreen> {
   void initState() {
     super.initState();
     _init();
-
-    // Listen for external gallery changes (e.g., new photos)
-    PhotoManager.addChangeCallback(_onGalleryChange);
-    PhotoManager.startChangeNotify();
   }
 
   @override
   void dispose() {
-    PhotoManager.removeChangeCallback(_onGalleryChange);
     _scrollController.dispose();
+    _deleteSubscription?.cancel();
+    _albumSubscription?.cancel();
+    _updateSubscription?.cancel();
     super.dispose();
   }
 
@@ -186,13 +263,11 @@ class _PhotoScreenState extends State<PhotoScreen> {
                 ]
               : [],
         ),
-        body: Column(
-          children: [
-            FutureBuilder<int>(
-              future: widget.album.assetCountAsync,
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  return Padding(
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
@@ -200,7 +275,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        '${snapshot.data} items',
+                        '${widget.album.assetCount} items',
                         style: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -208,118 +283,121 @@ class _PhotoScreenState extends State<PhotoScreen> {
                         ),
                       ),
                     ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(5),
-                child: ListView.builder(
-                  cacheExtent: 1500,
-                  itemCount: _groupedItems.length,
-                  controller: _scrollController,
-                  itemBuilder: (context, index) {
-                    final item = _groupedItems[index];
-
-                    if (item is String) {
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          item,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      );
-                    } else if (item is List<PhotoModel>) {
-                      return GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 4,
-                              crossAxisSpacing: 3,
-                              mainAxisSpacing: 3,
-                            ),
-                        itemCount: item.length,
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(5),
+                      child: ListView.builder(
+                        cacheExtent: 1500,
+                        itemCount: _groupedItems.length,
+                        controller: _scrollController,
                         itemBuilder: (context, index) {
-                          final photo = item[index];
-                          final globalIndex = _photos.indexOf(photo);
-                          final isSelected = _selectedIds.contains(
-                            photo.asset.id,
-                          );
+                          final item = _groupedItems[index];
 
-                          return GestureDetector(
-                            onLongPress: () {
-                              if (!_isSelecting) {
-                                setState(() {
-                                  _isSelecting = true;
-                                });
-                                _toggleSelection(photo.asset.id);
-                              }
-                            },
-                            onTap: () async {
-                              if (_isSelecting) {
-                                _toggleSelection(photo.asset.id);
-                              } else {
-                                await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ViewerScreen(
-                                      index: globalIndex,
-                                      initialPhotos: _photos,
-                                      sourceAlbums: widget.album,
-                                    ),
-                                  ),
-                                );
-                                // Update UI to reflect changes (e.g. favorites) without resetting scroll
-                                setState(() {});
-                              }
-                            },
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                AssetEntityImage(
-                                  photo.asset,
-                                  isOriginal: false,
-                                  thumbnailSize: const ThumbnailSize.square(
-                                    200,
-                                  ),
-                                  fit: BoxFit.cover,
+                          if (item is String) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 16,
+                              ),
+                              child: Text(
+                                item,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                if (isSelected)
-                                  Container(
-                                    color: Colors.black.withOpacity(0.4),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.check_circle,
-                                        color: Colors.blue,
-                                        size: 30,
+                              ),
+                            );
+                          } else if (item is List<PhotoModel>) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 1.5,
+                              ),
+                              child: Row(
+                                children: [
+                                  for (int i = 0; i < 4; i++)
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 1.5,
+                                        ),
+                                        child: i < item.length
+                                            ? _buildPhotoItem(item[i])
+                                            : const SizedBox.shrink(),
                                       ),
                                     ),
-                                  ),
-                                if (photo.isVideo && !isSelected)
-                                  const Center(
-                                    child: Icon(
-                                      Icons.play_circle_fill_outlined,
-                                      color: Colors.white,
-                                      size: 30,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          );
+                                ],
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
                         },
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoItem(PhotoModel photo) {
+    final isSelected = _selectedIds.contains(photo.uid);
+
+    return GestureDetector(
+      onLongPress: () {
+        if (!_isSelecting) {
+          setState(() {
+            _isSelecting = true;
+          });
+          _toggleSelection(photo.uid);
+        }
+      },
+      onTap: () async {
+        if (_isSelecting) {
+          _toggleSelection(photo.uid);
+        } else {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ViewerScreen(
+                index: photo.index ?? 0,
+                initialPhotos: _photos,
+                sourceAlbums: widget.album,
               ),
             ),
+          );
+          // Update UI to reflect changes (e.g. favorites) without resetting scroll
+          setState(() {});
+        }
+      },
+      child: AspectRatio(
+        aspectRatio: 1.0,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            AvesEntryImage(entry: photo.asset, extent: 200, fit: BoxFit.cover),
+            if (isSelected)
+              Container(
+                color: Colors.black.withOpacity(0.4),
+                child: const Center(
+                  child: Icon(Icons.check_circle, color: Colors.blue, size: 30),
+                ),
+              ),
+            if (photo.isVideo && !isSelected)
+              const Center(
+                child: Icon(
+                  Icons.play_circle_fill_outlined,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+            if (photo.asset.isFavorite && !isSelected)
+              const Positioned(
+                top: 5,
+                right: 5,
+                child: Icon(Icons.favorite, color: Colors.red, size: 18),
+              ),
           ],
         ),
       ),

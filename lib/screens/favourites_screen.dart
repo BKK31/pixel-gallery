@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:photo_manager/photo_manager.dart';
-import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
+import 'dart:async';
 import '../services/media_service.dart';
 import '../models/photo_model.dart';
 import '../screens/viewer_screen.dart';
-import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/trash_service.dart';
 import 'package:m3e_collection/m3e_collection.dart';
+import '../widgets/aves_entry_image.dart';
 
 class FavouritesScreen extends StatefulWidget {
   const FavouritesScreen({super.key});
@@ -26,20 +25,70 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
   // Selection
   bool _isSelecting = false;
   final Set<String> _selectedIds = {};
+  StreamSubscription? _deleteSubscription;
+  StreamSubscription? _updateSubscription;
 
   Future<void> _init() async {
-    setState(() => _loading = true);
-    await _trashService.init();
-    final media = await _service.getFavorites();
-    setState(() {
-      _photos = media;
-      _groupedItems = MediaService.groupPhotosByDate(media);
-      _loading = false;
-    });
-  }
+    // 1. Initial Load from memory/DB cache
+    final favorites = await _service.getFavorites();
+    if (mounted) {
+      setState(() {
+        _photos = favorites;
+        _groupedItems = MediaService.groupPhotosByDate(favorites);
+        _loading = false;
+      });
+    }
 
-  void _onGalleryChange(MethodCall call) {
-    _init();
+    // 2. Reactive listeners
+    _updateSubscription?.cancel();
+    _updateSubscription = _service.entryUpdateStream.listen((entry) {
+      if (!mounted) return;
+
+      if (!entry.isFavorite) {
+        // If it was unfavorited, remove it from this screen
+        setState(() {
+          _photos.removeWhere((p) => p.uid == entry.id);
+          _groupedItems = MediaService.groupPhotosByDate(_photos);
+        });
+      } else {
+        // If it was updated but still favorite (or newly favorited)
+        final index = _photos.indexWhere((p) => p.uid == entry.id);
+        if (index != -1) {
+          setState(() {
+            _photos[index] = PhotoModel(
+              uid: entry.id,
+              asset: entry,
+              timeTaken: entry.bestDate ?? DateTime.now(),
+              isVideo: entry.isVideo,
+            );
+            _groupedItems = MediaService.groupPhotosByDate(_photos);
+          });
+        } else {
+          // Newly favorited - add it
+          setState(() {
+            _photos.add(
+              PhotoModel(
+                uid: entry.id,
+                asset: entry,
+                timeTaken: entry.bestDate ?? DateTime.now(),
+                isVideo: entry.isVideo,
+              ),
+            );
+            _photos.sort((a, b) => b.timeTaken.compareTo(a.timeTaken));
+            _groupedItems = MediaService.groupPhotosByDate(_photos);
+          });
+        }
+      }
+    });
+
+    _deleteSubscription?.cancel();
+    _deleteSubscription = _service.entryDeletedStream.listen((id) {
+      if (!mounted) return;
+      setState(() {
+        _photos.removeWhere((p) => p.uid == id.toString());
+        _groupedItems = MediaService.groupPhotosByDate(_photos);
+      });
+    });
   }
 
   void _toggleSelection(String id) {
@@ -55,9 +104,12 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
 
   Future<void> _deleteSelected() async {
     for (var id in _selectedIds) {
-      final asset = await AssetEntity.fromId(id);
-      if (asset != null) {
-        await _trashService.moveToTrash(asset);
+      final photo = _photos.cast<PhotoModel?>().firstWhere(
+        (p) => p?.uid == id,
+        orElse: () => null,
+      );
+      if (photo != null) {
+        await _trashService.moveToTrash(photo.asset);
       }
     }
     setState(() {
@@ -75,9 +127,12 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
   Future<void> _shareSelected() async {
     List<XFile> files = [];
     for (var id in _selectedIds) {
-      final asset = await AssetEntity.fromId(id);
-      if (asset != null) {
-        final file = await asset.file;
+      final photo = _photos.cast<PhotoModel?>().firstWhere(
+        (p) => p?.uid == id,
+        orElse: () => null,
+      );
+      if (photo != null) {
+        final file = await photo.asset.file;
         if (file != null) files.add(XFile(file.path));
       }
     }
@@ -94,14 +149,6 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
   void initState() {
     super.initState();
     _init();
-    PhotoManager.addChangeCallback(_onGalleryChange);
-    PhotoManager.startChangeNotify();
-  }
-
-  @override
-  void dispose() {
-    PhotoManager.removeChangeCallback(_onGalleryChange);
-    super.dispose();
   }
 
   @override
@@ -127,12 +174,9 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 )
-              : Text(
+              : const Text(
                   "Favourites",
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                 ),
           centerTitle: false,
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -192,7 +236,10 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
 
                         if (item is String) {
                           return Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 16,
+                            ),
                             child: Text(
                               item,
                               style: const TextStyle(
@@ -202,86 +249,23 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                             ),
                           );
                         } else if (item is List<PhotoModel>) {
-                          return GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 4,
-                                  crossAxisSpacing: 2,
-                                  mainAxisSpacing: 2,
-                                ),
-                            itemCount: item.length,
-                            itemBuilder: (context, idx) {
-                              final photo = item[idx];
-                              final globalIndex = _photos.indexOf(photo);
-                              final isSelected = _selectedIds.contains(
-                                photo.asset.id,
-                              );
-
-                              return GestureDetector(
-                                onLongPress: () {
-                                  if (!_isSelecting) {
-                                    setState(() => _isSelecting = true);
-                                    _toggleSelection(photo.asset.id);
-                                  }
-                                },
-                                onTap: () async {
-                                  if (_isSelecting) {
-                                    _toggleSelection(photo.asset.id);
-                                  } else {
-                                    final paths =
-                                        await PhotoManager.getAssetPathList(
-                                          type: RequestType.common,
-                                        );
-                                    if (!context.mounted) return;
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ViewerScreen(
-                                          index: globalIndex,
-                                          initialPhotos: _photos,
-                                          sourceAlbums: paths.first,
-                                        ),
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 1),
+                            child: Row(
+                              children: [
+                                for (int i = 0; i < 4; i++)
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 1,
                                       ),
-                                    );
-                                    _init(); // Refresh to reflect changes
-                                  }
-                                },
-                                child: Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    AssetEntityImage(
-                                      photo.asset,
-                                      isOriginal: false,
-                                      thumbnailSize: const ThumbnailSize.square(
-                                        200,
-                                      ),
-                                      fit: BoxFit.cover,
+                                      child: i < item.length
+                                          ? _buildPhotoItem(item[i])
+                                          : const SizedBox.shrink(),
                                     ),
-                                    if (isSelected)
-                                      Container(
-                                        color: Colors.black.withOpacity(0.4),
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.check_circle,
-                                            color: Colors.blue,
-                                            size: 30,
-                                          ),
-                                        ),
-                                      ),
-                                    if (photo.isVideo && !isSelected)
-                                      const Center(
-                                        child: Icon(
-                                          Icons.play_circle_fill_outlined,
-                                          color: Colors.white,
-                                          size: 30,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              );
-                            },
+                                  ),
+                              ],
+                            ),
                           );
                         }
                         return const SizedBox.shrink();
@@ -292,5 +276,74 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
               ),
       ),
     );
+  }
+
+  Widget _buildPhotoItem(PhotoModel photo) {
+    final isSelected = _selectedIds.contains(photo.uid);
+
+    return GestureDetector(
+      onLongPress: () {
+        if (!_isSelecting) {
+          setState(() => _isSelecting = true);
+          _toggleSelection(photo.uid);
+        }
+      },
+      onTap: () async {
+        if (_isSelecting) {
+          _toggleSelection(photo.uid);
+        } else {
+          final albums = await _service.getPhotos();
+          if (!context.mounted) return;
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ViewerScreen(
+                index: photo.index ?? 0,
+                initialPhotos: _photos,
+                sourceAlbums: albums.first,
+              ),
+            ),
+          );
+          _init(); // Refresh to reflect changes
+        }
+      },
+      child: AspectRatio(
+        aspectRatio: 1.0,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            AvesEntryImage(entry: photo.asset, extent: 200, fit: BoxFit.cover),
+            if (isSelected)
+              Container(
+                color: Colors.black.withOpacity(0.4),
+                child: const Center(
+                  child: Icon(Icons.check_circle, color: Colors.blue, size: 30),
+                ),
+              ),
+            if (photo.isVideo && !isSelected)
+              const Center(
+                child: Icon(
+                  Icons.play_circle_fill_outlined,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+            if (photo.asset.isFavorite && !isSelected)
+              const Positioned(
+                top: 5,
+                right: 5,
+                child: Icon(Icons.favorite, color: Colors.red, size: 18),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _deleteSubscription?.cancel();
+    _updateSubscription?.cancel();
+    super.dispose();
   }
 }

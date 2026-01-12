@@ -1,10 +1,9 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:photo_manager/photo_manager.dart';
+import 'package:lumina_gallery/models/aves_entry.dart';
 import 'package:video_player/video_player.dart';
 
 class VideoScreen extends StatefulWidget {
-  final AssetEntity asset;
+  final AvesEntry asset;
   final bool controlsVisible;
   final VideoPlayerController? videoController;
 
@@ -70,8 +69,8 @@ class _VideoScreenState extends State<VideoScreen> {
                             });
                           },
                           icon: widget.videoController!.value.isPlaying
-                              ? Icon(Icons.pause_circle)
-                              : Icon(Icons.play_circle),
+                              ? const Icon(Icons.pause_circle)
+                              : const Icon(Icons.play_circle),
                           iconSize: 50,
                           color: Colors.white,
                         ),
@@ -87,7 +86,7 @@ class _VideoScreenState extends State<VideoScreen> {
               left: 0,
               right: 0,
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -95,17 +94,26 @@ class _VideoScreenState extends State<VideoScreen> {
                       children: [
                         Text(
                           _formatDuration(currentPosition),
-                          style: TextStyle(color: Colors.white, fontSize: 12),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
                         ),
                         Expanded(
                           child: Slider(
                             value: _isDragging
                                 ? _dragValue
-                                : widget.videoController!.value.position
-                                    .inSeconds
-                                    .toDouble(),
+                                : widget
+                                      .videoController!
+                                      .value
+                                      .position
+                                      .inSeconds
+                                      .toDouble(),
                             min: 0.0,
-                            max: widget.videoController!.value.duration
+                            max: widget
+                                .videoController!
+                                .value
+                                .duration
                                 .inSeconds
                                 .toDouble(),
                             onChangeStart: (value) {
@@ -132,10 +140,10 @@ class _VideoScreenState extends State<VideoScreen> {
                               widget.videoController!
                                   .seekTo(Duration(seconds: value.toInt()))
                                   .then((_) {
-                                setState(() {
-                                  _isDragging = false;
-                                });
-                              });
+                                    setState(() {
+                                      _isDragging = false;
+                                    });
+                                  });
                             },
                             activeColor: Colors.white,
                             inactiveColor: Colors.white.withOpacity(0.3),
@@ -143,8 +151,12 @@ class _VideoScreenState extends State<VideoScreen> {
                         ),
                         Text(
                           _formatDuration(
-                              widget.videoController!.value.duration),
-                          style: TextStyle(color: Colors.white, fontSize: 12),
+                            widget.videoController!.value.duration,
+                          ),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -153,8 +165,8 @@ class _VideoScreenState extends State<VideoScreen> {
                       children: [
                         IconButton(
                           icon: widget.videoController!.value.volume == 0
-                              ? Icon(Icons.volume_off)
-                              : Icon(Icons.volume_up),
+                              ? const Icon(Icons.volume_off)
+                              : const Icon(Icons.volume_up),
                           color: Colors.white,
                           iconSize: 28,
                           onPressed: () {
@@ -176,7 +188,7 @@ class _VideoScreenState extends State<VideoScreen> {
         ],
       );
     } else {
-      return Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator());
     }
   }
 }

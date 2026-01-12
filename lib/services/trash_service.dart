@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:photo_manager/photo_manager.dart';
+import 'package:lumina_gallery/models/aves_entry.dart';
+import 'package:lumina_gallery/services/media_service.dart';
 import 'package:path/path.dart' as path;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -34,8 +36,14 @@ class TrashItem {
 }
 
 class TrashService {
+  // Singleton instance
+  static final TrashService _instance = TrashService._internal();
+  factory TrashService() => _instance;
+  TrashService._internal();
+
   static const String _storageKey = 'trash_inventory';
   List<TrashItem> _trashedItems = [];
+  Set<String> _trashedPathsSet = {};
 
   // Initializes the service by loading trashed paths from SharedPreferences.
   Future<void> init() async {
@@ -45,11 +53,22 @@ class TrashService {
       _trashedItems = storedList
           .map((e) => TrashItem.fromJson(jsonDecode(e)))
           .toList();
+      _updatedTrashedPathsSet();
     }
 
     // Validate inventory: remove items where trash file is missing
+    final initialCount = _trashedItems.length;
     _trashedItems.removeWhere((item) => !File(item.trashPath).existsSync());
+    if (initialCount != _trashedItems.length) {
+      _updatedTrashedPathsSet();
+    }
     await _saveInventory(prefs);
+  }
+
+  void _updatedTrashedPathsSet() {
+    _trashedPathsSet = _trashedItems
+        .expand((it) => [it.trashPath, it.originalPath])
+        .toSet();
   }
 
   Future<void> _saveInventory([SharedPreferences? prefs]) async {
@@ -60,15 +79,27 @@ class TrashService {
     await prefs.setStringList(_storageKey, encoded);
   }
 
-  bool isTrashed(String pathOrId) {
-    return _trashedItems.any((it) => it.trashPath == pathOrId);
+  bool isTrashed(String? path) {
+    if (path == null) return false;
+    return _trashedPathsSet.contains(path);
   }
 
   List<String> get trashedPaths =>
       _trashedItems.map((e) => e.trashPath).toList();
 
+  Future<bool>? _permissionFuture;
+
   // Request Manage External Storage Permission
   Future<bool> requestPermission() async {
+    if (_permissionFuture != null) return _permissionFuture!;
+
+    _permissionFuture = _performPermissionRequest();
+    final result = await _permissionFuture!;
+    _permissionFuture = null;
+    return result;
+  }
+
+  Future<bool> _performPermissionRequest() async {
     if (Platform.isAndroid) {
       final androidInfo = await DeviceInfoPlugin().androidInfo;
       if (androidInfo.version.sdkInt >= 30) {
@@ -104,18 +135,18 @@ class TrashService {
     return trashDir;
   }
 
-  Future<void> moveToTrash(AssetEntity asset) async {
+  Future<void> moveToTrash(AvesEntry entry) async {
     // 1. Ensure permission
     if (!await requestPermission()) {
-      print("Permission denied for Manage External Storage");
+      debugPrint("Permission denied for Manage External Storage");
       return;
     }
 
-    final File? originalFile = await asset.file;
+    final File? originalFile = await entry.file;
     if (originalFile == null) return;
 
     final String originalPath = originalFile.path;
-    print("Moving to trash: $originalPath");
+    debugPrint("Moving to trash: $originalPath");
 
     try {
       final Directory trashDir = await _getTrashDirectoryFor(originalPath);
@@ -139,14 +170,24 @@ class TrashService {
           dateDeletedMs: DateTime.now().millisecondsSinceEpoch,
         ),
       );
+      _updatedTrashedPathsSet();
       await _saveInventory();
 
-      print("Moved to trash successfully: $trashPath");
+      // 4. Remove from local gallery index
+      await MediaService().deleteEntry(entry);
 
-      // Note: We do NOT call deleteWithIds anymore, because the file has been moved (renamed).
-      // PhotoManager might still show it in cache until refreshed.
+      // 5. Tell MediaStore the file is gone/moved
+      try {
+        const platform = MethodChannel('com.pixel.gallery/open_file');
+        await platform.invokeMethod('scanFile', {'path': originalPath});
+        debugPrint("Native scan triggered for trashing: $originalPath");
+      } catch (scanError) {
+        debugPrint("Scan trigger error (trashing): $scanError");
+      }
+
+      debugPrint("Moved to trash successfully: $trashPath");
     } catch (e) {
-      print("Error moving to trash: $e");
+      debugPrint("Error moving to trash: $e");
     }
   }
 
@@ -174,29 +215,33 @@ class TrashService {
       }
 
       await trashFile.rename(item.originalPath);
-      print("File renamed back to: ${item.originalPath}");
+      debugPrint("File renamed back to: ${item.originalPath}");
 
       // 2. Trigger Scan (Partial)
       // Use a native scanFile call to inform MediaStore about the restored file.
-      // This avoids photo_manager's saveImageWithPath which creates a duplicate copy.
       try {
-        final platform = MethodChannel('com.pixel.gallery/open_file');
+        const platform = MethodChannel('com.pixel.gallery/open_file');
         await platform.invokeMethod('scanFile', {'path': item.originalPath});
-        print("Native scan triggered for: ${item.originalPath}");
+        debugPrint("Native scan triggered for: ${item.originalPath}");
       } catch (scanError) {
-        print(
+        debugPrint(
           "Scan trigger error (might be ignored if file exists): $scanError",
         );
       }
 
       // 3. Update Inventory
       _trashedItems.removeAt(index);
+      _updatedTrashedPathsSet();
       await _saveInventory();
 
-      print("Restored successfully to: ${item.originalPath}");
+      // 4. Notify Gallery Service to refresh
+      MediaService().clearCache();
+      MediaService().notifyAlbumUpdated();
+
+      debugPrint("Restored successfully to: ${item.originalPath}");
       return true;
     } catch (e) {
-      print("Error restoring: $e");
+      debugPrint("Error restoring: $e");
       return false;
     }
   }
@@ -207,6 +252,7 @@ class TrashService {
       await file.delete();
     }
     _trashedItems.removeWhere((it) => it.trashPath == trashPath);
+    _updatedTrashedPathsSet();
     await _saveInventory();
   }
 }

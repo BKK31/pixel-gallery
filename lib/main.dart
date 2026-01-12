@@ -5,9 +5,17 @@ import 'package:dynamic_color/dynamic_color.dart';
 import 'package:lumina_gallery/screens/home_screen.dart';
 import 'package:lumina_gallery/screens/single_viewer_screen.dart';
 import 'screens/settings_screen.dart';
+import 'services/settings_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Settings
+  await SettingsService().init();
+
+  // Increase image cache size for broad gallery scrolling (512MB, 3000 items)
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 512 << 20;
+  PaintingBinding.instance.imageCache.maximumSize = 3000;
   runApp(const MyApp());
 }
 

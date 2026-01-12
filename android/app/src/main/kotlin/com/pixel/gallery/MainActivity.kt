@@ -21,7 +21,9 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+        val messenger = flutterEngine.dartExecutor.binaryMessenger
+
+        MethodChannel(messenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "getInitialFile" -> {
                     result.success(sharedFilePath)
@@ -41,12 +43,10 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENT_CHANNEL).setStreamHandler(
+        EventChannel(messenger, EVENT_CHANNEL).setStreamHandler(
             object : EventChannel.StreamHandler {
                 override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                     eventSink = events
-                    // If we have a pending file that hasn't been handled by the initial check, sending it here might be duplicate
-                    // but usually safe. For now, rely on MethodChannel for initial and this for updates.
                 }
 
                 override fun onCancel(arguments: Any?) {
@@ -54,6 +54,17 @@ class MainActivity : FlutterActivity() {
                 }
             }
         )
+
+        // Aves MediaStore engine channels
+        MethodChannel(messenger, com.pixel.gallery.channel.calls.MediaStoreHandler.CHANNEL).setMethodCallHandler(
+            com.pixel.gallery.channel.calls.MediaStoreHandler(this)
+        )
+        app.loup.streams_channel.StreamsChannel(messenger, com.pixel.gallery.channel.streams.MediaStoreStreamHandler.CHANNEL).setStreamHandlerFactory { args ->
+            com.pixel.gallery.channel.streams.MediaStoreStreamHandler(this, args)
+        }
+        app.loup.streams_channel.StreamsChannel(messenger, com.pixel.gallery.channel.streams.ImageByteStreamHandler.CHANNEL).setStreamHandlerFactory { args ->
+            com.pixel.gallery.channel.streams.ImageByteStreamHandler(this, args)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,4 +123,35 @@ class MainActivity : FlutterActivity() {
         }
         return null
     }
+
+    companion object {
+        const val DOCUMENT_TREE_ACCESS_REQUEST = 1
+        const val MEDIA_WRITE_BULK_PERMISSION_REQUEST = 2
+
+        val pendingStorageAccessResultHandlers = HashMap<Int, PendingStorageAccessResultHandler>()
+        var pendingScopedStoragePermissionCompleter: java.util.concurrent.CompletableFuture<Boolean>? = null
+
+        fun notifyError(message: String) {
+            android.util.Log.e("MainActivity", message)
+        }
+
+        private fun onStorageAccessResult(requestCode: Int, uri: Uri?) {
+            val handler = pendingStorageAccessResultHandlers.remove(requestCode) ?: return
+            if (uri != null) {
+                handler.onGranted(uri)
+            } else {
+                handler.onDenied()
+            }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        when (requestCode) {
+            DOCUMENT_TREE_ACCESS_REQUEST -> onStorageAccessResult(requestCode, data?.data)
+            MEDIA_WRITE_BULK_PERMISSION_REQUEST -> pendingScopedStoragePermissionCompleter?.complete(resultCode == RESULT_OK)
+        }
+    }
 }
+
+data class PendingStorageAccessResultHandler(val path: String?, val onGranted: (uri: Uri) -> Unit, val onDenied: () -> Unit)

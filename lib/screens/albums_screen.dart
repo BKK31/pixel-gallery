@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:photo_manager/photo_manager.dart';
+import 'dart:async';
 import '../services/media_service.dart';
-import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
+import '../models/album_model.dart';
+import '../widgets/aves_entry_image.dart';
 import 'photo_screen.dart';
-import 'package:flutter/services.dart';
 import 'recycle_bin_screen.dart';
 import 'favourites_screen.dart';
 
@@ -16,9 +16,10 @@ class AlbumsScreen extends StatefulWidget {
 
 class _AlbumsScreenState extends State<AlbumsScreen>
     with AutomaticKeepAliveClientMixin {
-  List<AssetPathEntity> _albums = [];
+  List<AlbumModel> _albums = [];
   bool _loading = true;
   final MediaService _service = MediaService();
+  StreamSubscription? _albumSubscription;
 
   @override
   bool get wantKeepAlive => true;
@@ -27,31 +28,36 @@ class _AlbumsScreenState extends State<AlbumsScreen>
   Future<void> _init() async {
     bool perm = await _service.requestPermission();
     if (!perm) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
       return;
     }
     final albums = await _service.getAlbums();
-    setState(() {
-      _albums = albums;
-      _loading = false;
-    });
-  }
+    if (mounted) {
+      setState(() {
+        _albums = albums;
+        _loading = false;
+      });
+    }
 
-  void _onGalleryChange(MethodCall call) {
-    _service.clearCache();
-    _init();
+    _albumSubscription?.cancel();
+    _albumSubscription = _service.albumUpdateStream.listen((_) {
+      _init();
+    });
   }
 
   @override
   void initState() {
     super.initState();
     _init();
-    PhotoManager.addChangeCallback(_onGalleryChange);
-    PhotoManager.startChangeNotify();
   }
 
   @override
   void dispose() {
-    PhotoManager.removeChangeCallback(_onGalleryChange);
+    _albumSubscription?.cancel();
     super.dispose();
   }
 
@@ -147,22 +153,15 @@ class _AlbumsScreenState extends State<AlbumsScreen>
                           color: Theme.of(context).colorScheme.surfaceVariant,
                         ),
                         clipBehavior: Clip.antiAlias,
-                        child: FutureBuilder<List<AssetEntity>>(
-                          future: album.getAssetListRange(start: 0, end: 1),
-                          builder: (context, snapshot) {
-                            if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                              return AssetEntityImage(
-                                snapshot.data![0],
-                                isOriginal: false,
-                                thumbnailSize: const ThumbnailSize.square(300),
+                        child: album.entries.isNotEmpty
+                            ? AvesEntryImage(
+                                entry: album.entries.first,
+                                extent: 300,
                                 fit: BoxFit.cover,
-                              );
-                            }
-                            return const Center(
-                              child: Icon(Icons.photo_library_outlined),
-                            );
-                          },
-                        ),
+                              )
+                            : const Center(
+                                child: Icon(Icons.photo_library_outlined),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -175,22 +174,12 @@ class _AlbumsScreenState extends State<AlbumsScreen>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    FutureBuilder<int>(
-                      future: album.assetCountAsync,
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData) {
-                          return Text(
-                            '${snapshot.data} items',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
-                            ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
+                    Text(
+                      '${album.assetCount} items',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
