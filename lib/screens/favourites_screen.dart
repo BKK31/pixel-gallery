@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../services/media_service.dart';
 import '../models/photo_model.dart';
+import '../models/extensions/favourites_extension.dart';
 import '../screens/viewer_screen.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/trash_service.dart';

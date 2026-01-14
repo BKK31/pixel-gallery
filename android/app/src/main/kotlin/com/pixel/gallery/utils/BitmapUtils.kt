@@ -7,25 +7,65 @@ import android.util.Log
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.TransformationUtils
 import com.pixel.gallery.metadata.Metadata.getExifCode
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.ByteArrayOutputStream
-import java.io.InputStream
 
 object BitmapUtils {
     private val LOG_TAG = LogUtils.createTag<BitmapUtils>()
     private const val INITIAL_BUFFER_SIZE = 1 shl 18 // 256kB
 
+    private val freeBaos = ArrayList<ByteArrayOutputStream>()
+    private val mutex = Mutex()
+
     private const val FORMAT_BYTE_ENCODED: Int = 0xCA
     val FORMAT_BYTE_ENCODED_AS_BYTES: ByteArray = ByteArray(1) { _ -> FORMAT_BYTE_ENCODED.toByte() }
 
-    fun getBytes(bitmap: Bitmap?, recycle: Boolean, decoded: Boolean, mimeType: String?): ByteArray? {
-        // Simplified: only supporting encoded bytes for now
+    // bytes per pixel with different bitmap config
+    private const val BPP_ALPHA_8 = 1
+    private const val BPP_RGB_565 = 2
+    private const val BPP_ARGB_8888 = 4
+    private const val BPP_RGBA_1010102 = 4
+    private const val BPP_RGBA_F16 = 8
+
+    private fun getBytePerPixel(config: Bitmap.Config?): Int {
+        return when (config) {
+            Bitmap.Config.ALPHA_8 -> BPP_ALPHA_8
+            Bitmap.Config.RGB_565 -> BPP_RGB_565
+            Bitmap.Config.ARGB_8888 -> BPP_ARGB_8888
+            else -> {
+                return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && config == Bitmap.Config.RGBA_F16) {
+                    BPP_RGBA_F16
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && config == Bitmap.Config.RGBA_1010102) {
+                    BPP_RGBA_1010102
+                } else {
+                    // default
+                    BPP_ARGB_8888
+                }
+            }
+        }
+    }
+
+    fun getExpectedImageSize(pixelCount: Long, config: Bitmap.Config?): Long {
+        return pixelCount * getBytePerPixel(config)
+    }
+
+    suspend fun getBytes(bitmap: Bitmap?, recycle: Boolean, decoded: Boolean, mimeType: String?): ByteArray? {
+        // Simplified: only supporting encoded bytes for now as Lumina simplified version
         return getEncodedBytes(bitmap, canHaveAlpha = MimeTypes.canHaveAlpha(mimeType), recycle = recycle)
     }
 
-    private fun getEncodedBytes(bitmap: Bitmap?, canHaveAlpha: Boolean = false, quality: Int = 100, recycle: Boolean): ByteArray? {
+    private suspend fun getEncodedBytes(bitmap: Bitmap?, canHaveAlpha: Boolean = false, quality: Int = 100, recycle: Boolean): ByteArray? {
         bitmap ?: return null
 
-        val stream = ByteArrayOutputStream(INITIAL_BUFFER_SIZE)
+        val stream: ByteArrayOutputStream
+        mutex.withLock {
+            stream = if (freeBaos.isNotEmpty()) {
+                freeBaos.removeAt(0)
+            } else {
+                ByteArrayOutputStream(INITIAL_BUFFER_SIZE)
+            }
+        }
         try {
             if (canHaveAlpha && bitmap.hasAlpha()) {
                 bitmap.compress(Bitmap.CompressFormat.PNG, quality, stream)
@@ -34,10 +74,19 @@ object BitmapUtils {
             }
             if (recycle) bitmap.recycle()
 
-            // trailer byte to indicate whether the returned bytes are decoded/encoded
             stream.write(FORMAT_BYTE_ENCODED)
 
-            return stream.toByteArray()
+            val bufferSize = stream.size()
+            if (!MemoryUtils.canAllocate(bufferSize)) {
+                throw Exception("bitmap compressed to $bufferSize bytes, which cannot be allocated to a new byte array")
+            }
+
+            val byteArray = stream.toByteArray()
+            stream.reset()
+            mutex.withLock {
+                freeBaos.add(stream)
+            }
+            return byteArray
         } catch (e: Exception) {
             Log.e(LOG_TAG, "failed to get bytes from bitmap", e)
         }

@@ -123,4 +123,17 @@ object MimeTypes {
         DNG, DNG_ADOBE, HEIC, HEIF, WEBP -> true
         else -> false
     }
+
+    // Glide automatically applies EXIF orientation when decoding images of known formats
+    // but we need to rotate the decoded bitmap for the other formats
+    fun needRotationAfterGlide(mimeType: String, pageId: Int?): Boolean {
+        // MultiPage logic skipped for now as we don't support MultiPage yet
+        /*if (pageId != null && MultiPageImage.isSupported(mimeType)) {
+            return true
+        }*/
+        return when (mimeType) {
+            AVIF, HEIC, HEIF, PNG, TIFF, WEBP -> true
+            else -> isRaw(mimeType)
+        }
+    }
 }

@@ -16,24 +16,26 @@ class AvesEntryImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image(
-      image: AvesEntryImageProvider(entry, extent: extent),
-      width: extent,
-      height: extent,
-      fit: fit,
-      gaplessPlayback: true,
-      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-        if (wasSynchronouslyLoaded || frame != null) {
-          return child;
-        }
-        return Container(color: Colors.grey[300]);
-      },
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          color: Colors.grey[200],
-          child: const Icon(Icons.error),
-        );
-      },
+    return RepaintBoundary(
+      child: Image(
+        image: AvesEntryImageProvider(entry, extent: extent),
+        width: extent,
+        height: extent,
+        fit: fit,
+        gaplessPlayback: true,
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded || frame != null) {
+            return child;
+          }
+          return Container(color: Colors.grey[300]);
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[200],
+            child: const Icon(Icons.error),
+          );
+        },
+      ),
     );
   }
 }

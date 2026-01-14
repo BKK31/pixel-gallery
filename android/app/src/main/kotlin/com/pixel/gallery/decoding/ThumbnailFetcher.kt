@@ -14,14 +14,19 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.signature.ObjectKey
 import com.pixel.gallery.channel.streams.ByteSink
-import com.pixel.gallery.model.EntryFields
+import com.pixel.gallery.glide.AvesAppGlideModule
+// import com.pixel.gallery.glide.MultiPageImage // Not ported yet
 import com.pixel.gallery.utils.BitmapUtils
 import com.pixel.gallery.utils.BitmapUtils.applyExifOrientation
 import com.pixel.gallery.utils.LogUtils
 import com.pixel.gallery.utils.MimeTypes
+import com.pixel.gallery.utils.MimeTypes.SVG
 import com.pixel.gallery.utils.MimeTypes.isVideo
 import com.pixel.gallery.utils.MimeTypes.needRotationAfterContentResolverThumbnail
+import com.pixel.gallery.utils.MimeTypes.needRotationAfterGlide
+import com.pixel.gallery.utils.StorageUtils
 import com.pixel.gallery.utils.UriUtils.tryParseId
 import java.io.ByteArrayInputStream
 import kotlin.math.min
@@ -45,16 +50,24 @@ class ThumbnailFetcher internal constructor(
     private val uri: Uri = uri.toUri()
     private val width: Int = if (width?.takeIf { it > 0 } != null) width else defaultSize
     private val height: Int = if (height?.takeIf { it > 0 } != null) height else defaultSize
+    private val svgFetch = mimeType == SVG
+    private val tiffFetch = mimeType == MimeTypes.TIFF
+    private val multiPageFetch = false // pageId != null && MultiPageImage.isSupported(mimeType)
+    private val customFetch = svgFetch || tiffFetch || multiPageFetch
 
     suspend fun fetch() {
         var bitmap: Bitmap? = null
         var exception: Exception? = null
 
         try {
-            if ((width == defaultSize || height == defaultSize) && !isFlipped) {
+            if (!customFetch && (width == defaultSize || height == defaultSize) && !isFlipped) {
+                // Fetch low quality thumbnails when size is not specified.
+                // As of Android 11, the Media Store content resolver may return a thumbnail
+                // that is automatically rotated according to EXIF orientation, but not flipped,
+                // so we skip this step for flipped entries.
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     bitmap = getByResolver()
-                } else {
+                } else if (StorageUtils.isMediaStoreContentUri(uri)) {
                     bitmap = getByMediaStore()
                 }
             }
@@ -62,6 +75,7 @@ class ThumbnailFetcher internal constructor(
             exception = e
         }
 
+        // fallback if the native methods failed or for higher quality thumbnails
         if (bitmap == null) {
             try {
                 bitmap = getByGlide()
@@ -72,16 +86,36 @@ class ThumbnailFetcher internal constructor(
 
         if (bitmap != null) {
             if (bitmap.width > width && bitmap.height > height) {
+                // rescale when the resulting bitmap is larger than requested
                 val scalingFactor: Double = min(bitmap.width.toDouble() / width, bitmap.height.toDouble() / height)
                 val dstWidth = (bitmap.width / scalingFactor).roundToInt()
                 val dstHeight = (bitmap.height / scalingFactor).roundToInt()
+                Log.d(
+                    LOG_TAG, "rescale thumbnail for mimeType=$mimeType uri=$uri width=$width height=$height" +
+                            ", with bitmap byteCount=${bitmap.byteCount} size=${bitmap.width}x${bitmap.height}" +
+                            ", to target=${dstWidth}x${dstHeight}"
+                )
                 bitmap = bitmap.scale(dstWidth, dstHeight)
+            }
+
+            if (bitmap.byteCount > BITMAP_SIZE_DANGER_THRESHOLD) {
+                result.error(
+                    "getThumbnail-large", "thumbnail bitmap dangerously large" +
+                            " for mimeType=$mimeType uri=$uri pageId=$pageId width=$width height=$height" +
+                            ", with bitmap byteCount=${bitmap.byteCount} size=${bitmap.width}x${bitmap.height} config=${bitmap.config?.name}", null
+                )
+                return
             }
         }
 
+        // do not recycle bitmaps fetched from `ContentResolver` or Glide as their lifecycle is unknown
         val bytes = BitmapUtils.getBytes(bitmap, recycle = false, decoded = decoded, mimeType)
         if (bytes == null) {
-            result.error("getThumbnail-null", "failed to get thumbnail for mimeType=$mimeType uri=$uri", exception?.message)
+            var errorDetails: String? = exception?.message
+            if (errorDetails?.isNotEmpty() == true) {
+                errorDetails = errorDetails.split(Regex("\n"), 2).first()
+            }
+            result.error("getThumbnail-null", "failed to get thumbnail for mimeType=$mimeType uri=$uri", errorDetails)
         } else {
             result.streamBytes(ByteArrayInputStream(bytes))
         }
@@ -90,11 +124,11 @@ class ThumbnailFetcher internal constructor(
     @RequiresApi(api = Build.VERSION_CODES.Q)
     private fun getByResolver(): Bitmap? {
         val resolver = context.contentResolver
-        return try {
-            resolver.loadThumbnail(uri, Size(width, height), null)
-        } catch (e: Exception) {
-            null
+        var bitmap: Bitmap? = resolver.loadThumbnail(uri, Size(width, height), null)
+        if (needRotationAfterContentResolverThumbnail(mimeType)) {
+            bitmap = applyExifOrientation(context, bitmap, rotationDegrees, isFlipped)
         }
+        return bitmap
     }
 
     private fun getByMediaStore(): Bitmap? {
@@ -106,6 +140,7 @@ class ThumbnailFetcher internal constructor(
         } else {
             @Suppress("deprecation")
             var bitmap = MediaStore.Images.Thumbnails.getThumbnail(resolver, contentId, MediaStore.Images.Thumbnails.MINI_KIND, null)
+            // from Android 10 (API 29), returned thumbnail is already rotated according to EXIF orientation
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && bitmap != null) {
                 bitmap = applyExifOrientation(context, bitmap, rotationDegrees, isFlipped)
             }
@@ -114,20 +149,27 @@ class ThumbnailFetcher internal constructor(
     }
 
     private fun getByGlide(): Bitmap? {
-        val options = RequestOptions()
+        // add signature to ignore cache for images which got modified but kept the same URI
+        var options = RequestOptions()
             .format(if (quality == 100) DecodeFormat.PREFER_ARGB_8888 else DecodeFormat.PREFER_RGB_565)
+            .signature(ObjectKey("$dateModifiedMillis-$rotationDegrees-$isFlipped-$width-$pageId"))
             .override(width, height)
-            
+        if (isVideo(mimeType)) {
+            options = options.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
+        }
+
         val target = Glide.with(context)
             .asBitmap()
             .apply(options)
-            .load(uri)
+            .load(AvesAppGlideModule.getModel(context, uri, mimeType, pageId))
             .submit(width, height)
 
         return try {
-            target.get()
-        } catch (e: Exception) {
-            null
+            var bitmap = target.get()
+            if (needRotationAfterGlide(mimeType, pageId)) {
+                bitmap = applyExifOrientation(context, bitmap, rotationDegrees, isFlipped)
+            }
+            bitmap
         } finally {
             Glide.with(context).clear(target)
         }
@@ -135,5 +177,6 @@ class ThumbnailFetcher internal constructor(
 
     companion object {
         private val LOG_TAG = LogUtils.createTag<ThumbnailFetcher>()
+        private const val BITMAP_SIZE_DANGER_THRESHOLD = 20 * (1 shl 20) // MB
     }
 }

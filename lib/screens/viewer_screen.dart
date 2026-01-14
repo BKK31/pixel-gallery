@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:lumina_gallery/services/trash_service.dart';
 import '../services/media_service.dart';
+import '../services/local_db.dart';
 import '../models/photo_model.dart';
 import '../models/album_model.dart';
+import '../models/extensions/favourites_extension.dart';
 import '../widgets/aves_entry_image_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
@@ -210,7 +212,22 @@ class _ViewerScreenState extends State<ViewerScreen> {
         ? "${(sizeBytes / (1024 * 1024)).toStringAsFixed(2)} MB"
         : "Unknown";
 
-    final location = await asset.latlngAsync();
+    // Load metadata from database to get lat/long
+    final db = LocalDatabase();
+    Map<String, dynamic>? location;
+    if (asset.contentId != null) {
+      final metadata = await db.loadMetadataByIds([asset.contentId!]);
+      if (metadata.isNotEmpty) {
+        final latLongData = metadata[asset.contentId];
+        if (latLongData?['latitude'] != null &&
+            latLongData?['longitude'] != null) {
+          location = {
+            'latitude': latLongData!['latitude'] as double,
+            'longitude': latLongData['longitude'] as double,
+          };
+        }
+      }
+    }
 
     Map<String, Object>? exifData;
     try {
@@ -295,8 +312,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
                     ),
                 ],
                 if (location != null &&
-                    location.latitude != null &&
-                    location.longitude != null) ...[
+                    location['latitude'] != null &&
+                    location['longitude'] != null) ...[
                   const SizedBox(height: 20),
                   const Text(
                     "Location",
@@ -313,8 +330,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
                     child: FlutterMap(
                       options: MapOptions(
                         initialCenter: latLng.LatLng(
-                          location.latitude!,
-                          location.longitude!,
+                          location!['latitude'] as double,
+                          location['longitude'] as double,
                         ),
                         initialZoom: 15.0,
                         interactionOptions: const InteractionOptions(
@@ -331,8 +348,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
                           markers: [
                             Marker(
                               point: latLng.LatLng(
-                                location.latitude!,
-                                location.longitude!,
+                                location!['latitude'] as double,
+                                location['longitude'] as double,
                               ),
                               child: const Icon(
                                 Icons.location_on,

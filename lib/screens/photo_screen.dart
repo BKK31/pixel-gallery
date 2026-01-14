@@ -5,6 +5,7 @@ import 'package:m3e_collection/m3e_collection.dart';
 import '../services/media_service.dart';
 import '../models/photo_model.dart';
 import '../models/album_model.dart';
+import '../models/extensions/favourites_extension.dart';
 import '../widgets/aves_entry_image.dart';
 import '../screens/viewer_screen.dart';
 import 'package:share_plus/share_plus.dart';

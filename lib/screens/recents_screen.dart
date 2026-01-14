@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lumina_gallery/models/photo_model.dart';
+import 'package:lumina_gallery/models/extensions/favourites_extension.dart';
 import 'package:lumina_gallery/screens/viewer_screen.dart';
 import 'package:lumina_gallery/services/media_service.dart';
 import 'package:lumina_gallery/services/trash_service.dart';
@@ -17,8 +18,7 @@ class RecentsScreen extends StatefulWidget {
   RecentsScreenState createState() => RecentsScreenState();
 }
 
-class RecentsScreenState extends State<RecentsScreen>
-    with AutomaticKeepAliveClientMixin {
+class RecentsScreenState extends State<RecentsScreen> {
   final MediaService _service = MediaService();
   final TrashService _trashService = TrashService();
   final ScrollController _scrollController = ScrollController();
@@ -36,9 +36,6 @@ class RecentsScreenState extends State<RecentsScreen>
   StreamSubscription? _deleteSubscription;
   StreamSubscription? _albumSubscription;
   Timer? _updateTimer;
-
-  @override
-  bool get wantKeepAlive => true;
 
   Future<void> refresh() => _init();
 
@@ -237,8 +234,6 @@ class RecentsScreenState extends State<RecentsScreen>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
-
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }

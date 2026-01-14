@@ -3,6 +3,7 @@ import '../models/aves_entry.dart';
 import 'local_db.dart';
 import 'notification_service.dart';
 import 'media_service.dart';
+import 'media_fetch_service.dart';
 
 class CatalogService {
   static final CatalogService _instance = CatalogService._internal();
@@ -11,6 +12,7 @@ class CatalogService {
 
   final LocalDatabase _db = LocalDatabase();
   final NotificationService _notifications = NotificationService();
+  final MediaFetchService _mediaFetchService = mediaFetchService;
 
   bool _isCataloging = false;
   bool get isCataloging => _isCataloging;
@@ -30,50 +32,45 @@ class CatalogService {
         if (!_isCataloging) break;
 
         final path = entry.path;
-        if (path != null) {
+        final contentId = entry.contentId;
+        if (path != null && contentId != null) {
           try {
+            // Extract metadata
             final exif = await Exif.fromPath(path);
             final latLong = await exif.getLatLong();
 
-            final updatedEntry = AvesEntry(
-              uri: entry.uri,
-              path: entry.path,
-              sourceMimeType: entry.sourceMimeType,
-              width: entry.width,
-              height: entry.height,
-              sourceRotationDegrees: entry.sourceRotationDegrees,
-              sizeBytes: entry.sizeBytes,
-              dateAddedSecs: entry.dateAddedSecs,
-              dateModifiedMillis: entry.dateModifiedMillis,
-              sourceDateTakenMillis: entry.sourceDateTakenMillis,
-              durationMillis: entry.durationMillis,
-              contentId: entry.contentId,
-              latitude: latLong?.latitude,
-              longitude: latLong?.longitude,
-              isCatalogued: true,
-            );
+            final metadata = {
+              'latitude': latLong?.latitude,
+              'longitude': latLong?.longitude,
+              'xmpSubjects': null,
+              'xmpTitle': null,
+              'rating': null,
+            };
 
-            await _db.updateEntry(updatedEntry);
-            MediaService().notifyEntryUpdated(updatedEntry);
+            await _db.saveMetadata(contentId, metadata);
             await exif.close();
+
+            // Pre-generate thumbnail for instant loading
+            try {
+              await _mediaFetchService.getThumbnail(
+                entry: entry,
+                extent: 200.0,
+              );
+            } catch (e) {
+              // Don't fail cataloging if thumbnail fails
+              print('Thumbnail generation failed: $e');
+            }
+
+            MediaService().notifyEntryUpdated(entry);
           } catch (e) {
-            // If failed, still mark as catalogued to avoid retrying indefinitely
-            final failedEntry = AvesEntry(
-              uri: entry.uri,
-              path: entry.path,
-              sourceMimeType: entry.sourceMimeType,
-              width: entry.width,
-              height: entry.height,
-              sourceRotationDegrees: entry.sourceRotationDegrees,
-              sizeBytes: entry.sizeBytes,
-              dateAddedSecs: entry.dateAddedSecs,
-              dateModifiedMillis: entry.dateModifiedMillis,
-              sourceDateTakenMillis: entry.sourceDateTakenMillis,
-              durationMillis: entry.durationMillis,
-              contentId: entry.contentId,
-              isCatalogued: true,
-            );
-            await _db.updateEntry(failedEntry);
+            // Still mark as catalogued even if extraction fails
+            await _db.saveMetadata(contentId, {
+              'latitude': null,
+              'longitude': null,
+              'xmpSubjects': null,
+              'xmpTitle': null,
+              'rating': null,
+            });
           }
         }
 

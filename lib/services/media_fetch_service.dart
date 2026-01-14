@@ -4,39 +4,42 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
+import 'package:flutter/widgets.dart';
 import 'package:lumina_gallery/models/aves_entry.dart';
 import 'package:lumina_gallery/services/channel.dart';
 
 final MediaFetchService mediaFetchService = MediaFetchService();
 
-class MediaFetchService {
+class MediaFetchService with WidgetsBindingObserver {
   final _mediaByteStreamChannel = AvesStreamsChannel(
     'com.pixel.gallery/media_byte_stream',
   );
 
-  // In-memory cache for decoders to provide instant access during scrolling
-  static final Map<String, ui.Codec> _memoryCache = {};
-  static const int _maxInMemoryThumbnails = 400;
+  // Track pending requests to avoid duplicate fetches
+  static final Map<String, List<Completer<ui.Codec>>> _pendingRequests = {};
 
-  Directory? _persistentThumbDir;
+  MediaFetchService() {
+    WidgetsBinding.instance.addObserver(this);
+  }
 
-  Future<File> _getCacheFile(AvesEntry entry, double extent) async {
-    if (_persistentThumbDir == null) {
-      final appDir = await getApplicationDocumentsDirectory();
-      _persistentThumbDir = Directory(p.join(appDir.path, 'thumbnails'));
-      if (!_persistentThumbDir!.existsSync()) {
-        _persistentThumbDir!.createSync(recursive: true);
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _clearPendingRequests();
+    }
+  }
+
+  void _clearPendingRequests() {
+    for (final pending in _pendingRequests.values) {
+      for (final completer in pending) {
+        if (!completer.isCompleted) {
+          completer.completeError(
+            Exception('App lifecycle: request cancelled'),
+          );
+        }
       }
     }
-
-    // Stable key using path (preferred) or URI + last modified
-    final stableId = entry.path ?? entry.uri;
-    final safeId = stableId.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
-    final fileName =
-        '${safeId}_${entry.dateModifiedMillis}_${extent.toInt()}.jpg';
-    return File(p.join(_persistentThumbDir!.path, fileName));
+    _pendingRequests.clear();
   }
 
   Future<ui.Codec> getThumbnail({
@@ -48,28 +51,17 @@ class MediaFetchService {
     final cacheKey =
         '${stableId}_${entry.dateModifiedMillis}_${extent.toInt()}';
 
-    // 1. Check Memory Cache
-    if (_memoryCache.containsKey(cacheKey)) {
-      return _memoryCache[cacheKey]!;
+    // Check pending requests
+    if (_pendingRequests.containsKey(cacheKey)) {
+      final completer = Completer<ui.Codec>();
+      _pendingRequests[cacheKey]!.add(completer);
+      return completer.future;
     }
 
-    final cacheFile = await _getCacheFile(entry, extent);
+    _pendingRequests[cacheKey] = [];
 
-    // 2. Check Disk Cache
-    if (await cacheFile.exists()) {
-      try {
-        final bytes = await cacheFile.readAsBytes();
-        final codec = await ui.instantiateImageCodec(bytes);
-        _updateMemoryCache(cacheKey, codec);
-        return codec;
-      } catch (e) {
-        debugPrint('MediaFetchService failed to read cache: $e');
-      }
-    }
-
-    // 3. Native Fetch
     final Completer<ui.Codec> completer = Completer();
-    final bytes = <int>[];
+    final sink = BytesBuilder(copy: false);
 
     _mediaByteStreamChannel
         .receiveBroadcastStream({
@@ -79,36 +71,68 @@ class MediaFetchService {
           'dateModifiedMillis': entry.dateModifiedMillis,
           'rotationDegrees': entry.sourceRotationDegrees,
           'isFlipped': false,
+          'pageId': null,
           'widthDip': extent,
           'heightDip': extent,
-          'defaultSizeDip': 256.0,
-          'quality': 90,
+          'defaultSizeDip': 64.0,
+          'quality': 100,
           'decoded': false,
         })
         .listen(
           (data) {
             if (data is List<int>) {
-              bytes.addAll(data);
+              sink.add(data);
             } else if (data is int) {
-              if (data == 202) {
-                final uint8Bytes = Uint8List.fromList(bytes);
-                // Save to cache asynchronously
-                _saveToDisk(cacheFile, uint8Bytes);
-
-                ui.instantiateImageCodec(uint8Bytes).then((codec) {
-                  _updateMemoryCache(cacheKey, codec);
-                  completer.complete(codec);
-                });
-              }
+              // Aves sometimes sends single bytes/status, but typically writes lists.
+              // If we receive a single int, handle it if needed.
+              // In Aves implementation, it streams Uint8List chunks.
             }
           },
           onError: (error) {
-            debugPrint('MediaFetchService getThumbnail error: $error');
-            completer.completeError(error);
+            debugPrint('MediaFetchService getThumbnail stream error: $error');
+            if (!completer.isCompleted) completer.completeError(error);
+            _rejectPendingRequests(cacheKey, error);
           },
-          onDone: () {
-            if (!completer.isCompleted) {
-              completer.completeError('Stream closed before image was loaded');
+          onDone: () async {
+            if (sink.isEmpty) {
+              final error = Exception(
+                'Stream closed with no data for ${entry.uri}',
+              );
+              if (!completer.isCompleted) completer.completeError(error);
+              _rejectPendingRequests(cacheKey, error);
+              return;
+            }
+
+            try {
+              final bytes = sink.takeBytes();
+              // Check trailer
+              if (bytes.isNotEmpty) {
+                final trailer = bytes.last;
+                // 0xCA = 202 (Encoded)
+                if (trailer == 202) {
+                  final imageData = Uint8List.sublistView(
+                    bytes,
+                    0,
+                    bytes.length - 1,
+                  );
+                  final codec = await ui.instantiateImageCodec(imageData);
+                  if (!completer.isCompleted) completer.complete(codec);
+                  _resolvePendingRequests(cacheKey, codec);
+                  return;
+                } else if (trailer == 254) {
+                  // 0xFE (Decoded / Raw) - Not fully implemented yet
+                  // Handle raw bytes if needed, but for now assuming encoded
+                }
+              }
+
+              // Fallback if no trailer or unknown
+              final codec = await ui.instantiateImageCodec(bytes);
+              if (!completer.isCompleted) completer.complete(codec);
+              _resolvePendingRequests(cacheKey, codec);
+            } catch (e) {
+              debugPrint('MediaFetchService codec error: $e');
+              if (!completer.isCompleted) completer.completeError(e);
+              _rejectPendingRequests(cacheKey, e);
             }
           },
           cancelOnError: true,
@@ -117,18 +141,25 @@ class MediaFetchService {
     return completer.future;
   }
 
-  void _updateMemoryCache(String key, ui.Codec codec) {
-    if (_memoryCache.length >= _maxInMemoryThumbnails) {
-      _memoryCache.remove(_memoryCache.keys.first); // Basic eviction
+  void _resolvePendingRequests(String key, ui.Codec codec) {
+    final pending = _pendingRequests.remove(key);
+    if (pending != null) {
+      for (final completer in pending) {
+        if (!completer.isCompleted) {
+          completer.complete(codec);
+        }
+      }
     }
-    _memoryCache[key] = codec;
   }
 
-  Future<void> _saveToDisk(File file, Uint8List bytes) async {
-    try {
-      await file.writeAsBytes(bytes);
-    } catch (e) {
-      debugPrint('MediaFetchService failed to write cache: $e');
+  void _rejectPendingRequests(String key, Object error) {
+    final pending = _pendingRequests.remove(key);
+    if (pending != null) {
+      for (final completer in pending) {
+        if (!completer.isCompleted) {
+          completer.completeError(error);
+        }
+      }
     }
   }
 }

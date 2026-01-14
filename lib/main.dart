@@ -6,12 +6,16 @@ import 'package:lumina_gallery/screens/home_screen.dart';
 import 'package:lumina_gallery/screens/single_viewer_screen.dart';
 import 'screens/settings_screen.dart';
 import 'services/settings_service.dart';
+import 'services/favourites_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Settings
   await SettingsService().init();
+
+  // Initialize Favourites Manager (loads favorites into memory)
+  await favouritesManager.init();
 
   // Increase image cache size for broad gallery scrolling (512MB, 3000 items)
   PaintingBinding.instance.imageCache.maximumSizeBytes = 512 << 20;

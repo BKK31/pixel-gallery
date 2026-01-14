@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lumina_gallery/models/aves_entry.dart';
 import 'package:video_player/video_player.dart';
@@ -22,6 +23,7 @@ class _VideoScreenState extends State<VideoScreen> {
   bool _isDragging = false;
   double _dragValue = 0;
   DateTime? _lastSeekTime;
+  Timer? _progressTimer;
 
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
@@ -30,14 +32,54 @@ class _VideoScreenState extends State<VideoScreen> {
     return "$minutes:$seconds";
   }
 
-  @override
-  void initState() {
-    super.initState();
-    widget.videoController?.addListener(() {
-      if (mounted && !_isDragging) {
+  void _startProgressTimer() {
+    _progressTimer?.cancel();
+    // Update seekbar every 100ms while video is playing
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (mounted &&
+          widget.videoController != null &&
+          widget.videoController!.value.isPlaying &&
+          !_isDragging) {
         setState(() {});
       }
     });
+  }
+
+  void _stopProgressTimer() {
+    _progressTimer?.cancel();
+    _progressTimer = null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen to play/pause state changes
+    widget.videoController?.addListener(_onVideoStateChange);
+    // Start timer if video is already playing
+    if (widget.videoController?.value.isPlaying == true) {
+      _startProgressTimer();
+    }
+  }
+
+  void _onVideoStateChange() {
+    if (!mounted) return;
+
+    final isPlaying = widget.videoController?.value.isPlaying ?? false;
+
+    if (isPlaying) {
+      _startProgressTimer();
+    } else {
+      _stopProgressTimer();
+      // Update UI one last time when paused to show correct position
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopProgressTimer();
+    widget.videoController?.removeListener(_onVideoStateChange);
+    super.dispose();
   }
 
   @override

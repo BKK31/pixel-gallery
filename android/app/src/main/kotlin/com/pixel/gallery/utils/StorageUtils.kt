@@ -538,6 +538,38 @@ object StorageUtils {
         return uri
     }
 
+    // As of Glide v4.12.0, a special loader `QMediaStoreUriLoader` is automatically used
+    // to work around a bug from Android 10 (API 29) where metadata redaction corrupts HEIC images.
+    // This loader relies on `MediaStore.setRequireOriginal` but this yields a `SecurityException`
+    // for some non image/video content URIs (e.g. `downloads`, `file`)
+    fun getGlideSafeUri(context: Context, uri: Uri, mimeType: String, sizeBytes: Long? = null): Uri {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && isMediaStoreContentUri(uri)) {
+            val uriPath = uri.path
+            when {
+                uriPath?.contains("/downloads/") == true -> {
+                    // e.g. `content://media/external_primary/downloads/...`
+                    getMediaUriImageVideoUri(uri, mimeType)?.let { imageVideoUri -> return imageVideoUri }
+                }
+
+                uriPath?.contains("/file/") == true -> {
+                    // e.g. `content://media/external/file/...`
+                    // create an ad-hoc temporary file for decoding only
+                    createTempFile(context).apply {
+                        try {
+                            transferFrom(openInputStream(context, uri), sizeBytes)
+                            return Uri.fromFile(this)
+                        } catch (e: Exception) {
+                            Log.e(LOG_TAG, "failed to create temporary file from uri=$uri", e)
+                        }
+                    }
+                }
+
+                uri.userInfo != null -> return stripMediaUriUserInfo(uri)
+            }
+        }
+        return uri
+    }
+
     fun getMediaStoreScopedStorageSafeUri(uri: Uri, mimeType: String): Uri {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && isMediaStoreContentUri(uri)) {
             val uriPath = uri.path

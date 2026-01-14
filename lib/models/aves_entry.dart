@@ -13,10 +13,6 @@ class AvesEntry {
   final int? sourceDateTakenMillis;
   final int? durationMillis;
   final int? contentId;
-  final double? latitude;
-  final double? longitude;
-  final bool isCatalogued;
-  final bool isFavorite;
 
   AvesEntry({
     required this.uri,
@@ -31,10 +27,6 @@ class AvesEntry {
     this.sourceDateTakenMillis,
     this.durationMillis,
     this.contentId,
-    this.latitude,
-    this.longitude,
-    this.isCatalogued = false,
-    this.isFavorite = false,
   });
 
   factory AvesEntry.fromMap(Map map) {
@@ -51,10 +43,8 @@ class AvesEntry {
       sourceDateTakenMillis: map['sourceDateTakenMillis'] as int?,
       durationMillis: map['durationMillis'] as int?,
       contentId: map['contentId'] as int?,
-      latitude: map['latitude'] as double?,
-      longitude: map['longitude'] as double?,
-      isCatalogued: (map['isCatalogued'] as int? ?? 0) == 1,
-      isFavorite: (map['isFavorite'] as int? ?? 0) == 1,
+      // Note: latitude, longitude, isCatalogued, isFavorite are ignored
+      // They're now in separate tables (metadata, favourites)
     );
   }
 
@@ -72,11 +62,40 @@ class AvesEntry {
       'sourceDateTakenMillis': sourceDateTakenMillis,
       'durationMillis': durationMillis,
       'contentId': contentId,
-      'latitude': latitude,
-      'longitude': longitude,
-      'isCatalogued': isCatalogued ? 1 : 0,
-      'isFavorite': isFavorite ? 1 : 0,
     };
+  }
+
+  /// Creates a copy with modified fields
+  AvesEntry copyWith({
+    String? uri,
+    String? path,
+    String? sourceMimeType,
+    int? width,
+    int? height,
+    int? sourceRotationDegrees,
+    int? sizeBytes,
+    int? dateAddedSecs,
+    int? dateModifiedMillis,
+    int? sourceDateTakenMillis,
+    int? durationMillis,
+    int? contentId,
+  }) {
+    return AvesEntry(
+      uri: uri ?? this.uri,
+      path: path ?? this.path,
+      sourceMimeType: sourceMimeType ?? this.sourceMimeType,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      sourceRotationDegrees:
+          sourceRotationDegrees ?? this.sourceRotationDegrees,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      dateAddedSecs: dateAddedSecs ?? this.dateAddedSecs,
+      dateModifiedMillis: dateModifiedMillis ?? this.dateModifiedMillis,
+      sourceDateTakenMillis:
+          sourceDateTakenMillis ?? this.sourceDateTakenMillis,
+      durationMillis: durationMillis ?? this.durationMillis,
+      contentId: contentId ?? this.contentId,
+    );
   }
 
   // AssetEntity compatibility
@@ -101,13 +120,6 @@ class AvesEntry {
   int get typeInt => isVideo ? 2 : 1; // 1 for image, 2 for video in AssetsType?
 
   Future<File?> get file async => path != null ? File(path!) : null;
-
-  Future<AvesEntry?> latlngAsync() async {
-    if (latitude != null && longitude != null) {
-      return this;
-    }
-    return null;
-  }
 
   DateTime? get bestDate {
     final millis = (sourceDateTakenMillis != null && sourceDateTakenMillis! > 0)

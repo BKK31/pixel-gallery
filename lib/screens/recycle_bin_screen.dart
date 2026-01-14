@@ -10,14 +10,10 @@ class RecycleBinScreen extends StatefulWidget {
   State<RecycleBinScreen> createState() => _RecycleBinScreenState();
 }
 
-class _RecycleBinScreenState extends State<RecycleBinScreen>
-    with AutomaticKeepAliveClientMixin {
+class _RecycleBinScreenState extends State<RecycleBinScreen> {
   List<String> _trashedPaths = [];
   List<File> _trashedFiles = [];
   final TrashService _trashService = TrashService();
-
-  @override
-  bool get wantKeepAlive => true;
 
   // Selection
   bool _isSelecting = false;
@@ -134,7 +130,6 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return PopScope(
       canPop: !_isSelecting,
       onPopInvokedWithResult: (didPop, result) {

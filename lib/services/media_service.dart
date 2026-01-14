@@ -418,20 +418,7 @@ class MediaService {
 
   // Fetches all assets marked as favorites across all albums.
   Future<List<PhotoModel>> getFavorites() async {
-    if (_isInitialized) {
-      return _allEntries
-          .where((e) => e.isFavorite)
-          .map(
-            (entry) => PhotoModel(
-              uid: entry.id,
-              asset: entry,
-              timeTaken: entry.bestDate ?? DateTime.now(),
-              isVideo: entry.isVideo,
-            ),
-          )
-          .toList();
-    }
-
+    // Always load from database since favorites are in separate table
     final entries = await _db.getFavoriteEntries();
     return entries
         .map(
@@ -446,35 +433,13 @@ class MediaService {
   }
 
   Future<void> toggleFavorite(AvesEntry entry) async {
-    final isFavorite = !entry.isFavorite;
-    final updated = AvesEntry(
-      uri: entry.uri,
-      path: entry.path,
-      sourceMimeType: entry.sourceMimeType,
-      width: entry.width,
-      height: entry.height,
-      sourceRotationDegrees: entry.sourceRotationDegrees,
-      sizeBytes: entry.sizeBytes,
-      dateAddedSecs: entry.dateAddedSecs,
-      dateModifiedMillis: entry.dateModifiedMillis,
-      sourceDateTakenMillis: entry.sourceDateTakenMillis,
-      durationMillis: entry.durationMillis,
-      contentId: entry.contentId,
-      latitude: entry.latitude,
-      longitude: entry.longitude,
-      isCatalogued: entry.isCatalogued,
-      isFavorite: isFavorite,
-    );
+    if (entry.contentId == null) return;
 
-    // Synchronous memory update
-    final index = _allEntries.indexWhere((e) => e.contentId == entry.contentId);
-    if (index != -1) {
-      _allEntries[index] = updated;
-      _cachedAlbums = _groupEntries(_allEntries);
-    }
+    // Toggle favorite in database (favorites table)
+    await _db.toggleFavorite(entry.contentId!);
 
-    await _db.updateEntry(updated);
-    _entryUpdateController.add(updated);
+    // Notify UI of change
+    _entryUpdateController.add(entry);
   }
 
   // Groups a flat list of photos by their date (Month-Day-Year).
