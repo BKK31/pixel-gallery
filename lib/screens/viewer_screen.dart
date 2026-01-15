@@ -18,6 +18,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latLng;
 import 'package:native_exif/native_exif.dart';
 import 'package:motion_photos/motion_photos.dart';
+import 'package:wallpaper_manager_plus/wallpaper_manager_plus.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class ViewerScreen extends StatefulWidget {
   final int index;
@@ -84,7 +86,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
     try {
       final file = await photo.asset.file;
       if (file != null && await file.exists()) {
-        final controller = VideoPlayerController.file(file);
+        final controller = VideoPlayerController.file(
+          file,
+          videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+        );
         await controller.initialize();
         await controller.setLooping(true);
 
@@ -152,6 +157,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
       await _motionController!.initialize();
       await _motionController!.setLooping(true);
       await _motionController!.play();
+      WakelockPlus.enable();
 
       if (mounted) {
         setState(() {
@@ -165,6 +171,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   void _stopVideo() {
     _motionController?.pause();
+    WakelockPlus.disable();
     _motionController?.dispose();
     _motionController = null;
     if (mounted) {
@@ -176,6 +183,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   Future<void> _toggleFavorite(PhotoModel photo) async {
     await _service.toggleFavorite(photo.asset);
+    // Force UI update since isFavorite is a getter that reads from FavouritesManager
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   // Moves the current photo to the trash and closes the viewer.
@@ -197,6 +208,63 @@ class _ViewerScreenState extends State<ViewerScreen> {
     if (file != null) {
       await Share.shareXFiles([XFile(file.path)]);
     }
+  }
+
+  Future<void> _setWallpaper(PhotoModel photo, int location) async {
+    File? file = await photo.asset.file;
+    if (file == null) return;
+
+    try {
+      // Show loading indicator? Or just toast after
+      await WallpaperManagerPlus().setWallpaper(file, location);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Wallpaper set successfully")),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error setting wallpaper: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to set wallpaper")),
+        );
+      }
+    }
+  }
+
+  void _showWallpaperOptions(PhotoModel photo) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.wallpaper),
+            title: const Text("Home Screen"),
+            onTap: () {
+              Navigator.pop(context);
+              _setWallpaper(photo, WallpaperManagerPlus.homeScreen);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.lock),
+            title: const Text("Lock Screen"),
+            onTap: () {
+              Navigator.pop(context);
+              _setWallpaper(photo, WallpaperManagerPlus.lockScreen);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.smartphone),
+            title: const Text("Both"),
+            onTap: () {
+              Navigator.pop(context);
+              _setWallpaper(photo, WallpaperManagerPlus.bothScreens);
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   // Shows a bottom sheet with detailed metadata (EXIF) about the photo.
@@ -241,6 +309,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
     }
 
     if (!mounted) return;
+
+    // Slight delay to allow dismiss animation to settle if triggered by swipe
+    await Future.delayed(const Duration(milliseconds: 100));
 
     showModalBottomSheet(
       context: context,
@@ -407,6 +478,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     _controller.dispose();
     _videoController?.dispose();
     _motionController?.dispose();
+    WakelockPlus.disable();
     _updateSubscription?.cancel();
     super.dispose();
   }
@@ -445,45 +517,47 @@ class _ViewerScreenState extends State<ViewerScreen> {
               itemBuilder: (context, index) {
                 final photo = _photos[index];
 
+                final Widget content;
                 if (photo.asset.isVideo) {
-                  return VideoScreen(
+                  content = VideoScreen(
                     asset: photo.asset,
                     controlsVisible: _showUI,
                     videoController: _videoController,
                   );
-                }
-
-                // Stack Logic: Photo is base, Video is overlay for Motion Photos
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    PhotoView(
-                      scaleStateChangedCallback: (state) {
-                        setState(() {
-                          _isZoomed = state != PhotoViewScaleState.initial;
-                        });
-                      },
-                      imageProvider: AvesEntryImageProvider(photo.asset),
-                      minScale: PhotoViewComputedScale.contained,
-                      maxScale: PhotoViewComputedScale.covered * 4,
-                      heroAttributes: PhotoViewHeroAttributes(
-                        tag: photo.asset.id,
-                      ),
-                    ),
-                    if (index == _currentIndex &&
-                        _isPlayingMotion &&
-                        _motionController != null &&
-                        _motionController!.value.isInitialized)
-                      Positioned.fill(
-                        child: Center(
-                          child: AspectRatio(
-                            aspectRatio: _motionController!.value.aspectRatio,
-                            child: VideoPlayer(_motionController!),
-                          ),
+                } else {
+                  // Stack Logic: Photo is base, Video is overlay for Motion Photos
+                  content = Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      PhotoView(
+                        scaleStateChangedCallback: (state) {
+                          setState(() {
+                            _isZoomed = state != PhotoViewScaleState.initial;
+                          });
+                        },
+                        imageProvider: AvesEntryImageProvider(photo.asset),
+                        minScale: PhotoViewComputedScale.contained,
+                        maxScale: PhotoViewComputedScale.covered * 4,
+                        heroAttributes: PhotoViewHeroAttributes(
+                          tag: photo.asset.id,
                         ),
                       ),
-                  ],
-                );
+                      if (index == _currentIndex &&
+                          _isPlayingMotion &&
+                          _motionController != null &&
+                          _motionController!.value.isInitialized)
+                        Positioned.fill(
+                          child: Center(
+                            child: AspectRatio(
+                              aspectRatio: _motionController!.value.aspectRatio,
+                              child: VideoPlayer(_motionController!),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                }
+                return content;
               },
             ),
           ),
@@ -516,12 +590,27 @@ class _ViewerScreenState extends State<ViewerScreen> {
                         }
                       },
                     ),
-                  IconButton(
-                    icon: const Icon(Icons.info_outline),
-                    onPressed: () {
-                      final photo = _photos[_currentIndex];
-                      _showInfoBottomSheet(photo);
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'wallpaper') {
+                        _showWallpaperOptions(_photos[_currentIndex]);
+                      } else if (value == 'edit') {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Editing coming soon")),
+                        );
+                      }
                     },
+                    itemBuilder: (BuildContext context) =>
+                        <PopupMenuEntry<String>>[
+                          const PopupMenuItem<String>(
+                            value: 'wallpaper',
+                            child: Text('Set as wallpaper'),
+                          ),
+                          const PopupMenuItem<String>(
+                            value: 'edit',
+                            child: Text('Edit'),
+                          ),
+                        ],
                   ),
                 ],
               ),
@@ -542,6 +631,12 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
+                    IconButton(
+                      icon: const Icon(Icons.info_outline, color: Colors.white),
+                      onPressed: () {
+                        _showInfoBottomSheet(_photos[_currentIndex]);
+                      },
+                    ),
                     IconButton(
                       icon: const Icon(Icons.share, color: Colors.white),
                       onPressed: () {

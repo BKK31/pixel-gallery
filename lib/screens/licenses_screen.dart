@@ -1,151 +1,68 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 
-class LicensesScreen extends StatefulWidget {
+class LicensesScreen extends StatelessWidget {
   const LicensesScreen({super.key});
 
   @override
-  State<LicensesScreen> createState() => _LicensesScreenState();
-}
-
-class _LicensesScreenState extends State<LicensesScreen> {
-  final List<LicenseEntry> _licenses = [];
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadLicenses();
-  }
-
-  Future<void> _loadLicenses() async {
-    await for (final license in LicenseRegistry.licenses) {
-      if (mounted) {
-        setState(() {
-          _licenses.add(license);
-        });
-      }
-    }
-    if (mounted) {
-      setState(() {
-        _loading = false;
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBarM3E(
         title: const Text(
           "Open Source Licenses",
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.inversePrimary,
         centerTitle: true,
       ),
-      body: _loading && _licenses.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : SelectionArea(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 24,
+      body: SelectionArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "SPECIAL ATTRIBUTION: AVES",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: theme.colorScheme.primary,
                 ),
-                itemCount: _licenses.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "--------------------------------------------------------------------------------",
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          "SPECIAL ATTRIBUTION: AVES",
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          "Lumina Gallery is built with inspiration and core components from the Aves project.\nCopyright (c) 2020 Thibault Deckers.\n\nAdditional thanks to all open source contributors whose work is listed below.",
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 13,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          "--------------------------------------------------------------------------------",
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                      ],
-                    );
-                  }
-
-                  final entry = _licenses[index - 1];
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Package: ${entry.packages.join(', ')}",
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      ...entry.paragraphs.map(
-                        (p) => Padding(
-                          padding: EdgeInsets.only(
-                            left: p.indent * 16.0,
-                            bottom: 8.0,
-                          ),
-                          child: Text(
-                            p.text,
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 13,
-                              height: 1.4,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        "--------------------------------------------------------------------------------",
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-                  );
-                },
               ),
-            ),
+              const SizedBox(height: 16),
+              const Text(
+                "Lumina Gallery is built with inspiration and core components from the Aves project.\n\n"
+                "BSD 3-Clause License\n\n"
+                "Copyright (c) 2020, Thibault Deckers\n"
+                "All rights reserved.\n\n"
+                "Redistribution and use in source and binary forms, with or without\n"
+                "modification, are permitted provided that the following conditions are met:\n\n"
+                "1. Redistributions of source code must retain the above copyright notice, this\n"
+                "   list of conditions and the following disclaimer.\n\n"
+                "2. Redistributions in binary form must reproduce the above copyright notice,\n"
+                "   this list of conditions and the following disclaimer in the documentation\n"
+                "   and/or other materials provided with the distribution.\n\n"
+                "3. Neither the name of the copyright holder nor the names of its\n"
+                "   contributors may be used to endorse or promote products derived from\n"
+                "   this software without specific prior written permission.\n\n"
+                "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"\n"
+                "AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE\n"
+                "IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE\n"
+                "DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE\n"
+                "FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL\n"
+                "DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR\n"
+                "SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER\n"
+                "CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,\n"
+                "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\n"
+                "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.",
+                style: TextStyle(fontSize: 14, height: 1.5),
+              ),
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

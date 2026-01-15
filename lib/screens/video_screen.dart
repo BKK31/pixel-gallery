@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lumina_gallery/models/aves_entry.dart';
 import 'package:video_player/video_player.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class VideoScreen extends StatefulWidget {
   final AvesEntry asset;
@@ -34,11 +35,13 @@ class _VideoScreenState extends State<VideoScreen> {
 
   void _startProgressTimer() {
     _progressTimer?.cancel();
-    // Update seekbar every 100ms while video is playing
-    _progressTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+    // Update seekbar every 1000ms (twice per second) when controls are visible
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 1000), (
+      timer,
+    ) {
       if (mounted &&
           widget.videoController != null &&
-          widget.videoController!.value.isPlaying &&
+          widget.controlsVisible &&
           !_isDragging) {
         setState(() {});
       }
@@ -55,9 +58,38 @@ class _VideoScreenState extends State<VideoScreen> {
     super.initState();
     // Listen to play/pause state changes
     widget.videoController?.addListener(_onVideoStateChange);
-    // Start timer if video is already playing
-    if (widget.videoController?.value.isPlaying == true) {
+    // Start timer if controls are visible
+    if (widget.controlsVisible) {
       _startProgressTimer();
+    }
+    // Enable wakelock if video is playing
+    if (widget.videoController?.value.isPlaying == true) {
+      _enableWakelock();
+    }
+  }
+
+  @override
+  void didUpdateWidget(VideoScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.videoController != widget.videoController) {
+      oldWidget.videoController?.removeListener(_onVideoStateChange);
+      widget.videoController?.addListener(_onVideoStateChange);
+
+      if (widget.videoController?.value.isPlaying == true) {
+        _enableWakelock();
+      } else {
+        _disableWakelock();
+      }
+    }
+
+    // Start/stop timer based on controls visibility
+    if (oldWidget.controlsVisible != widget.controlsVisible) {
+      if (widget.controlsVisible) {
+        _startProgressTimer();
+        setState(() {}); // Immediate update when controls become visible
+      } else {
+        _stopProgressTimer();
+      }
     }
   }
 
@@ -67,17 +99,28 @@ class _VideoScreenState extends State<VideoScreen> {
     final isPlaying = widget.videoController?.value.isPlaying ?? false;
 
     if (isPlaying) {
-      _startProgressTimer();
+      _enableWakelock();
     } else {
-      _stopProgressTimer();
+      _disableWakelock();
       // Update UI one last time when paused to show correct position
-      setState(() {});
+      if (widget.controlsVisible) {
+        setState(() {});
+      }
     }
+  }
+
+  void _enableWakelock() {
+    WakelockPlus.enable();
+  }
+
+  void _disableWakelock() {
+    WakelockPlus.disable();
   }
 
   @override
   void dispose() {
     _stopProgressTimer();
+    _disableWakelock();
     widget.videoController?.removeListener(_onVideoStateChange);
     super.dispose();
   }
@@ -87,7 +130,7 @@ class _VideoScreenState extends State<VideoScreen> {
     if (widget.videoController != null &&
         widget.videoController!.value.isInitialized) {
       final currentPosition = _isDragging
-          ? Duration(seconds: _dragValue.toInt())
+          ? Duration(milliseconds: _dragValue.toInt())
           : widget.videoController!.value.position;
 
       return Stack(
@@ -149,14 +192,14 @@ class _VideoScreenState extends State<VideoScreen> {
                                       .videoController!
                                       .value
                                       .position
-                                      .inSeconds
+                                      .inMilliseconds
                                       .toDouble(),
                             min: 0.0,
                             max: widget
                                 .videoController!
                                 .value
                                 .duration
-                                .inSeconds
+                                .inMilliseconds
                                 .toDouble(),
                             onChangeStart: (value) {
                               setState(() {
@@ -174,13 +217,13 @@ class _VideoScreenState extends State<VideoScreen> {
                                       const Duration(milliseconds: 50)) {
                                 _lastSeekTime = now;
                                 widget.videoController!.seekTo(
-                                  Duration(seconds: value.toInt()),
+                                  Duration(milliseconds: value.toInt()),
                                 );
                               }
                             },
                             onChangeEnd: (value) {
                               widget.videoController!
-                                  .seekTo(Duration(seconds: value.toInt()))
+                                  .seekTo(Duration(milliseconds: value.toInt()))
                                   .then((_) {
                                     setState(() {
                                       _isDragging = false;

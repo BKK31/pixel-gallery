@@ -220,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen>
               body: (context, controller) => TabBarView(
                 controller: _tabController,
                 dragStartBehavior: DragStartBehavior.down,
-                physics: const BouncingScrollPhysics(),
+                physics: const NeverScrollableScrollPhysics(),
                 children: _pages,
               ),
               child: TabBar(

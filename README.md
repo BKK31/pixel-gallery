@@ -106,22 +106,29 @@ To run Pixel Gallery locally, you'll need [Flutter](https://flutter.dev/docs/get
 Pixel Gallery is built with a curated list of top-tier libraries:
 
 - [**Flutter**](https://flutter.dev) - UI Toolkit.
-- [**photo_manager**](https://pub.dev/packages/photo_manager) - Advanced asset management.
-- [**dynamic_color**](https://pub.dev/packages/dynamic_color) - Material You theming.
-- [**video_player**](https://pub.dev/packages/video_player) - Video playback support.
+- [**shared_preferences**](https://pub.dev/packages/shared_preferences) - Read and write simple key-value pairs.
+- [**intl**](https://pub.dev/packages/intl) - Internationalization and localization.
+- [**sqflite**](https://pub.dev/packages/sqflite) - SQLite plugin for Flutter.
+- [**path**](https://pub.dev/packages/path) - Path manipulation library.
+- [**flutter_local_notifications**](https://pub.dev/packages/flutter_local_notifications) - Displaying local notifications.
+- [**dynamic_color**](https://pub.dev/packages/dynamic_color) - Material You dynamic theming.
+- [**share_plus**](https://pub.dev/packages/share_plus) - Native sharing capabilities.
 - [**photo_view**](https://pub.dev/packages/photo_view) - Zoomable image viewer.
+- [**video_player**](https://pub.dev/packages/video_player) - Video playback support.
+- [**motion_photos**](https://pub.dev/packages/motion_photos) - Motion photo extracting.
 - [**flutter_map**](https://pub.dev/packages/flutter_map) + [**latlong2**](https://pub.dev/packages/latlong2) - OpenStreetMap integration.
 - [**native_exif**](https://pub.dev/packages/native_exif) - Efficient EXIF metadata reading.
-- [**motion_photos**](https://pub.dev/packages/motion_photos) - Motion photo extracting.
-- [**share_plus**](https://pub.dev/packages/share_plus) - Native sharing capabilities.
+- [**cupertino_icons**](https://pub.dev/packages/cupertino_icons) - iOS-style icons.
+- [**path_provider**](https://pub.dev/packages/path_provider) - Local file system access.
 - [**permission_handler**](https://pub.dev/packages/permission_handler) - Cross-platform permission handling.
 - [**device_info_plus**](https://pub.dev/packages/device_info_plus) - Device version checking.
-- [**intl**](https://pub.dev/packages/intl) - Internationalization and date formatting.
 - [**m3e_collection**](https://pub.dev/packages/m3e_collection) - Material 3 Expressive components.
 - [**flutter_floating_bottom_bar**](https://pub.dev/packages/flutter_floating_bottom_bar) - Interactive floating navigation.
-- [**font_awesome_flutter**](https://pub.dev/packages/font_awesome_flutter) - Brand icons (GitHub, etc.).
-- [**path_provider**](https://pub.dev/packages/path_provider) - Local file system access.
 - [**url_launcher**](https://pub.dev/packages/url_launcher) - Opening external links.
+- [**font_awesome_flutter**](https://pub.dev/packages/font_awesome_flutter) - Font Awesome icons.
+- [**streams_channel**](https://github.com/deckerst/aves_streams_channel) - Aves streams channel.
+- [**wallpaper_manager_plus**](https://pub.dev/packages/wallpaper_manager_plus) - Set device wallpaper.
+- [**wakelock_plus**](https://pub.dev/packages/wakelock_plus) - Keep the device screen awake.
 
 ## 🤝 Contributing
 
@@ -132,6 +139,12 @@ Contributions are welcome! If you have suggestions or want to report a bug, plea
 3.  Commit your changes (`git commit -m 'Add some amazing feature'`).
 4.  Push to the branch (`git push origin feature/amazing-feature`).
 5.  Open a Pull Request.
+
+## 🙏 Acknowledgements
+
+A significant portion of the backend logic, particularly for media handling and metadata extraction, is adapted from the [Aves](https://github.com/deckerst/aves) project. Aves is a beautiful and feature-rich gallery and metadata explorer for Android, and its source code was invaluable to the development of Lumina Gallery. The `streams_channel` package used in this project is also a part of the Aves project.
+
+The original Aves project is licensed under the [BSD 3-Clause "New" or "Revised" License](https://github.com/deckerst/aves/blob/main/LICENSE). We are immensely grateful to the Aves contributors for their work.
 
 ## 📄 License
 

@@ -14,6 +14,7 @@ import 'catalog_service.dart';
 import 'trash_service.dart';
 import 'settings_service.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'favourites_manager.dart';
 
 // Service responsible for fetching and managing media assets (photos/videos)
 // and albums using Aves MediaStore engine.
@@ -435,8 +436,8 @@ class MediaService {
   Future<void> toggleFavorite(AvesEntry entry) async {
     if (entry.contentId == null) return;
 
-    // Toggle favorite in database (favorites table)
-    await _db.toggleFavorite(entry.contentId!);
+    // Use FavouritesManager which handles both DB and in-memory state
+    await favouritesManager.toggle(entry);
 
     // Notify UI of change
     _entryUpdateController.add(entry);

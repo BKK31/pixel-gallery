@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:video_player/video_player.dart';
 import 'package:intl/intl.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class SingleViewerScreen extends StatefulWidget {
   final File file;
@@ -31,19 +32,25 @@ class _SingleViewerScreenState extends State<SingleViewerScreen> {
         path.endsWith('.mp4') || path.endsWith('.mov') || path.endsWith('.avi');
 
     if (_isVideo) {
-      _videoController = VideoPlayerController.file(widget.file)
-        ..initialize().then((_) {
-          setState(() {});
-          _videoController!.play();
-          _isPlaying = true;
-          _videoController!.setLooping(true);
-        });
+      _videoController =
+          VideoPlayerController.file(
+              widget.file,
+              videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+            )
+            ..initialize().then((_) {
+              setState(() {});
+              _videoController!.play();
+              WakelockPlus.enable();
+              _isPlaying = true;
+              _videoController!.setLooping(true);
+            });
     }
   }
 
   @override
   void dispose() {
     _videoController?.dispose();
+    WakelockPlus.disable();
     super.dispose();
   }
 
@@ -51,11 +58,13 @@ class _SingleViewerScreenState extends State<SingleViewerScreen> {
     if (_videoController == null) return;
     if (_videoController!.value.isPlaying) {
       _videoController!.pause();
+      WakelockPlus.disable();
       setState(() {
         _isPlaying = false;
       });
     } else {
       _videoController!.play();
+      WakelockPlus.enable();
       setState(() {
         _isPlaying = true;
       });
