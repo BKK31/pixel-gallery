@@ -237,7 +237,7 @@ class RecentsScreenState extends State<RecentsScreen>
       children: [
         if (_photos.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -252,7 +252,7 @@ class RecentsScreenState extends State<RecentsScreen>
           ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 2),
             child: ListView.builder(
               cacheExtent: 1500,
               controller: _scrollController,
@@ -264,7 +264,7 @@ class RecentsScreenState extends State<RecentsScreen>
                   return Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 16,
+                      vertical: 12,
                     ),
                     child: Text(
                       item,

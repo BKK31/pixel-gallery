@@ -132,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen>
               icon: const Icon(Icons.close),
               onPressed: _clearSelection,
             )
-          : null,
+          : Icon(null),
       actions: _isSelecting
           ? [
               IconButton(
@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen>
           duration: const Duration(seconds: 1),
           curve: Curves.decelerate,
           showIcon: true,
-          width: MediaQuery.of(context).size.width * 0.8,
+          width: MediaQuery.of(context).size.width * 0.4,
           barColor: Color.lerp(
             Theme.of(context).colorScheme.primary,
             Theme.of(context).colorScheme.surface,
@@ -188,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen>
           )!,
           start: 2,
           end: 0,
-          offset: 10,
+          offset: 8,
           barAlignment: Alignment.bottomCenter,
           iconHeight: 35,
           iconWidth: 35,
