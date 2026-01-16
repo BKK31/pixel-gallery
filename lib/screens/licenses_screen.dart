@@ -32,7 +32,7 @@ class LicensesScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               const Text(
-                "Lumina Gallery is built with inspiration and core components from the Aves project.\n\n"
+                "Pixel Gallery is built with inspiration and core components from the Aves project.\n\n"
                 "BSD 3-Clause License\n\n"
                 "Copyright (c) 2020, Thibault Deckers\n"
                 "All rights reserved.\n\n"

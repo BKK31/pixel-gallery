@@ -3,8 +3,6 @@ import 'package:flutter/gestures.dart';
 import 'package:lumina_gallery/screens/albums_screen.dart';
 import 'package:lumina_gallery/screens/recents_screen.dart';
 import 'package:lumina_gallery/screens/settings_screen.dart';
-import 'package:lumina_gallery/services/media_service.dart';
-import 'package:lumina_gallery/services/trash_service.dart';
 import 'package:lumina_gallery/services/settings_service.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
@@ -20,7 +18,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late int _selectedIndex;
-  late Future<void> _initSettings;
   late TabController _tabController;
 
   bool _isSelecting = false;
@@ -40,22 +37,18 @@ class _HomeScreenState extends State<HomeScreen>
       const AlbumsScreen(),
     ];
 
-    _initSettings = _loadInitialSettings();
-    _tabController = TabController(length: 2, vsync: this);
+    // Load initial tab synchronously from pre-initialized service
+    _selectedIndex = SettingsService().startupAtAlbums ? 1 : 0;
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: _selectedIndex,
+    );
+
     WidgetsBinding.instance.addObserver(this);
 
-    _initPermissions();
-  }
-
-  Future<void> _initPermissions() async {
-    final mediaService = MediaService();
-    final trashService = TrashService();
-
-    // 1. Request Media Permissions first
-    await mediaService.requestPermission();
-
-    // 2. Then request Trash/File Management permissions
-    await trashService.requestPermission();
+    // Permissions are handled inside the sub-screens on demand or in background
+    // No need to block the entire HomeScreen build.
   }
 
   @override
@@ -77,14 +70,6 @@ class _HomeScreenState extends State<HomeScreen>
         SettingsService().topEntryIds = visibleIds;
       }
     }
-  }
-
-  Future<void> _loadInitialSettings() async {
-    final bool startAlbum = await SettingsScreen.getStartupAtAlbums();
-    setState(() {
-      _selectedIndex = startAlbum ? 1 : 0;
-      _tabController.index = _selectedIndex;
-    });
   }
 
   void _onSelectionChanged(bool selecting, int count) {
@@ -131,13 +116,13 @@ class _HomeScreenState extends State<HomeScreen>
       title: _isSelecting
           ? Text(
               "${_selectedCount} Selected",
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
             )
-          : Text(
+          : const Text(
               "Pixel Gallery",
               style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
             ),
-      centerTitle: _isSelecting ? false : true,
+      centerTitle: !_isSelecting,
       shapeFamily: AppBarM3EShapeFamily.round,
       density: AppBarM3EDensity.regular,
       backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -147,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen>
               icon: const Icon(Icons.close),
               onPressed: _clearSelection,
             )
-          : const Icon(null),
+          : null,
       actions: _isSelecting
           ? [
               IconButton(
@@ -187,69 +172,60 @@ class _HomeScreenState extends State<HomeScreen>
       },
       child: Scaffold(
         appBar: _buildAppBar(context),
-        body: FutureBuilder<void>(
-          future: _initSettings,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            return BottomBar(
-              fit: StackFit.expand,
-              icon: (width, height) =>
-                  Center(child: Icon(Icons.arrow_upward_rounded, size: width)),
-              borderRadius: BorderRadius.circular(500),
-              duration: const Duration(seconds: 1),
-              curve: Curves.decelerate,
-              showIcon: true,
-              width: MediaQuery.of(context).size.width * 0.8,
-              barColor: Color.lerp(
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.surface,
-                0.92,
-              )!,
-              start: 2,
-              end: 0,
-              offset: 10,
-              barAlignment: Alignment.bottomCenter,
-              iconHeight: 35,
-              iconWidth: 35,
-              hideOnScroll: true,
-              onBottomBarHidden: () {},
-              respectSafeArea: true,
-              body: (context, controller) => TabBarView(
-                controller: _tabController,
-                dragStartBehavior: DragStartBehavior.down,
-                physics: const NeverScrollableScrollPhysics(),
-                children: _pages,
+        body: BottomBar(
+          fit: StackFit.expand,
+          icon: (width, height) =>
+              Center(child: Icon(Icons.arrow_upward_rounded, size: width)),
+          borderRadius: BorderRadius.circular(500),
+          duration: const Duration(seconds: 1),
+          curve: Curves.decelerate,
+          showIcon: true,
+          width: MediaQuery.of(context).size.width * 0.8,
+          barColor: Color.lerp(
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.surface,
+            0.92,
+          )!,
+          start: 2,
+          end: 0,
+          offset: 10,
+          barAlignment: Alignment.bottomCenter,
+          iconHeight: 35,
+          iconWidth: 35,
+          hideOnScroll: true,
+          onBottomBarHidden: () {},
+          respectSafeArea: true,
+          body: (context, controller) => TabBarView(
+            controller: _tabController,
+            dragStartBehavior: DragStartBehavior.down,
+            physics: PageScrollPhysics(),
+            children: _pages,
+          ),
+          child: TabBar(
+            controller: _tabController,
+            onTap: _navigateBottomBar,
+            dividerColor: Colors.transparent,
+            indicatorPadding: const EdgeInsets.symmetric(horizontal: 6),
+            indicator: UnderlineTabIndicator(
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 4,
               ),
-              child: TabBar(
-                controller: _tabController,
-                onTap: _navigateBottomBar,
-                dividerColor: Colors.transparent,
-                indicatorPadding: const EdgeInsets.symmetric(horizontal: 6),
-                indicator: UnderlineTabIndicator(
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 4,
-                  ),
-                  insets: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                ),
-                tabs: const [
-                  SizedBox(
-                    height: 55,
-                    width: 40,
-                    child: Center(child: Icon(Icons.photo)),
-                  ),
-                  SizedBox(
-                    height: 55,
-                    width: 40,
-                    child: Center(child: Icon(Icons.photo_album)),
-                  ),
-                ],
+              insets: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            ),
+            tabs: const [
+              SizedBox(
+                height: 55,
+                width: 40,
+                child: Center(child: Icon(Icons.photo)),
               ),
-            );
-          },
+              SizedBox(
+                height: 55,
+                width: 40,
+                child: Center(child: Icon(Icons.photo_album)),
+              ),
+            ],
+          ),
         ),
       ),
     );

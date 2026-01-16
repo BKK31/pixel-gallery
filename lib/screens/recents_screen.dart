@@ -12,13 +12,14 @@ import 'dart:async';
 class RecentsScreen extends StatefulWidget {
   final Function(bool, int)? onSelectionChanged;
 
-  const RecentsScreen({Key? key, this.onSelectionChanged}) : super(key: key);
+  const RecentsScreen({super.key, this.onSelectionChanged});
 
   @override
   RecentsScreenState createState() => RecentsScreenState();
 }
 
-class RecentsScreenState extends State<RecentsScreen> {
+class RecentsScreenState extends State<RecentsScreen>
+    with AutomaticKeepAliveClientMixin {
   final MediaService _service = MediaService();
   final TrashService _trashService = TrashService();
   final ScrollController _scrollController = ScrollController();
@@ -29,115 +30,115 @@ class RecentsScreenState extends State<RecentsScreen> {
 
   bool _loading = true;
   bool _isSelecting = false;
+  bool _isInitializing = false;
   final Set<String> _selectedIds = {};
 
-  StreamSubscription? _mediaSubscription;
   StreamSubscription? _updateSubscription;
   StreamSubscription? _deleteSubscription;
   StreamSubscription? _albumSubscription;
-  Timer? _updateTimer;
+  Timer? _debounceTimer;
+
+  @override
+  bool get wantKeepAlive => true;
 
   Future<void> refresh() => _init();
 
-  Future<void> _init() async {
-    final perm = await _service.requestPermission();
-    await _trashService.init();
-    await _trashService.requestPermission();
+  Future<void> _init({bool silent = false}) async {
+    if (_isInitializing) return;
+    _isInitializing = true;
 
-    if (!perm) {
-      if (mounted) {
+    try {
+      if (!silent && mounted) {
         setState(() {
-          _loading = false;
+          _loading = true;
         });
       }
-      return;
-    }
 
-    // 1. Initial Load from memory/DB cache
-    final albums = await _service.getPhotos();
-    final recentAlbum = albums.firstWhere(
-      (a) => a.id == 'recent',
-      orElse: () => albums.first,
-    );
+      final perm = await _service.requestPermission();
+      await _trashService.init();
+      await _trashService.requestPermission();
 
-    if (mounted) {
-      setState(() {
-        _currentAlbum = recentAlbum;
-        _photos = recentAlbum.entries
-            .map(
-              (entry) => PhotoModel(
-                uid: entry.id,
-                asset: entry,
-                timeTaken: entry.bestDate ?? DateTime.now(),
-                isVideo: entry.isVideo,
-              ),
-            )
-            .toList();
-        // Sort photos by date descending for consistency with Viewer and Grouping
-        _photos.sort((a, b) => b.timeTaken.compareTo(a.timeTaken));
-        _groupedItems = MediaService.groupPhotosByDate(_photos);
-        _loading = false;
-      });
-    }
-
-    // 2. Setup reactive listeners
-    _updateSubscription?.cancel();
-    _updateSubscription = _service.entryUpdateStream.listen((entry) {
-      if (!mounted) return;
-      final index = _photos.indexWhere((p) => p.uid == entry.id);
-      if (index != -1) {
-        setState(() {
-          _photos[index] = PhotoModel(
-            uid: entry.id,
-            asset: entry,
-            timeTaken: entry.bestDate ?? DateTime.now(),
-            isVideo: entry.isVideo,
-          );
-          _groupedItems = MediaService.groupPhotosByDate(_photos);
-        });
+      if (!perm) {
+        if (mounted) {
+          setState(() {
+            _loading = false;
+          });
+        }
+        return;
       }
-    });
 
-    _deleteSubscription?.cancel();
-    _deleteSubscription = _service.entryDeletedStream.listen((id) {
-      if (!mounted) return;
-      setState(() {
-        _photos.removeWhere((p) => p.uid == id.toString());
-        _groupedItems = MediaService.groupPhotosByDate(_photos);
-      });
-    });
+      // 1. Initial Load from memory/DB cache
+      final albums = await _service.getPhotos();
+      final recentAlbum = albums.firstWhere(
+        (a) => a.id == 'recent',
+        orElse: () => albums.first,
+      );
 
-    _albumSubscription?.cancel();
-    _albumSubscription = _service.albumUpdateStream.listen((_) {
-      // For album updates, we just need to re-fetch the latest lists
-      // but since we focus on 'recent', we can just re-group if _photos changed
-      // or re-fetch from service if it's a structural change.
-      _service.getPhotos().then((updatedAlbums) {
+      _processAlbum(recentAlbum);
+
+      // 2. Setup reactive listeners (only once)
+      _updateSubscription ??= _service.entryUpdateStream.listen((entry) {
         if (!mounted) return;
-        final latestRecent = updatedAlbums.firstWhere(
-          (a) => a.id == 'recent',
-          orElse: () => updatedAlbums.first,
-        );
+        final index = _photos.indexWhere((p) => p.uid == entry.id);
+        if (index != -1) {
+          setState(() {
+            _photos[index] = PhotoModel(
+              uid: entry.id,
+              asset: entry,
+              timeTaken: entry.bestDate ?? DateTime.now(),
+              isVideo: entry.isVideo,
+            );
+            _groupedItems = MediaService.groupPhotosByDate(_photos);
+          });
+        }
+      });
+
+      _deleteSubscription ??= _service.entryDeletedStream.listen((id) {
+        if (!mounted) return;
         setState(() {
-          _photos = latestRecent.entries
-              .map(
-                (entry) => PhotoModel(
-                  uid: entry.id,
-                  asset: entry,
-                  timeTaken: entry.bestDate ?? DateTime.now(),
-                  isVideo: entry.isVideo,
-                ),
-              )
-              .toList();
-          _photos.sort((a, b) => b.timeTaken.compareTo(a.timeTaken));
+          _photos.removeWhere((p) => p.uid == id.toString());
           _groupedItems = MediaService.groupPhotosByDate(_photos);
         });
       });
-    });
 
-    // 3. Start background sync (if not already running)
-    // This will notify via entryUpdateStream/entryDeletedStream/albumUpdateStream
-    unawaited(_service.getMediaStream().drain());
+      _albumSubscription ??= _service.albumUpdateStream.listen((_) {
+        _onAlbumUpdated();
+      });
+
+      // 3. Start background sync (if not already running)
+      unawaited(_service.getMediaStream().drain());
+    } finally {
+      _isInitializing = false;
+    }
+  }
+
+  void _onAlbumUpdated() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 600), () {
+      if (mounted) {
+        _init(silent: true);
+      }
+    });
+  }
+
+  void _processAlbum(AlbumModel album) {
+    if (!mounted) return;
+    setState(() {
+      _currentAlbum = album;
+      _photos = album.entries
+          .map(
+            (entry) => PhotoModel(
+              uid: entry.id,
+              asset: entry,
+              timeTaken: entry.bestDate ?? DateTime.now(),
+              isVideo: entry.isVideo,
+            ),
+          )
+          .toList();
+      _photos.sort((a, b) => b.timeTaken.compareTo(a.timeTaken));
+      _groupedItems = MediaService.groupPhotosByDate(_photos);
+      _loading = false;
+    });
   }
 
   void _toggleSelection(String id) {
@@ -150,7 +151,6 @@ class RecentsScreenState extends State<RecentsScreen> {
         _isSelecting = true;
       }
     });
-
     widget.onSelectionChanged?.call(_isSelecting, _selectedIds.length);
   }
 
@@ -184,7 +184,6 @@ class RecentsScreenState extends State<RecentsScreen> {
 
   Future<void> shareSelected() async {
     final List<XFile> files = [];
-
     for (final id in _selectedIds) {
       final photo = _photos.cast<PhotoModel?>().firstWhere(
         (p) => p?.uid == id,
@@ -197,17 +196,13 @@ class RecentsScreenState extends State<RecentsScreen> {
         }
       }
     }
-
     if (files.isNotEmpty) {
       await Share.shareXFiles(files);
     }
-
     clearSelections();
   }
 
   List<int> getVisibleEntryIds() {
-    // Aves-style: just take the top entries from the collection
-    // This provides a consistent "Recent" experience on cold boot.
     return _photos
         .take(40)
         .map((p) => p.asset.contentId)
@@ -224,17 +219,17 @@ class RecentsScreenState extends State<RecentsScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _mediaSubscription?.cancel();
     _updateSubscription?.cancel();
     _deleteSubscription?.cancel();
     _albumSubscription?.cancel();
-    _updateTimer?.cancel();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
+    super.build(context);
+    if (_loading && _photos.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -327,8 +322,7 @@ class RecentsScreenState extends State<RecentsScreen> {
               ),
             ),
           );
-          // Update UI if needed
-          setState(() {});
+          if (mounted) setState(() {});
         }
       },
       child: AspectRatio(

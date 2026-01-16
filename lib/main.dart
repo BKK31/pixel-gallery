@@ -31,7 +31,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late Future<bool> _materialYouFuture;
+  bool _materialYou = true;
 
   static const MethodChannel platform = MethodChannel(
     'com.pixel.gallery/open_file',
@@ -51,7 +51,7 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
 
-    _materialYouFuture = SettingsScreen.getMaterialYou();
+    _materialYou = SettingsScreen.getMaterialYou();
 
     _checkInitialFile();
 
@@ -88,85 +88,71 @@ class _MyAppState extends State<MyApp> {
 
   void _refreshTheme() {
     setState(() {
-      _materialYouFuture = SettingsScreen.getMaterialYou();
+      _materialYou = SettingsScreen.getMaterialYou();
     });
   }
 
   /// Locks switch visuals so Material You only changes colors
   SwitchThemeData _buildSwitchTheme(ColorScheme scheme) {
     return SwitchThemeData(
-      thumbColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) {
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
           return scheme.primary;
         }
         return scheme.outline;
       }),
-      trackColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) {
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
           return scheme.primary.withOpacity(0.5);
         }
         return scheme.surfaceVariant;
       }),
-      overlayColor: MaterialStateProperty.all(Colors.transparent),
+      overlayColor: WidgetStateProperty.all(Colors.transparent),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _materialYouFuture,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const MaterialApp(
-            debugShowCheckedModeBanner: false,
-            home: Scaffold(body: Center(child: CircularProgressIndicator())),
-          );
-        }
+    final bool useMaterialYou = _materialYou;
 
-        final bool useMaterialYou = snapshot.data!;
+    return DynamicColorBuilder(
+      builder: (lightDynamic, darkDynamic) {
+        final ColorScheme lightScheme = (useMaterialYou && lightDynamic != null)
+            ? lightDynamic
+            : ColorScheme.fromSeed(seedColor: _defaultSeedColor);
 
-        return DynamicColorBuilder(
-          builder: (lightDynamic, darkDynamic) {
-            final ColorScheme lightScheme =
-                (useMaterialYou && lightDynamic != null)
-                ? lightDynamic
-                : ColorScheme.fromSeed(seedColor: _defaultSeedColor);
+        final ColorScheme darkScheme = (useMaterialYou && darkDynamic != null)
+            ? darkDynamic
+            : ColorScheme.fromSeed(
+                seedColor: _defaultSeedColor,
+                brightness: Brightness.dark,
+              );
 
-            final ColorScheme darkScheme =
-                (useMaterialYou && darkDynamic != null)
-                ? darkDynamic
-                : ColorScheme.fromSeed(
-                    seedColor: _defaultSeedColor,
-                    brightness: Brightness.dark,
-                  );
+        return MaterialApp(
+          navigatorKey: navigatorKey,
+          debugShowCheckedModeBanner: false,
+          title: 'Pixel Gallery',
 
-            return MaterialApp(
-              navigatorKey: navigatorKey,
-              debugShowCheckedModeBanner: false,
-              title: 'Pixel Gallery',
+          /// 🌞 LIGHT THEME
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: lightScheme,
+            switchTheme: _buildSwitchTheme(lightScheme),
+          ),
 
-              /// 🌞 LIGHT THEME
-              theme: ThemeData(
-                useMaterial3: true,
-                colorScheme: lightScheme,
-                switchTheme: _buildSwitchTheme(lightScheme),
-              ),
+          /// 🌙 DARK THEME
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            colorScheme: darkScheme,
+            switchTheme: _buildSwitchTheme(darkScheme),
+          ),
 
-              /// 🌙 DARK THEME
-              darkTheme: ThemeData(
-                useMaterial3: true,
-                colorScheme: darkScheme,
-                switchTheme: _buildSwitchTheme(darkScheme),
-              ),
-
-              home: _initialFilePath != null
-                  ? SingleViewerScreen(
-                      key: ValueKey(_initialFilePath),
-                      file: File(_initialFilePath!),
-                    )
-                  : HomeScreen(onThemeRefresh: _refreshTheme),
-            );
-          },
+          home: _initialFilePath != null
+              ? SingleViewerScreen(
+                  key: ValueKey(_initialFilePath),
+                  file: File(_initialFilePath!),
+                )
+              : HomeScreen(onThemeRefresh: _refreshTheme),
         );
       },
     );

@@ -19,9 +19,18 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
   bool _loading = true;
   final MediaService _service = MediaService();
   StreamSubscription? _albumSubscription;
+  Timer? _debounceTimer;
 
   // Initializes the screen: requests permissions and fetches all albums.
-  Future<void> _init() async {
+  Future<void> _init({bool silent = false}) async {
+    if (!silent) {
+      if (mounted) {
+        setState(() {
+          _loading = true;
+        });
+      }
+    }
+
     bool perm = await _service.requestPermission();
     if (!perm) {
       if (mounted) {
@@ -31,6 +40,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
       }
       return;
     }
+
     final albums = await _service.getAlbums();
     if (mounted) {
       setState(() {
@@ -39,9 +49,20 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
       });
     }
 
-    _albumSubscription?.cancel();
-    _albumSubscription = _service.albumUpdateStream.listen((_) {
-      _init();
+    if (_albumSubscription == null) {
+      _albumSubscription = _service.albumUpdateStream.listen((_) {
+        _onAlbumUpdated();
+      });
+    }
+  }
+
+  void _onAlbumUpdated() {
+    // Debounce updates to avoid rapid re-fetches during sync
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _init(silent: true);
+      }
     });
   }
 
@@ -54,12 +75,13 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
   @override
   void dispose() {
     _albumSubscription?.cancel();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
+    if (_loading && _albums.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -128,57 +150,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
             ),
             delegate: SliverChildBuilderDelegate((context, index) {
               final album = _albums[index];
-              return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PhotoScreen(album: album),
-                    ),
-                  );
-                },
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          color: Theme.of(context).colorScheme.surfaceVariant,
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: album.entries.isNotEmpty
-                            ? AvesEntryImage(
-                                entry: album.entries.first,
-                                extent: 300,
-                                fit: BoxFit.cover,
-                              )
-                            : const Center(
-                                child: Icon(Icons.photo_library_outlined),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      album.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      '${album.assetCount} items',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              );
+              return _AlbumGridItem(album: album);
             }, childCount: _albums.length),
           ),
         ),
@@ -215,6 +187,60 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AlbumGridItem extends StatelessWidget {
+  final AlbumModel album;
+
+  const _AlbumGridItem({required this.album});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => PhotoScreen(album: album)),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: Theme.of(context).colorScheme.surfaceVariant,
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: album.entries.isNotEmpty
+                  ? AvesEntryImage(
+                      entry: album.entries.first,
+                      extent: 300,
+                      fit: BoxFit.cover,
+                    )
+                  : const Center(child: Icon(Icons.photo_library_outlined)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            album.name,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            '${album.assetCount} items',
+            style: TextStyle(
+              fontSize: 13,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }
