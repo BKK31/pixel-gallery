@@ -66,6 +66,17 @@ class LocalDatabase {
     return maps.map((map) => AvesEntry.fromMap(map)).toList();
   }
 
+  /// Quickly gets the most recent entries (limited) for Fast Path loading
+  Future<List<AvesEntry>> getLatestEntries({int limit = 50}) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      LocalMediaDbSchema.entryTable,
+      orderBy: 'dateModifiedMillis DESC',
+      limit: limit,
+    );
+    return maps.map((map) => AvesEntry.fromMap(map)).toList();
+  }
+
   /// Gets a map of known entries (contentId -> dateModifiedMillis)
   Future<Map<int?, int?>> getKnownEntries() async {
     final db = await database;

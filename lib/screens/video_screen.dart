@@ -1,19 +1,22 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lumina_gallery/models/aves_entry.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 class VideoScreen extends StatefulWidget {
   final AvesEntry asset;
   final bool controlsVisible;
-  final VideoPlayerController? videoController;
+  final Player? player;
+  final VideoController? controller;
 
   const VideoScreen({
     super.key,
     required this.asset,
     required this.controlsVisible,
-    required this.videoController,
+    required this.player,
+    required this.controller,
   });
 
   @override
@@ -25,22 +28,25 @@ class _VideoScreenState extends State<VideoScreen> {
   double _dragValue = 0;
   DateTime? _lastSeekTime;
   Timer? _progressTimer;
+  final List<StreamSubscription> _subscriptions = [];
 
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = duration.inHours;
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
+    if (hours > 0) {
+      return "$hours:$minutes:$seconds";
+    }
     return "$minutes:$seconds";
   }
 
   void _startProgressTimer() {
     _progressTimer?.cancel();
-    // Update seekbar every 1000ms (twice per second) when controls are visible
-    _progressTimer = Timer.periodic(const Duration(milliseconds: 1000), (
-      timer,
-    ) {
+    // Update seekbar every 500ms when controls are visible
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       if (mounted &&
-          widget.videoController != null &&
+          widget.player != null &&
           widget.controlsVisible &&
           !_isDragging) {
         setState(() {});
@@ -56,37 +62,46 @@ class _VideoScreenState extends State<VideoScreen> {
   @override
   void initState() {
     super.initState();
-    // Listen to play/pause state changes
-    widget.videoController?.addListener(_onVideoStateChange);
-    // Start timer if controls are visible
+    _initSubscriptions();
     if (widget.controlsVisible) {
       _startProgressTimer();
     }
-    // Enable wakelock if video is playing
-    if (widget.videoController?.value.isPlaying == true) {
+    if (widget.player?.state.playing == true) {
       _enableWakelock();
+    }
+  }
+
+  void _initSubscriptions() {
+    if (widget.player != null) {
+      _subscriptions.add(
+        widget.player!.stream.playing.listen((playing) {
+          _onVideoStateChange();
+        }),
+      );
     }
   }
 
   @override
   void didUpdateWidget(VideoScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.videoController != widget.videoController) {
-      oldWidget.videoController?.removeListener(_onVideoStateChange);
-      widget.videoController?.addListener(_onVideoStateChange);
+    if (oldWidget.player != widget.player) {
+      for (var s in _subscriptions) {
+        s.cancel();
+      }
+      _subscriptions.clear();
+      _initSubscriptions();
 
-      if (widget.videoController?.value.isPlaying == true) {
+      if (widget.player?.state.playing == true) {
         _enableWakelock();
       } else {
         _disableWakelock();
       }
     }
 
-    // Start/stop timer based on controls visibility
     if (oldWidget.controlsVisible != widget.controlsVisible) {
       if (widget.controlsVisible) {
         _startProgressTimer();
-        setState(() {}); // Immediate update when controls become visible
+        setState(() {});
       } else {
         _stopProgressTimer();
       }
@@ -96,13 +111,12 @@ class _VideoScreenState extends State<VideoScreen> {
   void _onVideoStateChange() {
     if (!mounted) return;
 
-    final isPlaying = widget.videoController?.value.isPlaying ?? false;
+    final isPlaying = widget.player?.state.playing ?? false;
 
     if (isPlaying) {
       _enableWakelock();
     } else {
       _disableWakelock();
-      // Update UI one last time when paused to show correct position
       if (widget.controlsVisible) {
         setState(() {});
       }
@@ -121,50 +135,49 @@ class _VideoScreenState extends State<VideoScreen> {
   void dispose() {
     _stopProgressTimer();
     _disableWakelock();
-    widget.videoController?.removeListener(_onVideoStateChange);
+    for (var s in _subscriptions) {
+      s.cancel();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.videoController != null &&
-        widget.videoController!.value.isInitialized) {
+    if (widget.player != null && widget.controller != null) {
       final currentPosition = _isDragging
           ? Duration(milliseconds: _dragValue.toInt())
-          : widget.videoController!.value.position;
+          : widget.player!.state.position;
+
+      // Ensure duration is at least 1ms to avoid slider issues
+      final duration = widget.player!.state.duration.inMilliseconds > 0
+          ? widget.player!.state.duration
+          : const Duration(milliseconds: 1);
 
       return Stack(
         fit: StackFit.expand,
         children: [
           Center(
-            child: AspectRatio(
-              aspectRatio: widget.videoController!.value.aspectRatio,
-              child: Stack(
-                children: [
-                  VideoPlayer(widget.videoController!),
-                  if (widget.controlsVisible)
-                    Positioned.fill(
-                      child: Center(
-                        child: IconButton(
-                          onPressed: () {
-                            setState(() {
-                              widget.videoController!.value.isPlaying
-                                  ? widget.videoController!.pause()
-                                  : widget.videoController!.play();
-                            });
-                          },
-                          icon: widget.videoController!.value.isPlaying
-                              ? const Icon(Icons.pause_circle)
-                              : const Icon(Icons.play_circle),
-                          iconSize: 50,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+            child: Video(
+              controller: widget.controller!,
+              controls: NoVideoControls,
             ),
           ),
+          if (widget.controlsVisible)
+            Positioned.fill(
+              child: Center(
+                child: IconButton(
+                  onPressed: () {
+                    widget.player!.playOrPause();
+                    setState(() {});
+                  },
+                  icon: widget.player!.state.playing
+                      ? const Icon(Icons.pause_circle)
+                      : const Icon(Icons.play_circle),
+                  iconSize: 50,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           if (widget.controlsVisible)
             Positioned(
               bottom: 80,
@@ -187,20 +200,18 @@ class _VideoScreenState extends State<VideoScreen> {
                         Expanded(
                           child: Slider(
                             value: _isDragging
-                                ? _dragValue
-                                : widget
-                                      .videoController!
-                                      .value
-                                      .position
-                                      .inMilliseconds
-                                      .toDouble(),
+                                ? _dragValue.clamp(
+                                    0.0,
+                                    duration.inMilliseconds.toDouble(),
+                                  )
+                                : widget.player!.state.position.inMilliseconds
+                                      .toDouble()
+                                      .clamp(
+                                        0.0,
+                                        duration.inMilliseconds.toDouble(),
+                                      ),
                             min: 0.0,
-                            max: widget
-                                .videoController!
-                                .value
-                                .duration
-                                .inMilliseconds
-                                .toDouble(),
+                            max: duration.inMilliseconds.toDouble(),
                             onChangeStart: (value) {
                               setState(() {
                                 _isDragging = true;
@@ -216,14 +227,14 @@ class _VideoScreenState extends State<VideoScreen> {
                                   now.difference(_lastSeekTime!) >
                                       const Duration(milliseconds: 50)) {
                                 _lastSeekTime = now;
-                                widget.videoController!.seekTo(
+                                widget.player!.seek(
                                   Duration(milliseconds: value.toInt()),
                                 );
                               }
                             },
                             onChangeEnd: (value) {
-                              widget.videoController!
-                                  .seekTo(Duration(milliseconds: value.toInt()))
+                              widget.player!
+                                  .seek(Duration(milliseconds: value.toInt()))
                                   .then((_) {
                                     setState(() {
                                       _isDragging = false;
@@ -235,9 +246,7 @@ class _VideoScreenState extends State<VideoScreen> {
                           ),
                         ),
                         Text(
-                          _formatDuration(
-                            widget.videoController!.value.duration,
-                          ),
+                          _formatDuration(widget.player!.state.duration),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -249,17 +258,15 @@ class _VideoScreenState extends State<VideoScreen> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         IconButton(
-                          icon: widget.videoController!.value.volume == 0
+                          icon: widget.player!.state.volume == 0
                               ? const Icon(Icons.volume_off)
                               : const Icon(Icons.volume_up),
                           color: Colors.white,
                           iconSize: 28,
                           onPressed: () {
                             setState(() {
-                              widget.videoController!.setVolume(
-                                widget.videoController!.value.volume == 0
-                                    ? 1
-                                    : 0,
+                              widget.player!.setVolume(
+                                widget.player!.state.volume == 0 ? 100 : 0,
                               );
                             });
                           },

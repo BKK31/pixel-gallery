@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:lumina_gallery/screens/home_screen.dart';
 import 'package:lumina_gallery/screens/single_viewer_screen.dart';
 import 'screens/settings_screen.dart';
@@ -10,6 +11,7 @@ import 'services/favourites_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
 
   // Initialize Settings
   await SettingsService().init();

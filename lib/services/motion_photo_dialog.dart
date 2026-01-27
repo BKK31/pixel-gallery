@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:motion_photos/motion_photos.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -22,7 +23,8 @@ class MotionPhotoDialog extends StatefulWidget {
 }
 
 class _MotionPhotoDialogState extends State<MotionPhotoDialog> {
-  VideoPlayerController? _controller;
+  Player? _player;
+  VideoController? _controller;
   bool _isLoading = true;
   String? _error;
 
@@ -39,10 +41,10 @@ class _MotionPhotoDialogState extends State<MotionPhotoDialog> {
         await getTemporaryDirectory(),
       );
 
-      _controller = VideoPlayerController.file(videoFile);
-      await _controller!.initialize();
-      await _controller!.setLooping(true);
-      await _controller!.play();
+      _player = Player();
+      _controller = VideoController(_player!);
+      await _player!.open(Media(videoFile.path));
+      await _player!.setPlaylistMode(PlaylistMode.loop);
 
       if (mounted) {
         setState(() {
@@ -62,7 +64,7 @@ class _MotionPhotoDialogState extends State<MotionPhotoDialog> {
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _player?.dispose();
     super.dispose();
   }
 
@@ -113,21 +115,14 @@ class _MotionPhotoDialogState extends State<MotionPhotoDialog> {
       );
     }
 
-    if (_controller?.value.isInitialized ?? false) {
-      // Use FittedBox with BoxFit.cover to crop properly
-      return Container(
-        color: Colors.black,
-        child: FittedBox(
-          fit: BoxFit.cover,
-          child: SizedBox(
-            width: _controller!.value.size.width,
-            height: _controller!.value.size.height,
-            child: VideoPlayer(_controller!),
-          ),
-        ),
-      );
-    }
-
-    return Container(color: Colors.black);
+    // Use FittedBox with BoxFit.cover to crop properly
+    return Container(
+      color: Colors.black,
+      child: Video(
+        controller: _controller!,
+        fit: BoxFit.cover,
+        controls: NoVideoControls,
+      ),
+    );
   }
 }

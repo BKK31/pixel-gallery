@@ -281,6 +281,43 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
                                       ),
                                     ),
                                   ),
+                                // Days remaining badge
+                                if (!isSelected)
+                                  Positioned(
+                                    bottom: 4,
+                                    right: 4,
+                                    child: Builder(
+                                      builder: (context) {
+                                        final daysRemaining = _trashService
+                                            .getDaysRemaining(file.path);
+                                        if (daysRemaining == null)
+                                          return const SizedBox.shrink();
+
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(
+                                              0.7,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${daysRemaining}d',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
                               ],
                             ),
                           );

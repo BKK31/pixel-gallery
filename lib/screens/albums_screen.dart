@@ -23,31 +23,39 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
 
   // Initializes the screen: requests permissions and fetches all albums.
   Future<void> _init({bool silent = false}) async {
+    // Show cached data immediately if available
+    if (_albums.isNotEmpty) {
+      silent = true;
+    }
+
     if (!silent) {
-      if (mounted) {
+      if (mounted && _albums.isEmpty) {
         setState(() {
           _loading = true;
         });
       }
     }
 
-    bool perm = await _service.requestPermission();
-    if (!perm) {
+    // Non-blocking permission check and data load
+    _service.requestPermission().then((perm) async {
+      if (!perm) {
+        if (mounted) {
+          setState(() {
+            _loading = false;
+          });
+        }
+        return;
+      }
+
+      final albums = await _service.getAlbums();
+
       if (mounted) {
         setState(() {
+          _albums = albums;
           _loading = false;
         });
       }
-      return;
-    }
-
-    final albums = await _service.getAlbums();
-    if (mounted) {
-      setState(() {
-        _albums = albums;
-        _loading = false;
-      });
-    }
+    });
 
     if (_albumSubscription == null) {
       _albumSubscription = _service.albumUpdateStream.listen((_) {

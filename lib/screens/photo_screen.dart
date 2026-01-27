@@ -41,26 +41,42 @@ class _PhotoScreenState extends State<PhotoScreen> {
 
   // Initializes the screen by requesting permissions and loading initial assets.
   Future<void> _init() async {
-    // Request permission then load initial assets for the specific album
-    bool perm = await _service.requestPermission();
-    await _trashService.init();
-    if (!perm) {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
-      }
-      return;
+    // Show cached data immediately if available
+    if (_photos.isNotEmpty) {
+      // Already have data, just refresh in background
+      setState(() {
+        _loading = false;
+      });
+    } else if (mounted) {
+      setState(() {
+        _loading = true;
+      });
     }
 
-    // 1. Initial Load from memory/DB cache
-    final albums = await _service.getPhotos();
-    final latestAlbum = albums.firstWhere(
-      (a) => a.id == widget.album.id,
-      orElse: () => widget.album,
-    );
+    // Non-blocking permission check and data load
+    _service.requestPermission().then((perm) async {
+      if (!perm) {
+        if (mounted) {
+          setState(() {
+            _loading = false;
+          });
+        }
+        return;
+      }
 
-    if (mounted) {
+      // Initialize trash service in background
+      unawaited(_trashService.init());
+
+      // 1. Initial Load from memory/DB cache
+      final albums = await _service.getPhotos();
+
+      if (!mounted) return;
+
+      final latestAlbum = albums.firstWhere(
+        (a) => a.id == widget.album.id,
+        orElse: () => widget.album,
+      );
+
       setState(() {
         _photos = latestAlbum.entries
             .map(
@@ -75,7 +91,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
         _groupedItems = MediaService.groupPhotosByDate(_photos);
         _loading = false;
       });
-    }
+    });
 
     // 2. Reactive listeners
     _updateSubscription?.cancel();

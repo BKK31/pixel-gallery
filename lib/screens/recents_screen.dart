@@ -48,33 +48,49 @@ class RecentsScreenState extends State<RecentsScreen>
     _isInitializing = true;
 
     try {
-      if (!silent && mounted) {
+      // Show cached data immediately if available
+      if (_photos.isNotEmpty) {
+        // Already have data, just refresh in background
+        silent = true;
+      }
+
+      if (!silent && mounted && _photos.isEmpty) {
         setState(() {
           _loading = true;
         });
       }
 
-      final perm = await _service.requestPermission();
-      await _trashService.init();
-      await _trashService.requestPermission();
-
-      if (!perm) {
-        if (mounted) {
-          setState(() {
-            _loading = false;
-          });
+      // 1. Non-blocking permission check and data load
+      // Run in background without blocking UI
+      _service.requestPermission().then((perm) async {
+        if (!perm) {
+          if (mounted) {
+            setState(() {
+              _loading = false;
+            });
+          }
+          return;
         }
-        return;
-      }
 
-      // 1. Initial Load from memory/DB cache
-      final albums = await _service.getPhotos();
-      final recentAlbum = albums.firstWhere(
-        (a) => a.id == 'recent',
-        orElse: () => albums.first,
-      );
+        // Initialize trash service in background
+        unawaited(_trashService.init());
+        unawaited(_trashService.requestPermission());
 
-      _processAlbum(recentAlbum);
+        // Load photos (uses cache if available)
+        final albums = await _service.getPhotos();
+
+        if (!mounted) return;
+
+        final recentAlbum = albums.firstWhere(
+          (a) => a.id == 'recent',
+          orElse: () => albums.first,
+        );
+
+        _processAlbum(recentAlbum);
+
+        // Start background sync (if not already running)
+        unawaited(_service.getMediaStream().drain());
+      });
 
       // 2. Setup reactive listeners (only once)
       _updateSubscription ??= _service.entryUpdateStream.listen((entry) {
@@ -104,9 +120,6 @@ class RecentsScreenState extends State<RecentsScreen>
       _albumSubscription ??= _service.albumUpdateStream.listen((_) {
         _onAlbumUpdated();
       });
-
-      // 3. Start background sync (if not already running)
-      unawaited(_service.getMediaStream().drain());
     } finally {
       _isInitializing = false;
     }

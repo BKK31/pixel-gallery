@@ -59,6 +59,35 @@ class TrashService {
     // Validate inventory: remove items where trash file is missing
     final initialCount = _trashedItems.length;
     _trashedItems.removeWhere((item) => !File(item.trashPath).existsSync());
+
+    // Auto-empty: Remove items older than 30 days
+    final now = DateTime.now().millisecondsSinceEpoch;
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+
+    final itemsToDelete = <TrashItem>[];
+    for (final item in _trashedItems) {
+      if (item.dateDeletedMs != null) {
+        final age = now - item.dateDeletedMs!;
+        if (age > thirtyDaysMs) {
+          itemsToDelete.add(item);
+        }
+      }
+    }
+
+    // Delete old items permanently
+    for (final item in itemsToDelete) {
+      final file = File(item.trashPath);
+      if (await file.exists()) {
+        try {
+          await file.delete();
+          debugPrint('Auto-deleted old trash item: ${item.trashPath}');
+        } catch (e) {
+          debugPrint('Failed to auto-delete ${item.trashPath}: $e');
+        }
+      }
+      _trashedItems.remove(item);
+    }
+
     if (initialCount != _trashedItems.length) {
       _updatedTrashedPathsSet();
     }
@@ -86,6 +115,26 @@ class TrashService {
 
   List<String> get trashedPaths =>
       _trashedItems.map((e) => e.trashPath).toList();
+
+  List<TrashItem> get trashedItems => List.unmodifiable(_trashedItems);
+
+  /// Returns days remaining before auto-deletion (null if no date)
+  int? getDaysRemaining(String trashPath) {
+    final item = _trashedItems.firstWhere(
+      (it) => it.trashPath == trashPath,
+      orElse: () => TrashItem(trashPath: '', originalPath: ''),
+    );
+
+    if (item.dateDeletedMs == null) return null;
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+    final age = now - item.dateDeletedMs!;
+    final remaining = thirtyDaysMs - age;
+
+    if (remaining <= 0) return 0;
+    return (remaining / (24 * 60 * 60 * 1000)).ceil();
+  }
 
   Future<bool>? _permissionFuture;
 

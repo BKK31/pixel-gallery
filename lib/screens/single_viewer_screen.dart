@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:intl/intl.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -16,7 +17,8 @@ class SingleViewerScreen extends StatefulWidget {
 
 class _SingleViewerScreenState extends State<SingleViewerScreen> {
   late bool _isVideo;
-  VideoPlayerController? _videoController;
+  Player? _player;
+  VideoController? _controller;
   bool _isPlaying = false;
   bool _showUI = true;
 
@@ -32,43 +34,31 @@ class _SingleViewerScreenState extends State<SingleViewerScreen> {
         path.endsWith('.mp4') || path.endsWith('.mov') || path.endsWith('.avi');
 
     if (_isVideo) {
-      _videoController =
-          VideoPlayerController.file(
-              widget.file,
-              videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-            )
-            ..initialize().then((_) {
-              setState(() {});
-              _videoController!.play();
-              WakelockPlus.enable();
-              _isPlaying = true;
-              _videoController!.setLooping(true);
-            });
+      _player = Player();
+      _controller = VideoController(_player!);
+      _player!.open(Media(widget.file.path));
+      _player!.setPlaylistMode(PlaylistMode.loop);
+      _player!.stream.playing.listen((playing) {
+        if (mounted) {
+          setState(() {
+            _isPlaying = playing;
+          });
+        }
+      });
+      WakelockPlus.enable();
     }
   }
 
   @override
   void dispose() {
-    _videoController?.dispose();
+    _player?.dispose();
     WakelockPlus.disable();
     super.dispose();
   }
 
   void _togglePlay() {
-    if (_videoController == null) return;
-    if (_videoController!.value.isPlaying) {
-      _videoController!.pause();
-      WakelockPlus.disable();
-      setState(() {
-        _isPlaying = false;
-      });
-    } else {
-      _videoController!.play();
-      WakelockPlus.enable();
-      setState(() {
-        _isPlaying = true;
-      });
-    }
+    if (_player == null) return;
+    _player!.playOrPause();
   }
 
   Future<void> _showInfoBottomSheet() async {
@@ -127,12 +117,10 @@ class _SingleViewerScreenState extends State<SingleViewerScreen> {
             },
             child: _isVideo
                 ? Center(
-                    child:
-                        _videoController != null &&
-                            _videoController!.value.isInitialized
-                        ? AspectRatio(
-                            aspectRatio: _videoController!.value.aspectRatio,
-                            child: VideoPlayer(_videoController!),
+                    child: _controller != null
+                        ? Video(
+                            controller: _controller!,
+                            controls: NoVideoControls,
                           )
                         : CircularProgressIndicator(),
                   )

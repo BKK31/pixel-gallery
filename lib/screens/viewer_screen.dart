@@ -13,7 +13,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:photo_view/photo_view.dart';
 import 'video_screen.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latLng;
 import 'package:native_exif/native_exif.dart';
@@ -43,12 +44,14 @@ class _ViewerScreenState extends State<ViewerScreen> {
   bool _showUI = true;
   late List<PhotoModel> _photos;
   bool _isZoomed = false;
-  VideoPlayerController? _videoController;
+  Player? _player;
+  VideoController? _videoKitController;
 
   // Motion Photo state
   bool _isMotionPhoto = false;
   bool _isPlayingMotion = false;
-  VideoPlayerController? _motionController;
+  Player? _motionPlayer;
+  VideoController? _motionVideoController;
 
   int _page = 0;
 
@@ -74,33 +77,35 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
     final photo = _photos[index];
     if (!photo.asset.isVideo) {
-      _videoController?.dispose();
-      _videoController = null;
+      _player?.dispose();
+      _player = null;
+      _videoKitController = null;
       return;
     }
 
     // Dispose old controller if exists
-    await _videoController?.dispose();
-    _videoController = null;
+    await _player?.dispose();
+    _player = null;
+    _videoKitController = null;
 
     try {
       final file = await photo.asset.file;
       if (file != null && await file.exists()) {
-        final controller = VideoPlayerController.file(
-          file,
-          videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-        );
-        await controller.initialize();
-        await controller.setLooping(true);
+        final player = Player();
+        final controller = VideoController(player);
+
+        await player.setVolume(100);
+        await player.setPlaylistMode(PlaylistMode.loop);
+        await player.open(Media(file.path), play: true);
 
         // Only update if we're still on this index and viewer still mounted
         if (mounted && _currentIndex == index) {
           setState(() {
-            _videoController = controller;
+            _player = player;
+            _videoKitController = controller;
           });
-          await controller.play();
         } else {
-          await controller.dispose();
+          await player.dispose();
         }
       }
     } catch (e) {
@@ -114,8 +119,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
       setState(() {
         _isMotionPhoto = false;
         _isPlayingMotion = false;
-        _motionController?.dispose();
-        _motionController = null;
+        _motionPlayer?.dispose();
+        _motionPlayer = null;
+        _motionVideoController = null;
       });
     }
 
@@ -153,10 +159,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
         await getTemporaryDirectory(),
       );
 
-      _motionController = VideoPlayerController.file(videoFile);
-      await _motionController!.initialize();
-      await _motionController!.setLooping(true);
-      await _motionController!.play();
+      _motionPlayer = Player();
+      _motionVideoController = VideoController(_motionPlayer!);
+      await _motionPlayer!.open(Media(videoFile.path));
+      await _motionPlayer!.setPlaylistMode(PlaylistMode.loop);
       WakelockPlus.enable();
 
       if (mounted) {
@@ -170,10 +176,11 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   void _stopVideo() {
-    _motionController?.pause();
+    _motionPlayer?.pause();
     WakelockPlus.disable();
-    _motionController?.dispose();
-    _motionController = null;
+    _motionPlayer?.dispose();
+    _motionPlayer = null;
+    _motionVideoController = null;
     if (mounted) {
       setState(() {
         _isPlayingMotion = false;
@@ -476,8 +483,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
   @override
   void dispose() {
     _controller.dispose();
-    _videoController?.dispose();
-    _motionController?.dispose();
+    _player?.dispose();
+    _motionPlayer?.dispose();
     WakelockPlus.disable();
     _updateSubscription?.cancel();
     super.dispose();
@@ -522,7 +529,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   content = VideoScreen(
                     asset: photo.asset,
                     controlsVisible: _showUI,
-                    videoController: _videoController,
+                    player: _player,
+                    controller: _videoKitController,
                   );
                 } else {
                   // Stack Logic: Photo is base, Video is overlay for Motion Photos
@@ -544,14 +552,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
                       ),
                       if (index == _currentIndex &&
                           _isPlayingMotion &&
-                          _motionController != null &&
-                          _motionController!.value.isInitialized)
+                          _motionVideoController != null)
                         Positioned.fill(
                           child: Center(
-                            child: AspectRatio(
-                              aspectRatio: _motionController!.value.aspectRatio,
-                              child: VideoPlayer(_motionController!),
-                            ),
+                            child: Video(controller: _motionVideoController!),
                           ),
                         ),
                     ],

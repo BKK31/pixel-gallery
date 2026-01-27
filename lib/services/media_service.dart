@@ -13,6 +13,7 @@ import 'notification_service.dart';
 import 'catalog_service.dart';
 import 'trash_service.dart';
 import 'settings_service.dart';
+import 'db/db_schema.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'favourites_manager.dart';
 
@@ -47,6 +48,7 @@ class MediaService {
   List<AlbumModel>? _cachedAlbums;
   List<AvesEntry> _allEntries = [];
   bool _isInitialized = false;
+  Future<List<AlbumModel>>? _fullLoadFuture;
 
   // Clears the internal cache, useful when gallery changes are detected.
   void clearCache() {
@@ -147,39 +149,68 @@ class MediaService {
   }
 
   // Fetches a list of asset paths (albums), typically starting with "Recent".
+  // Optimized for "Fast Path" loading to show thumbnails instantly.
   Future<List<AlbumModel>> getPhotos() async {
+    // 1. If we have a full cache, return it instantly
     if (_isInitialized && _cachedAlbums != null) return _cachedAlbums!;
 
-    // Initial load from DB if not already done
+    // 2. FAST PATH: Load Top Entries or Latest 50 from DB
     if (!_isInitialized) {
-      final dbEntries = await _db.getAllEntries();
-      if (dbEntries.isNotEmpty) {
-        _allEntries = dbEntries;
+      final topIds = SettingsService().topEntryIds;
+      List<AvesEntry> fastPathEntries = [];
+
+      if (topIds.isNotEmpty) {
+        debugPrint(
+          'MediaService: Loading ${topIds.length} top entries for fast path',
+        );
+        fastPathEntries = await _db.getEntriesByIds(topIds);
+      }
+
+      if (fastPathEntries.isEmpty) {
+        debugPrint('MediaService: Falling back to latest 50 for fast path');
+        // Fetch latest 50 as a quick preview
+        final db = await _db.database;
+        final List<Map<String, dynamic>> maps = await db.query(
+          LocalMediaDbSchema.entryTable,
+          orderBy: 'dateModifiedMillis DESC',
+          limit: 50,
+        );
+        fastPathEntries = maps.map((map) => AvesEntry.fromMap(map)).toList();
+      }
+
+      if (fastPathEntries.isNotEmpty) {
+        _allEntries = fastPathEntries;
         _cachedAlbums = _groupEntries(_allEntries);
-        _isInitialized = true;
 
-        // Start background sync to find new/missing files
-        unawaited(_backgroundSync());
-
+        // Return fast path results immediately, but start full load in background
+        _fullLoadFuture ??= _fullDatabaseLoadAndSync();
         return _cachedAlbums!;
-      } else {
-        // TOP ENTRIES for prioritized Re-launch
-        // We load what was visible last time for instant recovery
-        final topIds = SettingsService().topEntryIds;
-        if (topIds.isNotEmpty) {
-          final topEntries = await _db.getEntriesByIds(topIds);
-          if (topEntries.isNotEmpty) {
-            _allEntries = topEntries;
-            _cachedAlbums = _groupEntries(_allEntries);
-            // We don't set _isInitialized = true yet because this is just above-the-fold
-            unawaited(_backgroundSync());
-            return _cachedAlbums!;
-          }
-        }
       }
     }
 
-    // If DB is empty, perform a full fetch
+    // 3. SLOW PATH: Full database load and sync
+    // This only happens if Fast Path failed or was already done
+    _fullLoadFuture ??= _fullDatabaseLoadAndSync();
+    return await _fullLoadFuture!;
+  }
+
+  Future<List<AlbumModel>> _fullDatabaseLoadAndSync() async {
+    // Prevent multiple concurrent full loads
+    if (_isInitialized && _cachedAlbums != null) return _cachedAlbums!;
+
+    final dbEntries = await _db.getAllEntries();
+    if (dbEntries.isNotEmpty) {
+      _allEntries = dbEntries;
+      _cachedAlbums = _groupEntries(_allEntries);
+      _isInitialized = true;
+      _albumUpdateController.add(null);
+
+      // Start background sync with MediaStore
+      unawaited(_backgroundSync());
+      return _cachedAlbums!;
+    }
+
+    // If DB is empty, perform a full fetch from MediaStore
     final albums = await _fetchAllMediaAndGroup();
     _cachedAlbums = albums;
     _isInitialized = true;
