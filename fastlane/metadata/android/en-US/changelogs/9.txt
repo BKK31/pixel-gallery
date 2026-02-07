@@ -1,0 +1,5 @@
+Addressed IzzyOnDroid submission feedback:
+- Removed sensitive storage permissions (READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE).
+- Disabled dependency metadata in build configuration.
+- Improved Fastlane description formatting.
+- Updated Flutter version for reproducible builds.
