@@ -1,0 +1,8 @@
+## ✨ New Features & Major Improvements
+
+   * 🚀 Implemented Aves's video playback engine instead of video_player for faster rendering of videos.
+   * 🗑️ Added a 30 day auto emptying of bin for the recycle bin page. 
+
+ ## 🐛 Bug Fixes
+
+   * Changes to the video screen where it incorrect video duration would show for longer videos.
