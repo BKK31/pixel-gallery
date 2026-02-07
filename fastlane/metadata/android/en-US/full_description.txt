@@ -1,5 +1,6 @@
 Pixel Gallery is a sleek, privacy-focused gallery application designed to provide a premium user experience. It leverages the power of Material You dynamic theming to adapt to your device's wallpaper, ensuring a seamless and personalized look for your photo collection.
 From managing your albums to viewing motion photos and map locations, Pixel Gallery creates a beautiful and private home for your memories.
+
 Key Features:
 • Privacy First: All data and processing stay on your device.
 • Material 3 Design: Modern, expressive UI with dynamic color support.

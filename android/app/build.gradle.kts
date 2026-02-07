@@ -55,6 +55,21 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
     }
+
+    dependenciesInfo {
+        // Disables dependency metadata when building APKs (for IzzyOnDroid/F-Droid)
+        includeInApk = false
+        // Disables dependency metadata when building Android App Bundles (for Google Play)
+        includeInBundle = false
+    }
+
+    packaging {
+        jniLibs {
+            // Native libraries are stored uncompressed in the APK (since Android 6.0). 
+            // Setting this to true forces compression, reducing APK size.
+            useLegacyPackaging = true
+        }
+    }
 }
 
 flutter {
