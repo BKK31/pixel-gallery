@@ -555,7 +555,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
                           _motionVideoController != null)
                         Positioned.fill(
                           child: Center(
-                            child: Video(controller: _motionVideoController!),
+                            child: Video(
+                              controller: _motionVideoController!,
+                              controls: NoVideoControls,
+                            ),
                           ),
                         ),
                     ],

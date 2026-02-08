@@ -1,0 +1,3 @@
+• Fixed application crash on older devices by disabling Impeller.
+• Improved motion photo viewing experience by removing video overlays.
+• Corrected metadata formatting for store listings.
