@@ -1,40 +1,100 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path/path.dart' as p;
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/aves_entry.dart';
-import 'local_db.dart';
+import 'media_service.dart';
 
-/// Manages the set of content IDs that have been moved into the Locked Folder.
-/// Entries in this set are excluded from all normal views (Recent, Albums, etc.)
-/// and are only shown inside the Locked Folder screen after authentication.
+/// A vault item tracks the moved file and the original entry metadata
+/// so we can display thumbnails and restore the file later.
+class VaultItem {
+  final String vaultPath;
+  final String originalPath;
+  final Map<String, dynamic> entryMap; // serialised AvesEntry
+
+  VaultItem({
+    required this.vaultPath,
+    required this.originalPath,
+    required this.entryMap,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'vaultPath': vaultPath,
+        'originalPath': originalPath,
+        'entryMap': entryMap,
+      };
+
+  static VaultItem fromJson(Map<String, dynamic> json) {
+    return VaultItem(
+      vaultPath: json['vaultPath'] as String,
+      originalPath: json['originalPath'] as String,
+      entryMap: Map<String, dynamic>.from(json['entryMap'] as Map),
+    );
+  }
+
+  AvesEntry toAvesEntry() {
+    // Override the path with the vault path so thumbnails and files resolve
+    final map = Map<String, dynamic>.from(entryMap);
+    map['path'] = vaultPath;
+    return AvesEntry.fromMap(map);
+  }
+}
+
+/// Manages the locked folder vault.
+/// Files are physically moved to the app's private directory and
+/// obfuscated (UUID filename, no extension). They are completely
+/// invisible to the system media scanner and other apps.
 class LockedFolderService {
   static final LockedFolderService _instance = LockedFolderService._internal();
   factory LockedFolderService() => _instance;
   LockedFolderService._internal();
 
-  static const String _lockedIdsKey = 'locked_folder_ids';
+  static const String _storageKey = 'vault_inventory';
 
   SharedPreferences? _prefs;
+  List<VaultItem> _vaultItems = [];
+
+  /// Set of content IDs currently in the vault (for fast O(1) filtering).
   Set<int> _lockedIds = {};
 
-  /// Must be called once during app start-up (after SettingsService.init).
+  /// Must be called once during app start-up.
   Future<void> init() async {
     _prefs ??= await SharedPreferences.getInstance();
-    _lockedIds = _loadIds();
+    _loadInventory();
   }
 
-  Set<int> _loadIds() {
-    final list = _prefs?.getStringList(_lockedIdsKey);
-    if (list == null) return {};
-    return list.map((s) => int.tryParse(s)).whereType<int>().toSet();
+  void _loadInventory() {
+    final list = _prefs?.getStringList(_storageKey);
+    if (list == null) {
+      _vaultItems = [];
+      _lockedIds = {};
+      return;
+    }
+    _vaultItems = list
+        .map((e) => VaultItem.fromJson(jsonDecode(e) as Map<String, dynamic>))
+        .toList();
+    _rebuildLockedIds();
   }
 
-  Future<void> _persist() async {
-    await _prefs?.setStringList(
-      _lockedIdsKey,
-      _lockedIds.map((id) => id.toString()).toList(),
-    );
+  void _rebuildLockedIds() {
+    _lockedIds = _vaultItems
+        .map((v) => v.entryMap['contentId'] as int?)
+        .whereType<int>()
+        .toSet();
   }
 
-  /// Returns the current set of locked content IDs (O(1) lookup).
+  Future<void> _saveInventory() async {
+    final encoded =
+        _vaultItems.map((v) => jsonEncode(v.toJson())).toList();
+    await _prefs?.setStringList(_storageKey, encoded);
+  }
+
+  /// The set of content IDs in the vault – used by MediaService for filtering.
   Set<int> get lockedIds => _lockedIds;
 
   /// Whether a given content ID is locked.
@@ -43,44 +103,172 @@ class LockedFolderService {
     return _lockedIds.contains(contentId);
   }
 
-  /// Move an entry into the Locked Folder.
-  Future<void> lock(AvesEntry entry) async {
-    if (entry.contentId == null) return;
-    _lockedIds.add(entry.contentId!);
-    await _persist();
+  /// Get the vault directory (inside app-private storage).
+  Future<Directory> _getVaultDir() async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final vaultDir = Directory(p.join(appDir.path, '.vault'));
+    if (!await vaultDir.exists()) {
+      await vaultDir.create(recursive: true);
+    }
+    return vaultDir;
   }
 
-  /// Unlock an entry (remove it from the Locked Folder).
-  Future<void> unlock(AvesEntry entry) async {
-    if (entry.contentId == null) return;
-    _lockedIds.remove(entry.contentId!);
-    await _persist();
+  // ---------------------------------------------------------------
+  // Permission helper (same pattern as TrashService)
+  // ---------------------------------------------------------------
+  Future<bool>? _permissionFuture;
+
+  Future<bool> requestPermission() async {
+    if (_permissionFuture != null) return _permissionFuture!;
+    _permissionFuture = _performPermissionRequest();
+    final result = await _permissionFuture!;
+    _permissionFuture = null;
+    return result;
   }
 
-  /// Unlock multiple entries at once.
+  Future<bool> _performPermissionRequest() async {
+    if (Platform.isAndroid) {
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      if (androidInfo.version.sdkInt >= 30) {
+        var status = await Permission.manageExternalStorage.status;
+        if (!status.isGranted) {
+          status = await Permission.manageExternalStorage.request();
+        }
+        return status.isGranted;
+      }
+    }
+    return await Permission.storage.request().isGranted;
+  }
+
+  // ---------------------------------------------------------------
+  // Lock / Unlock
+  // ---------------------------------------------------------------
+
+  /// Move an entry's file into the vault. Returns true on success.
+  Future<bool> lock(AvesEntry entry) async {
+    if (entry.contentId == null || entry.path == null) return false;
+
+    // Ensure storage permission
+    if (!await requestPermission()) {
+      debugPrint('LockedFolderService: storage permission denied');
+      return false;
+    }
+
+    final File originalFile = File(entry.path!);
+    if (!await originalFile.exists()) {
+      debugPrint('LockedFolderService: original file does not exist');
+      return false;
+    }
+
+    try {
+      final vaultDir = await _getVaultDir();
+
+      // Obfuscated filename: contentId + no extension
+      final vaultFileName = '${entry.contentId}';
+      final vaultPath = p.join(vaultDir.path, vaultFileName);
+
+      // Move (copy + delete for cross-partition safety)
+      await originalFile.copy(vaultPath);
+      await originalFile.delete();
+
+      // Store inventory item with full entry metadata for later display
+      _vaultItems.add(VaultItem(
+        vaultPath: vaultPath,
+        originalPath: entry.path!,
+        entryMap: entry.toMap(),
+      ));
+      _rebuildLockedIds();
+      await _saveInventory();
+
+      // Remove from gallery index & notify MediaStore
+      await MediaService().deleteEntry(entry);
+      _scanFile(entry.path!);
+
+      debugPrint('LockedFolderService: locked ${entry.path} -> $vaultPath');
+      return true;
+    } catch (e) {
+      debugPrint('LockedFolderService: error locking: $e');
+      return false;
+    }
+  }
+
+  /// Restore an entry from the vault back to its original location.
+  /// Returns true on success.
+  Future<bool> unlock(AvesEntry entry) async {
+    final contentId = entry.contentId;
+    if (contentId == null) return false;
+
+    final index = _vaultItems.indexWhere(
+      (v) => v.entryMap['contentId'] == contentId,
+    );
+    if (index == -1) return false;
+
+    // Ensure storage permission
+    if (!await requestPermission()) return false;
+
+    final item = _vaultItems[index];
+    final vaultFile = File(item.vaultPath);
+
+    if (!await vaultFile.exists()) {
+      // File is gone – clean up inventory
+      _vaultItems.removeAt(index);
+      _rebuildLockedIds();
+      await _saveInventory();
+      return false;
+    }
+
+    try {
+      // Ensure original parent directory exists
+      final parentDir = Directory(p.dirname(item.originalPath));
+      if (!await parentDir.exists()) {
+        await parentDir.create(recursive: true);
+      }
+
+      // Move back (copy + delete)
+      await vaultFile.copy(item.originalPath);
+      await vaultFile.delete();
+
+      // Update inventory
+      _vaultItems.removeAt(index);
+      _rebuildLockedIds();
+      await _saveInventory();
+
+      // Re-index in MediaStore
+      _scanFile(item.originalPath);
+
+      // Refresh gallery
+      MediaService().clearCache();
+      MediaService().notifyAlbumUpdated();
+
+      debugPrint(
+          'LockedFolderService: unlocked ${item.vaultPath} -> ${item.originalPath}');
+      return true;
+    } catch (e) {
+      debugPrint('LockedFolderService: error unlocking: $e');
+      return false;
+    }
+  }
+
+  /// Unlock multiple entries.
   Future<void> unlockAll(List<AvesEntry> entries) async {
     for (final entry in entries) {
-      if (entry.contentId != null) {
-        _lockedIds.remove(entry.contentId!);
-      }
+      await unlock(entry);
     }
-    await _persist();
   }
 
-  /// Lock multiple entries at once.
-  Future<void> lockAll(List<AvesEntry> entries) async {
-    for (final entry in entries) {
-      if (entry.contentId != null) {
-        _lockedIds.add(entry.contentId!);
-      }
-    }
-    await _persist();
+  /// Returns AvesEntry objects for every vaulted file (with path pointing
+  /// to the vault copy so thumbnails load correctly).
+  List<AvesEntry> getLockedEntries() {
+    return _vaultItems.map((v) => v.toAvesEntry()).toList();
   }
 
-  /// Return all locked entries from the database.
-  Future<List<AvesEntry>> getLockedEntries() async {
-    if (_lockedIds.isEmpty) return [];
-    final db = LocalDatabase();
-    return db.getEntriesByIds(_lockedIds.toList());
+  /// Trigger a native MediaStore scan on the given path.
+  void _scanFile(String filePath) {
+    try {
+      const platform = MethodChannel('com.pixel.gallery/open_file');
+      platform.invokeMethod('scanFile', {'path': filePath});
+    } catch (e) {
+      debugPrint('LockedFolderService: scanFile error: $e');
+    }
   }
 }

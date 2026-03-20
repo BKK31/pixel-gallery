@@ -517,10 +517,10 @@ class MediaService {
         .toList();
   }
 
-  /// Returns photos that are in the locked folder.
-  Future<List<PhotoModel>> getLockedFolderMedia() async {
+  /// Returns photos that are in the locked folder vault.
+  List<PhotoModel> getLockedFolderMedia() {
     final lockedService = LockedFolderService();
-    final entries = await lockedService.getLockedEntries();
+    final entries = lockedService.getLockedEntries();
     return entries
         .map(
           (entry) => PhotoModel(

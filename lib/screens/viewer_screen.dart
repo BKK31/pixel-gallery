@@ -248,22 +248,28 @@ class _ViewerScreenState extends State<ViewerScreen> {
     final isLocked = lockedService.isLocked(photo.asset.contentId);
 
     if (isLocked) {
-      await lockedService.unlock(photo.asset);
-      _service.rebuildAlbums();
+      final success = await lockedService.unlock(photo.asset);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Removed from Locked Folder')),
+          SnackBar(
+            content: Text(success
+                ? 'Restored to gallery'
+                : 'Failed to restore'),
+          ),
         );
-        setState(() {});
+        if (success) setState(() {});
       }
     } else {
-      await lockedService.lock(photo.asset);
-      _service.rebuildAlbums();
+      final success = await lockedService.lock(photo.asset);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Moved to Locked Folder')));
-        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success
+                ? 'Moved to Locked Folder'
+                : 'Failed to move to Locked Folder'),
+          ),
+        );
+        if (success) Navigator.pop(context);
       }
     }
   }

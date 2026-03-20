@@ -24,6 +24,7 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
   List<dynamic> _groupedItems = [];
   bool _loading = true;
   bool _authenticated = false;
+  bool _isProcessing = false;
 
   bool _isSelecting = false;
   final Set<String> _selectedIds = {};
@@ -45,7 +46,6 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
   Future<void> _authenticate() async {
     final available = await _bioService.isAvailable();
     if (!available) {
-      // If no biometric/screen-lock is available, allow access directly
       _authenticated = true;
       _loadMedia();
       return;
@@ -56,21 +56,18 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
       _authenticated = true;
       _loadMedia();
     } else {
-      // Auth failed – go back
       if (mounted) Navigator.pop(context);
     }
   }
 
-  Future<void> _loadMedia() async {
-    final photos = await _mediaService.getLockedFolderMedia();
+  void _loadMedia() {
+    final photos = _mediaService.getLockedFolderMedia();
     photos.sort((a, b) {
-      final c = (b.asset.bestDateMillis ?? 0).compareTo(
-        a.asset.bestDateMillis ?? 0,
-      );
+      final c =
+          (b.asset.bestDateMillis ?? 0).compareTo(a.asset.bestDateMillis ?? 0);
       if (c != 0) return c;
       return (b.asset.contentId ?? 0).compareTo(a.asset.contentId ?? 0);
     });
-    // set index for each photo
     for (int i = 0; i < photos.length; i++) {
       photos[i].index = i;
     }
@@ -108,8 +105,10 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
         .map((p) => p.asset)
         .toList();
 
+    setState(() => _isProcessing = true);
     await _lockedService.unlockAll(entriesToUnlock);
-    _mediaService.rebuildAlbums();
+    setState(() => _isProcessing = false);
+
     _clearSelections();
     _loadMedia();
 
@@ -117,7 +116,7 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${entriesToUnlock.length} item(s) removed from Locked Folder',
+            '${entriesToUnlock.length} item(s) restored to gallery',
           ),
         ),
       );
@@ -149,36 +148,40 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
               ? [
                   IconButton(
                     icon: const Icon(Icons.lock_open),
-                    tooltip: 'Remove from Locked Folder',
-                    onPressed: _unlockSelected,
+                    tooltip: 'Restore to gallery',
+                    onPressed: _isProcessing ? null : _unlockSelected,
                   ),
                 ]
               : [],
         ),
-        body: !_authenticated
-            ? const Center(child: CircularProgressIndicator())
-            : _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _photos.isEmpty
-            ? Center(
+        body: Stack(
+          children: [
+            if (!_authenticated)
+              const Center(child: CircularProgressIndicator())
+            else if (_loading)
+              const Center(child: CircularProgressIndicator())
+            else if (_photos.isEmpty)
+              Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.lock_outline,
                       size: 64,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.3),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.3),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'No locked items',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.5),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -189,17 +192,23 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.4),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.4),
                         ),
                       ),
                     ),
+                    const SizedBox(height: 24),
+                    _buildDisclaimer(context),
                   ],
                 ),
               )
-            : Column(
+            else
+              Column(
                 children: [
+                  // Disclaimer banner
+                  _buildDisclaimerBanner(context),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
                     child: Align(
@@ -208,7 +217,8 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
                         '${_photos.length} locked items',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -221,9 +231,10 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
                       interactive: true,
                       thickness: 8.0,
                       radius: const Radius.circular(4.0),
-                      thumbColor: Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.5),
+                      thumbColor: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.5),
                       child: ListView.builder(
                         cacheExtent: 1500,
                         controller: _scrollController,
@@ -246,17 +257,15 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
                             );
                           } else if (item is List<PhotoModel>) {
                             return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 1.5,
-                              ),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 1.5),
                               child: Row(
                                 children: [
                                   for (int i = 0; i < 4; i++)
                                     Expanded(
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: 1.5,
-                                        ),
+                                            horizontal: 1.5),
                                         child: i < item.length
                                             ? _buildPhotoItem(item[i])
                                             : const SizedBox.shrink(),
@@ -273,6 +282,75 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
                   ),
                 ],
               ),
+            // Processing overlay
+            if (_isProcessing)
+              Container(
+                color: Colors.black54,
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: Colors.white),
+                      SizedBox(height: 16),
+                      Text(
+                        'Moving files…',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDisclaimerBanner(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.3),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline,
+              size: 18,
+              color: Theme.of(context).colorScheme.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Uninstalling the app will permanently delete locked files.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onErrorContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDisclaimer(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.warning_amber_rounded,
+              size: 16,
+              color: Theme.of(context).colorScheme.error),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              'Uninstalling the app will delete locked files.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
