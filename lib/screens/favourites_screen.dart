@@ -6,6 +6,7 @@ import '../models/extensions/favourites_extension.dart';
 import '../screens/viewer_screen.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/trash_service.dart';
+import '../services/locked_folder_service.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import '../widgets/aves_entry_image.dart';
 
@@ -104,13 +105,59 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
   }
 
   Future<void> _deleteSelected() async {
+    bool moveToTrash = true;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setStateDialog) => AlertDialog(
+          title: const Text('Delete items'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Delete ${_selectedIds.length} selected item(s)?'),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                value: moveToTrash,
+                onChanged: (v) => setStateDialog(() => moveToTrash = v),
+                title: const Text('Move to bin'),
+                subtitle: Text(
+                  moveToTrash
+                      ? 'Items can be restored from the recycle bin'
+                      : 'Items will be permanently deleted',
+                ),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(
+                moveToTrash ? 'Move to bin' : 'Delete permanently',
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+
     for (var id in _selectedIds) {
       final photo = _photos.cast<PhotoModel?>().firstWhere(
         (p) => p?.uid == id,
         orElse: () => null,
       );
       if (photo != null) {
-        await _trashService.moveToTrash(photo.asset);
+        if (moveToTrash) {
+          await _trashService.moveToTrash(photo.asset);
+        } else {
+          await _service.permanentlyDelete(photo.asset);
+        }
       }
     }
     setState(() {
@@ -120,7 +167,13 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
     _init();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Moved selected items to trash")),
+        SnackBar(
+          content: Text(
+            moveToTrash
+                ? 'Moved selected items to trash'
+                : 'Permanently deleted selected items',
+          ),
+        ),
       );
     }
   }
@@ -140,10 +193,32 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
     if (files.isNotEmpty) {
       await Share.shareXFiles(files);
     }
+    // Intentionally NOT clearing selection.
+  }
+
+  Future<void> _lockSelected() async {
+    final lockedService = LockedFolderService();
+    int successCount = 0;
+    for (final id in List<String>.from(_selectedIds)) {
+      final photo = _photos.cast<PhotoModel?>().firstWhere(
+        (p) => p?.uid == id,
+        orElse: () => null,
+      );
+      if (photo != null) {
+        final ok = await lockedService.lock(photo.asset);
+        if (ok) successCount++;
+      }
+    }
     setState(() {
       _isSelecting = false;
       _selectedIds.clear();
     });
+    _init();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Moved $successCount item(s) to Locked Folder')),
+      );
+    }
   }
 
   @override
@@ -198,9 +273,35 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                     onPressed: _shareSelected,
                     icon: const Icon(Icons.share),
                   ),
-                  IconButton(
-                    onPressed: _deleteSelected,
-                    icon: const Icon(Icons.delete),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        _deleteSelected();
+                      } else if (value == 'lock') {
+                        _lockSelected();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: ListTile(
+                          leading: Icon(Icons.delete_outline),
+                          title: Text('Delete'),
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'lock',
+                        child: ListTile(
+                          leading: Icon(Icons.lock_outline),
+                          title: Text('Move to Locked Folder'),
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
                   ),
                 ]
               : [],

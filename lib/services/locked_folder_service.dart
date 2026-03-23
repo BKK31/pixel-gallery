@@ -24,10 +24,10 @@ class VaultItem {
   });
 
   Map<String, dynamic> toJson() => {
-        'vaultPath': vaultPath,
-        'originalPath': originalPath,
-        'entryMap': entryMap,
-      };
+    'vaultPath': vaultPath,
+    'originalPath': originalPath,
+    'entryMap': entryMap,
+  };
 
   static VaultItem fromJson(Map<String, dynamic> json) {
     return VaultItem(
@@ -89,8 +89,7 @@ class LockedFolderService {
   }
 
   Future<void> _saveInventory() async {
-    final encoded =
-        _vaultItems.map((v) => jsonEncode(v.toJson())).toList();
+    final encoded = _vaultItems.map((v) => jsonEncode(v.toJson())).toList();
     await _prefs?.setStringList(_storageKey, encoded);
   }
 
@@ -172,11 +171,13 @@ class LockedFolderService {
       await originalFile.delete();
 
       // Store inventory item with full entry metadata for later display
-      _vaultItems.add(VaultItem(
-        vaultPath: vaultPath,
-        originalPath: entry.path!,
-        entryMap: entry.toMap(),
-      ));
+      _vaultItems.add(
+        VaultItem(
+          vaultPath: vaultPath,
+          originalPath: entry.path!,
+          entryMap: entry.toMap(),
+        ),
+      );
       _rebuildLockedIds();
       await _saveInventory();
 
@@ -228,6 +229,20 @@ class LockedFolderService {
       await vaultFile.copy(item.originalPath);
       await vaultFile.delete();
 
+      // Restore the original last-modified timestamp so MediaStore does not
+      // index the file under today's date (important for WhatsApp photos
+      // and others without embedded EXIF dates).
+      final originalModifiedSecs = item.entryMap['dateModifiedSecs'] as int?;
+      if (originalModifiedSecs != null) {
+        try {
+          await File(item.originalPath).setLastModified(
+            DateTime.fromMillisecondsSinceEpoch(originalModifiedSecs * 1000),
+          );
+        } catch (e) {
+          debugPrint('LockedFolderService: could not restore modified date: $e');
+        }
+      }
+
       // Update inventory
       _vaultItems.removeAt(index);
       _rebuildLockedIds();
@@ -241,7 +256,8 @@ class LockedFolderService {
       MediaService().notifyAlbumUpdated();
 
       debugPrint(
-          'LockedFolderService: unlocked ${item.vaultPath} -> ${item.originalPath}');
+        'LockedFolderService: unlocked ${item.vaultPath} -> ${item.originalPath}',
+      );
       return true;
     } catch (e) {
       debugPrint('LockedFolderService: error unlocking: $e');

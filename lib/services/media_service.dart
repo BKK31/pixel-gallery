@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
 import 'dart:async';
@@ -282,6 +283,28 @@ class MediaService {
 
   void notifyAlbumUpdated() {
     _albumUpdateController.add(null);
+  }
+
+  /// Permanently deletes an entry's file from disk and removes it from the
+  /// DB and memory cache. Unlike [deleteEntry] (which is used when the file
+  /// is moved rather than deleted), this also physically removes the file.
+  Future<void> permanentlyDelete(AvesEntry entry) async {
+    final file = await entry.file;
+    if (file != null && await file.exists()) {
+      try {
+        await file.delete();
+      } catch (e) {
+        debugPrint('MediaService.permanentlyDelete: could not delete file: $e');
+      }
+    }
+
+    // Tell MediaStore the file is gone
+    try {
+      const platform = MethodChannel('com.pixel.gallery/open_file');
+      await platform.invokeMethod('scanFile', {'path': entry.path});
+    } catch (_) {}
+
+    await deleteEntry(entry);
   }
 
   Future<void> deleteEntry(AvesEntry entry) async {

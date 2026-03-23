@@ -1,0 +1,5 @@
+- Bulk Album Management: Long-press albums to hide/unhide or delete contents
+- Improved Deletion: New dialog gives the option to Move to Bin or Delete Permanently
+- Selection Persistence: Checked items stay selected after sharing
+- UI Tweaks: Reorganized Viewer and Multi-Select action menus for a cleaner experience
+- Vault fixes: Restored photos now retain their original timestamp

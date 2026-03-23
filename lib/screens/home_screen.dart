@@ -22,10 +22,16 @@ class _HomeScreenState extends State<HomeScreen>
   late int _selectedIndex;
   late TabController _tabController;
 
+  // Recents selection
   bool _isSelecting = false;
   int _selectedCount = 0;
 
+  // Albums selection
+  bool _isAlbumSelecting = false;
+  int _albumSelectedCount = 0;
+
   late final GlobalKey<RecentsScreenState> _recentsKey;
+  late final GlobalKey<AlbumsScreenState> _albumsKey;
   late final List<Widget> _pages;
 
   @override
@@ -33,10 +39,14 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
 
     _recentsKey = GlobalKey<RecentsScreenState>();
+    _albumsKey = GlobalKey<AlbumsScreenState>();
 
     _pages = [
       RecentsScreen(key: _recentsKey, onSelectionChanged: _onSelectionChanged),
-      const AlbumsScreen(),
+      AlbumsScreen(
+        key: _albumsKey,
+        onSelectionChanged: _onAlbumSelectionChanged,
+      ),
     ];
 
     // Load initial tab synchronously from pre-initialized service
@@ -83,16 +93,30 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  void _onAlbumSelectionChanged(bool selecting, int count) {
+    setState(() {
+      _isAlbumSelecting = selecting;
+      _albumSelectedCount = count;
+    });
+  }
+
   void _clearSelection() {
     _recentsKey.currentState?.clearSelections();
+    _albumsKey.currentState?.clearSelections();
     setState(() {
       _isSelecting = false;
       _selectedCount = 0;
+      _isAlbumSelecting = false;
+      _albumSelectedCount = 0;
     });
   }
 
   void _deleteSelected() {
     _recentsKey.currentState?.deleteSelected();
+  }
+
+  void _lockSelected() {
+    _recentsKey.currentState?.lockSelected();
   }
 
   void _shareSelected() {
@@ -116,6 +140,11 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    // Album selection mode (tab index 1)
+    if (_isAlbumSelecting && _selectedIndex == 1) {
+      return _buildAlbumSelectionAppBar(context);
+    }
+    // Photo selection mode (tab index 0)
     return AppBarM3E(
       title: _isSelecting
           ? Text(
@@ -143,9 +172,35 @@ class _HomeScreenState extends State<HomeScreen>
                 icon: const Icon(Icons.share),
                 onPressed: _shareSelected,
               ),
-              IconButton(
-                icon: const Icon(Icons.delete),
-                onPressed: _deleteSelected,
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) {
+                  if (value == 'delete') {
+                    _deleteSelected();
+                  } else if (value == 'lock') {
+                    _lockSelected();
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      leading: Icon(Icons.delete_outline),
+                      title: Text('Delete'),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'lock',
+                    child: ListTile(
+                      leading: Icon(Icons.lock_outline),
+                      title: Text('Move to Locked Folder'),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
               ),
             ]
           : [
@@ -201,6 +256,36 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
             ],
+    );
+  }
+
+  PreferredSizeWidget _buildAlbumSelectionAppBar(BuildContext context) {
+    return AppBarM3E(
+      title: Text(
+        '$_albumSelectedCount Selected',
+        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+      ),
+      centerTitle: false,
+      shapeFamily: AppBarM3EShapeFamily.round,
+      density: AppBarM3EDensity.regular,
+      backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      automaticallyImplyLeading: false,
+      leading: IconButton(
+        icon: const Icon(Icons.close),
+        onPressed: _clearSelection,
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.visibility_off),
+          tooltip: 'Hide / Unhide',
+          onPressed: () => _albumsKey.currentState?.hideSelected(),
+        ),
+        IconButton(
+          icon: const Icon(Icons.delete_outline),
+          tooltip: 'Delete contents',
+          onPressed: () => _albumsKey.currentState?.deleteSelected(),
+        ),
+      ],
     );
   }
 

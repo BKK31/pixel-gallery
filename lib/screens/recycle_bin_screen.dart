@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import '../services/trash_service.dart';
+import 'trash_viewer_screen.dart';
 
 class RecycleBinScreen extends StatefulWidget {
   const RecycleBinScreen({super.key});
@@ -35,32 +36,6 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
     }
   }
 
-  // Restores a single file using the service and refreshes the list.
-  Future<void> _restore(File file) async {
-    // Restore a single asset from trash
-    final success = await _trashService.restore(file.path);
-    if (success) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Restored successfully")));
-      }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Failed to restore item. Check permissions."),
-          ),
-        );
-      }
-    }
-    _init(); // Refresh list to reflect changes
-  }
-
-  Future<void> _deletePermanently(File file) async {
-    await _trashService.deletePermanently(file.path);
-    _init(); // Refresh list
-  }
 
   // Multi-Selection Actions
   // Toggles selection state for a file path.
@@ -218,37 +193,21 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
                                 _toggleSelection(file.path);
                               }
                             },
-                            onTap: () {
+                            onTap: () async {
                               if (_isSelecting) {
                                 _toggleSelection(file.path);
                               } else {
-                                // Show Dialog
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => AlertDialog(
-                                    title: const Text("Actions"),
-                                    content: const Text("Restore or Delete?"),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          _restore(file);
-                                          Navigator.pop(context);
-                                        },
-                                        child: const Text("Restore"),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          _deletePermanently(file);
-                                          Navigator.pop(context);
-                                        },
-                                        child: const Text(
-                                          "Delete",
-                                          style: TextStyle(color: Colors.red),
-                                        ),
-                                      ),
-                                    ],
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => TrashViewerScreen(
+                                      files: _trashedFiles,
+                                      initialIndex: index,
+                                    ),
                                   ),
                                 );
+                                // Refresh in case an item was restored or deleted
+                                if (mounted) _init();
                               }
                             },
                             child: Stack(

@@ -4,6 +4,7 @@ import 'package:lumina_gallery/models/extensions/favourites_extension.dart';
 import 'package:lumina_gallery/screens/viewer_screen.dart';
 import 'package:lumina_gallery/services/media_service.dart';
 import 'package:lumina_gallery/services/trash_service.dart';
+import 'package:lumina_gallery/services/locked_folder_service.dart';
 import 'package:lumina_gallery/models/album_model.dart';
 import 'package:lumina_gallery/widgets/aves_entry_image.dart';
 import 'package:share_plus/share_plus.dart';
@@ -182,13 +183,62 @@ class RecentsScreenState extends State<RecentsScreen>
   }
 
   Future<void> deleteSelected() async {
+    // Show confirmation dialog with move-to-bin toggle
+    bool moveToTrash = true;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setStateDialog) => AlertDialog(
+          title: const Text('Delete items'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Delete ${_selectedIds.length} selected item(s)?',
+              ),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                value: moveToTrash,
+                onChanged: (v) => setStateDialog(() => moveToTrash = v),
+                title: const Text('Move to bin'),
+                subtitle: Text(
+                  moveToTrash
+                      ? 'Items can be restored from the recycle bin'
+                      : 'Items will be permanently deleted',
+                ),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(
+                moveToTrash ? 'Move to bin' : 'Delete permanently',
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+
     for (final id in _selectedIds) {
       final photo = _photos.cast<PhotoModel?>().firstWhere(
         (p) => p?.uid == id,
         orElse: () => null,
       );
       if (photo != null) {
-        await _trashService.moveToTrash(photo.asset);
+        if (moveToTrash) {
+          await _trashService.moveToTrash(photo.asset);
+        } else {
+          await _service.permanentlyDelete(photo.asset);
+        }
       }
     }
     clearSelections();
@@ -196,7 +246,13 @@ class RecentsScreenState extends State<RecentsScreen>
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Moved selected items to trash")),
+        SnackBar(
+          content: Text(
+            moveToTrash
+                ? 'Moved selected items to trash'
+                : 'Permanently deleted selected items',
+          ),
+        ),
       );
     }
   }
@@ -218,7 +274,30 @@ class RecentsScreenState extends State<RecentsScreen>
     if (files.isNotEmpty) {
       await Share.shareXFiles(files);
     }
+    // Intentionally NOT clearing selection so the user can
+    // immediately move, delete, or lock the same items.
+  }
+
+  Future<void> lockSelected() async {
+    final lockedService = LockedFolderService();
+    int successCount = 0;
+    for (final id in List<String>.from(_selectedIds)) {
+      final photo = _photos.cast<PhotoModel?>().firstWhere(
+        (p) => p?.uid == id,
+        orElse: () => null,
+      );
+      if (photo != null) {
+        final ok = await lockedService.lock(photo.asset);
+        if (ok) successCount++;
+      }
+    }
     clearSelections();
+    _init();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Moved $successCount item(s) to Locked Folder')),
+      );
+    }
   }
 
   List<int> getVisibleEntryIds() {

@@ -229,15 +229,64 @@ class _ViewerScreenState extends State<ViewerScreen> {
     }
   }
 
-  // Moves the current photo to the trash and closes the viewer.
-  // Shows a snackbar confirmation.
+  // Shows a confirmation dialog then deletes or moves to trash.
   Future<void> _deletePhoto(PhotoModel photo) async {
-    await _trashService.moveToTrash(photo.asset);
+    bool moveToTrash = true;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setStateDialog) => AlertDialog(
+          title: const Text('Delete photo'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('What would you like to do with this photo?'),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                value: moveToTrash,
+                onChanged: (v) => setStateDialog(() => moveToTrash = v),
+                title: const Text('Move to bin'),
+                subtitle: Text(
+                  moveToTrash
+                      ? 'Can be restored from the recycle bin'
+                      : 'Will be permanently deleted',
+                ),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(
+                moveToTrash ? 'Move to bin' : 'Delete permanently',
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return;
 
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Moved to trash")));
+    if (moveToTrash) {
+      await _trashService.moveToTrash(photo.asset);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Moved to trash')));
+      }
+    } else {
+      await _service.permanentlyDelete(photo.asset);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Permanently deleted')));
+      }
     }
 
     Navigator.pop(context);
@@ -716,12 +765,19 @@ class _ViewerScreenState extends State<ViewerScreen> {
                         }
                       },
                     ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.info_outline,
+                      color: Colors.white,
+                    ),
+                    onPressed: () {
+                      _showInfoBottomSheet(_photos[_currentIndex]);
+                    },
+                  ),
                   PopupMenuButton<String>(
                     onSelected: (value) {
                       if (value == 'wallpaper') {
                         _showWallpaperOptions(_photos[_currentIndex]);
-                      } else if (value == 'edit') {
-                        _editPhoto(_photos[_currentIndex]);
                       } else if (value == 'lock') {
                         _toggleLock(_photos[_currentIndex]);
                       }
@@ -734,10 +790,6 @@ class _ViewerScreenState extends State<ViewerScreen> {
                         const PopupMenuItem<String>(
                           value: 'wallpaper',
                           child: Text('Set as wallpaper'),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'edit',
-                          child: Text('Edit'),
                         ),
                         PopupMenuItem<String>(
                           value: 'lock',
@@ -770,9 +822,12 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.info_outline, color: Colors.white),
+                      icon: const Icon(
+                        Icons.edit_outlined,
+                        color: Colors.white,
+                      ),
                       onPressed: () {
-                        _showInfoBottomSheet(_photos[_currentIndex]);
+                        _editPhoto(_photos[_currentIndex]);
                       },
                     ),
                     IconButton(
