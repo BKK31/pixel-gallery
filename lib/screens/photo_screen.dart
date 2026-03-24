@@ -10,6 +10,8 @@ import '../models/extensions/favourites_extension.dart';
 import '../widgets/aves_entry_image.dart';
 import '../screens/viewer_screen.dart';
 import 'package:share_plus/share_plus.dart';
+import '../services/settings_service.dart';
+import '../models/filters.dart';
 
 class PhotoScreen extends StatefulWidget {
   final AlbumModel album;
@@ -377,7 +379,31 @@ class _PhotoScreenState extends State<PhotoScreen> {
                     ],
                   ),
                 ]
-              : [],
+              : [
+                  PopupMenuButton<String>(
+                    onSelected: (value) async {
+                      if (value == 'exclude') {
+                        final hiddenFilters = SettingsService().hiddenFilters;
+                        hiddenFilters.add(PathFilter(widget.album.id));
+                        await SettingsService().setHiddenFilters(hiddenFilters);
+                        MediaService().clearCache();
+                        MediaService().rebuildAlbums();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Folder excluded')),
+                          );
+                          Navigator.pop(context);
+                        }
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'exclude',
+                        child: Text('Exclude Folder'),
+                      ),
+                    ],
+                  ),
+                ],
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())

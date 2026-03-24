@@ -102,13 +102,25 @@ class LockedFolderService {
     return _lockedIds.contains(contentId);
   }
 
-  /// Get the vault directory (inside app-private storage).
+  /// Get the vault directory (inside natively isolated app-specific external storage).
   Future<Directory> _getVaultDir() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final vaultDir = Directory(p.join(appDir.path, '.vault'));
+    // getExternalStorageDirectory() resolves to /storage/emulated/0/Android/data/com.pixel.gallery/files
+    final appDataDir = await getExternalStorageDirectory();
+    if (appDataDir == null) {
+      throw Exception('Could not access Android/data storage');
+    }
+    // Use the parent to get /storage/emulated/0/Android/data/com.pixel.gallery/vault
+    final vaultDir = Directory(p.join(appDataDir.parent.path, 'vault'));
     if (!await vaultDir.exists()) {
       await vaultDir.create(recursive: true);
     }
+
+    // Create .nomedia file to ensure the vault is hidden from other gallery apps
+    final noMediaFile = File(p.join(vaultDir.path, '.nomedia'));
+    if (!await noMediaFile.exists()) {
+      await noMediaFile.create();
+    }
+    
     return vaultDir;
   }
 
@@ -162,13 +174,20 @@ class LockedFolderService {
     try {
       final vaultDir = await _getVaultDir();
 
-      // Obfuscated filename: contentId + no extension
-      final vaultFileName = '${entry.contentId}';
+      // Ensure exact original extension is preserved for media_kit / glide decoders.
+      // Append contentId to prevent name collisions if lock targets have identical filenames from multiple directories.
+      final String originalFilename = p.basename(entry.path!);
+      final vaultFileName = '${entry.contentId}_$originalFilename';
       final vaultPath = p.join(vaultDir.path, vaultFileName);
 
-      // Move (copy + delete for cross-partition safety)
-      await originalFile.copy(vaultPath);
-      await originalFile.delete();
+      // Atomic rename for perfection on same partition (Android/data is on /storage/emulated/0)
+      try {
+        await originalFile.rename(vaultPath);
+      } catch (e) {
+        // Fallback for cross-partition (e.g. from an actual SD card)
+        await originalFile.copy(vaultPath);
+        await originalFile.delete();
+      }
 
       // Store inventory item with full entry metadata for later display
       _vaultItems.add(
@@ -225,21 +244,25 @@ class LockedFolderService {
         await parentDir.create(recursive: true);
       }
 
-      // Move back (copy + delete)
-      await vaultFile.copy(item.originalPath);
-      await vaultFile.delete();
+      // Native Android/data is unaffected by MediaScanner, meaning the file
+      // simply resided in a separate directory natively unmodified.
+      // Rename back to original path securely
+      try {
+        await vaultFile.rename(item.originalPath);
+      } catch (e) {
+        await vaultFile.copy(item.originalPath);
+        await vaultFile.delete();
+      }
 
-      // Restore the original last-modified timestamp so MediaStore does not
-      // index the file under today's date (important for WhatsApp photos
-      // and others without embedded EXIF dates).
-      final originalModifiedSecs = item.entryMap['dateModifiedSecs'] as int?;
-      if (originalModifiedSecs != null) {
+      // Restore modification time on disk so the MediaScanner picks it up correctly
+      final dateModifiedMillis = item.entryMap['dateModifiedMillis'] as int?;
+      if (dateModifiedMillis != null) {
         try {
           await File(item.originalPath).setLastModified(
-            DateTime.fromMillisecondsSinceEpoch(originalModifiedSecs * 1000),
+            DateTime.fromMillisecondsSinceEpoch(dateModifiedMillis),
           );
         } catch (e) {
-          debugPrint('LockedFolderService: could not restore modified date: $e');
+          debugPrint('LockedFolderService: error restoring lastModified on disk: $e');
         }
       }
 
@@ -248,8 +271,15 @@ class LockedFolderService {
       _rebuildLockedIds();
       await _saveInventory();
 
-      // Re-index in MediaStore
-      _scanFile(item.originalPath);
+      // Trigger standard MediaStore indexing but FORCE native database timestamp updates
+      _scanFile(
+        item.originalPath,
+        dateAddedSecs: item.entryMap['dateAddedSecs'] as int?,
+        dateModifiedSecs: (item.entryMap['dateModifiedMillis'] as int?) != null 
+            ? (item.entryMap['dateModifiedMillis'] as int) ~/ 1000 
+            : null,
+        dateTakenMillis: item.entryMap['sourceDateTakenMillis'] as int?,
+      );
 
       // Refresh gallery
       MediaService().clearCache();
@@ -278,11 +308,16 @@ class LockedFolderService {
     return _vaultItems.map((v) => v.toAvesEntry()).toList();
   }
 
-  /// Trigger a native MediaStore scan on the given path.
-  void _scanFile(String filePath) {
+  /// Trigger a native MediaStore scan on the given path with optional metadata overrides.
+  void _scanFile(String filePath, {int? dateAddedSecs, int? dateModifiedSecs, int? dateTakenMillis}) {
     try {
       const platform = MethodChannel('com.pixel.gallery/open_file');
-      platform.invokeMethod('scanFile', {'path': filePath});
+      platform.invokeMethod('scanFile', {
+        'path': filePath,
+        if (dateAddedSecs != null) 'dateAddedSecs': dateAddedSecs,
+        if (dateModifiedSecs != null) 'dateModifiedSecs': dateModifiedSecs,
+        if (dateTakenMillis != null) 'dateTakenMillis': dateTakenMillis,
+      });
     } catch (e) {
       debugPrint('LockedFolderService: scanFile error: $e');
     }

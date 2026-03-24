@@ -6,6 +6,7 @@ import 'package:lumina_gallery/screens/settings_screen.dart';
 import 'package:lumina_gallery/screens/hidden_albums_screen.dart';
 import 'package:lumina_gallery/screens/locked_folder_screen.dart';
 import 'package:lumina_gallery/services/settings_service.dart';
+import 'package:lumina_gallery/services/media_service.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
@@ -66,6 +67,8 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      // Trigger native MediaStore re-sync to pick up out-of-band file manager changes
+      MediaService().triggerBackgroundSync();
       // Refresh active tab if needed
       if (_selectedIndex == 0) {
         _recentsKey.currentState?.refresh();

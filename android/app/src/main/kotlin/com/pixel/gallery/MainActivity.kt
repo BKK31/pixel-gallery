@@ -31,8 +31,24 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 "scanFile" -> {
                     val path = call.argument<String>("path")
+                    val dateAddedSecs = call.argument<Number>("dateAddedSecs")?.toLong()
+                    val dateModifiedSecs = call.argument<Number>("dateModifiedSecs")?.toLong()
+                    val dateTakenMillis = call.argument<Number>("dateTakenMillis")?.toLong()
+
                     if (path != null) {
-                        android.media.MediaScannerConnection.scanFile(this, arrayOf(path), null) { _, _ -> }
+                        android.media.MediaScannerConnection.scanFile(this, arrayOf(path), null) { _, uri ->
+                            if (uri != null && (dateAddedSecs != null || dateModifiedSecs != null || dateTakenMillis != null)) {
+                                val values = android.content.ContentValues()
+                                if (dateAddedSecs != null) values.put(android.provider.MediaStore.MediaColumns.DATE_ADDED, dateAddedSecs)
+                                if (dateModifiedSecs != null) values.put(android.provider.MediaStore.MediaColumns.DATE_MODIFIED, dateModifiedSecs)
+                                if (dateTakenMillis != null) values.put("datetaken", dateTakenMillis)
+                                try {
+                                    contentResolver.update(uri, values, null, null)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("MainActivity", "Error updating scanned file dates: $e")
+                                }
+                            }
+                        }
                         result.success(true)
                     } else {
                         result.error("INVALID_ARGUMENT", "Path is null", null)
