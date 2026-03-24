@@ -35,7 +35,14 @@ class BiometricService {
           biometricOnly: false, // allow PIN/pattern/password fallback
         ),
       );
-    } on PlatformException {
+    } on PlatformException catch (e) {
+      // If the user's device doesn't have a screen lock or biometrics set up,
+      // allow them straight through to display the images.
+      if (e.code == 'NotEnrolled' ||
+          e.code == 'PasscodeNotSet' ||
+          e.code == 'NotAvailable') {
+        return true;
+      }
       return false;
     }
   }

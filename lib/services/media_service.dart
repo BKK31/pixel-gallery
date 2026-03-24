@@ -125,14 +125,17 @@ class MediaService {
     Set<String> trashedPaths, {
     Set<int>? lockedIds,
   }) {
-    // 1. Filter out entries in trash and locked folder using O(1) set lookup
+    // 1. Filter out entries in trash, locked folder, and excluded folders
     final effectiveLockedIds = lockedIds ?? LockedFolderService().lockedIds;
+    final hiddenFilters = SettingsService().hiddenFilters;
+    
     final filteredEntries = entries
         .where(
           (entry) =>
               !trashedPaths.contains(entry.path) &&
               !(entry.contentId != null &&
-                  effectiveLockedIds.contains(entry.contentId)),
+                  effectiveLockedIds.contains(entry.contentId)) &&
+              !hiddenFilters.any((filter) => filter.test(entry)),
         )
         .toList();
 
@@ -256,6 +259,16 @@ class MediaService {
     _cachedAlbums = albums;
     _isInitialized = true;
     return albums;
+  }
+
+  /// Forces a silent background sync with the MediaStore to pull any out-of-band updates,
+  /// bypassing the Fast Path memory cache. Use this primarily on AppLifecycle resume.
+  Future<void> triggerBackgroundSync() async {
+    if (!_isInitialized) {
+      await getPhotos();
+    } else {
+      unawaited(_backgroundSync());
+    }
   }
 
   Future<void> _backgroundSync() async {

@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/filters.dart';
 
 class SettingsService {
   static final SettingsService _instance = SettingsService._internal();
@@ -9,6 +10,7 @@ class SettingsService {
   static const String defaultPageKey = 'albums';
   static const String topEntryIdsKey = 'top_entry_ids';
   static const String hiddenAlbumsKey = 'hidden_albums';
+  static const String hiddenFiltersKey = 'hidden_filters';
 
   SharedPreferences? _prefs;
 
@@ -47,5 +49,22 @@ class SettingsService {
 
   Future<void> setHiddenAlbums(Set<String> value) async {
     await _prefs?.setStringList(hiddenAlbumsKey, value.toList());
+  }
+
+  // Hidden Filters
+  Set<GalleryFilter> get hiddenFilters {
+    final list = _prefs?.getStringList(hiddenFiltersKey);
+    if (list == null) return {};
+    return list.map((jsonStr) {
+      try {
+        return GalleryFilter.fromJson(jsonStr);
+      } catch (e) {
+        return null;
+      }
+    }).whereType<GalleryFilter>().toSet();
+  }
+
+  Future<void> setHiddenFilters(Set<GalleryFilter> value) async {
+    await _prefs?.setStringList(hiddenFiltersKey, value.map((f) => f.toJson()).toList());
   }
 }

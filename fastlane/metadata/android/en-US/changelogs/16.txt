@@ -1,0 +1,4 @@
+- Revamped Locked Folder Vault: Images are now natively secured in the app's isolated `Android/data` sandbox, completely protecting their metadata and fixing the timeline reset bugs.
+- Biometric Bypass Upgrade: The locked folder now automatically gracefully bypasses auth if you have no screen lock credentials enrolled.
+- Background Sync: The app now instantly recognizes photos downloaded or deleted outside the gallery upon returning from your Recents menu.
+- Context Menu Folder Exclusion: Added a seamless "Exclude Folder" button straight to the Album grid menu.
