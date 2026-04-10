@@ -3,7 +3,7 @@
 # For more info: https://localizely.com/docs/github-integration/
 
 config_version: "1.0"
-project_id: "PUT_YOUR_PROJECT_ID_HERE"
+project_id: "08078485-f0d5-4b12-8c75-f1acb8747f05"
 file_type: "flutter_arb"
 
 # Optional: specify the branch to sync (defaults to main)
