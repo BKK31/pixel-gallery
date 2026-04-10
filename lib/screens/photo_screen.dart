@@ -12,6 +12,7 @@ import '../screens/viewer_screen.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/settings_service.dart';
 import '../models/filters.dart';
+import '../widgets/add_to_album_sheet.dart';
 
 class PhotoScreen extends StatefulWidget {
   final AlbumModel album;
@@ -284,6 +285,20 @@ class _PhotoScreenState extends State<PhotoScreen> {
     }
   }
 
+  void _addToAlbumSelected() {
+    final selectedPhotosList = _photos
+        .where((p) => _selectedIds.contains(p.uid))
+        .toList();
+    AddToAlbumSheet.show(context, selectedPhotosList).then((_) {
+      if (mounted && _isSelecting) {
+        setState(() {
+          _isSelecting = false;
+          _selectedIds.clear();
+        });
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -355,6 +370,8 @@ class _PhotoScreenState extends State<PhotoScreen> {
                         _deleteSelected();
                       } else if (value == 'lock') {
                         _lockSelected();
+                      } else if (value == 'add_to_album') {
+                        _addToAlbumSelected();
                       }
                     },
                     itemBuilder: (context) => [
@@ -372,6 +389,15 @@ class _PhotoScreenState extends State<PhotoScreen> {
                         child: ListTile(
                           leading: Icon(Icons.lock_outline),
                           title: Text('Move to Locked Folder'),
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'add_to_album',
+                        child: ListTile(
+                          leading: Icon(Icons.create_new_folder_outlined),
+                          title: Text('Add to Album'),
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
