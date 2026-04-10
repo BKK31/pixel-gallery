@@ -9,10 +9,12 @@ import 'package:lumina_gallery/services/settings_service.dart';
 import 'package:lumina_gallery/services/media_service.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+import 'package:lumina_gallery/l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback? onThemeRefresh;
-  const HomeScreen({super.key, this.onThemeRefresh});
+  final VoidCallback? onLanguageRefresh;
+  const HomeScreen({super.key, this.onThemeRefresh, this.onLanguageRefresh});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -137,7 +139,10 @@ class _HomeScreenState extends State<HomeScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => SettingsScreen(onThemeChange: widget.onThemeRefresh),
+        builder: (_) => SettingsScreen(
+          onThemeChange: widget.onThemeRefresh,
+          onLanguageChange: widget.onLanguageRefresh,
+        ),
       ),
     );
   }
@@ -151,12 +156,12 @@ class _HomeScreenState extends State<HomeScreen>
     return AppBarM3E(
       title: _isSelecting
           ? Text(
-              "${_selectedCount} Selected",
+              AppLocalizations.of(context)!.homeSelectedCount(_selectedCount),
               style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
             )
-          : const Text(
-              "Pixel Gallery",
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+          : Text(
+              AppLocalizations.of(context)!.appTitle,
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
             ),
       centerTitle: !_isSelecting,
       shapeFamily: AppBarM3EShapeFamily.round,
@@ -185,20 +190,20 @@ class _HomeScreenState extends State<HomeScreen>
                   }
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'delete',
                     child: ListTile(
-                      leading: Icon(Icons.delete_outline),
-                      title: Text('Delete'),
+                      leading: const Icon(Icons.delete_outline),
+                      title: Text(AppLocalizations.of(context)!.homeDelete),
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'lock',
                     child: ListTile(
-                      leading: Icon(Icons.lock_outline),
-                      title: Text('Move to Locked Folder'),
+                      leading: const Icon(Icons.lock_outline),
+                      title: Text(AppLocalizations.of(context)!.homeLock),
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                     ),
@@ -229,29 +234,29 @@ class _HomeScreenState extends State<HomeScreen>
                   }
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'settings',
                     child: ListTile(
-                      leading: Icon(Icons.settings),
-                      title: Text('Settings'),
+                      leading: const Icon(Icons.settings),
+                      title: Text(AppLocalizations.of(context)!.settingsTitle),
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'hidden_albums',
                     child: ListTile(
-                      leading: Icon(Icons.visibility_off),
-                      title: Text('Hidden Albums'),
+                      leading: const Icon(Icons.visibility_off),
+                      title: Text(AppLocalizations.of(context)!.homeHiddenAlbums),
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'locked_folder',
                     child: ListTile(
-                      leading: Icon(Icons.lock),
-                      title: Text('Locked Folder'),
+                      leading: const Icon(Icons.lock),
+                      title: Text(AppLocalizations.of(context)!.homeLockedFolder),
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                     ),
@@ -265,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen>
   PreferredSizeWidget _buildAlbumSelectionAppBar(BuildContext context) {
     return AppBarM3E(
       title: Text(
-        '$_albumSelectedCount Selected',
+        AppLocalizations.of(context)!.homeSelectedCount(_albumSelectedCount),
         style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
       ),
       centerTitle: false,

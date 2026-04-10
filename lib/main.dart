@@ -2,6 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:lumina_gallery/l10n/app_localizations.dart';
+
 import 'package:media_kit/media_kit.dart';
 import 'package:lumina_gallery/screens/home_screen.dart';
 import 'package:lumina_gallery/screens/single_viewer_screen.dart';
@@ -38,6 +41,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _materialYou = true;
+  Locale? _locale;
 
   static const MethodChannel platform = MethodChannel(
     'com.pixel.gallery/open_file',
@@ -58,6 +62,10 @@ class _MyAppState extends State<MyApp> {
     super.initState();
 
     _materialYou = SettingsScreen.getMaterialYou();
+    final langCode = SettingsService().languageCode;
+    if (langCode != null) {
+      _locale = Locale(langCode);
+    }
 
     _checkInitialFile();
 
@@ -95,6 +103,13 @@ class _MyAppState extends State<MyApp> {
   void _refreshTheme() {
     setState(() {
       _materialYou = SettingsScreen.getMaterialYou();
+    });
+  }
+
+  void _refreshLocale() {
+    setState(() {
+      final langCode = SettingsService().languageCode;
+      _locale = langCode != null ? Locale(langCode) : null;
     });
   }
 
@@ -137,7 +152,17 @@ class _MyAppState extends State<MyApp> {
         return MaterialApp(
           navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
-          title: 'Pixel Gallery',
+          locale: _locale,
+          onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en', ''), // English
+          ],
 
           /// 🌞 LIGHT THEME
           theme: ThemeData(
@@ -170,7 +195,10 @@ class _MyAppState extends State<MyApp> {
                   key: ValueKey(_initialFilePath),
                   file: File(_initialFilePath!),
                 )
-              : HomeScreen(onThemeRefresh: _refreshTheme),
+              : HomeScreen(
+                  onThemeRefresh: _refreshTheme,
+                  onLanguageRefresh: _refreshLocale,
+                ),
         );
       },
     );

@@ -134,6 +134,18 @@ Pixel Gallery is built with a curated list of top-tier libraries:
 - [**wallpaper_manager_plus**](https://pub.dev/packages/wallpaper_manager_plus) - Set device wallpaper.
 - [**wakelock_plus**](https://pub.dev/packages/wakelock_plus) - Keep the device screen awake.
 
+## 🌐 Translations
+
+We want to make Pixel Gallery accessible to everyone! You can help us translate the app into your language:
+
+- **Localizely (Highly Recommended)**: The easiest way to contribute. Use our [Localizely project](https://localizely.com/projects/YOUR_PROJECT_URL) to translate strings directly in your browser. No coding knowledge required!
+- **Manual Contribution**:
+  1. Fork the repository.
+  2. Add/edit the `.arb` files in `lib/l10n/` (e.g., `app_es.arb` for Spanish).
+  3. Submit a Pull Request.
+
+*Note: If you are adding a new language, please check the [Flutter language codes](https://docs.flutter.dev/development/accessibility-and-localization/internationalization#supported-languages) first.*
+
 ## 🤝 Contributing
 
 Contributions are welcome! If you have suggestions or want to report a bug, please open an issue or submit a pull request.

@@ -1,0 +1,94 @@
+{
+  "appTitle": "Pixel Gallery",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "settingsTitle": "Settings",
+  "settingsMaterialYou": "Material You",
+  "settingsMaterialYouDesc": "Use dynamic colors from wallpaper",
+  "settingsStartupAlbums": "Startup at Albums",
+  "settingsStartupAlbumsDesc": "Start on Albums page instead of Photos",
+  "settingsExcludedFolders": "Excluded Folders",
+  "settingsExcludedFoldersDesc": "Hide folders from the gallery",
+  "settingsLicenses": "Open Source Licenses",
+  "settingsLicensesDesc": "Credits and license information",
+  "settingsSourceCode": "Source Code",
+  "homeSelectedCount": "{count} Selected",
+  "@homeSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeShare": "Share",
+  "homeDelete": "Delete",
+  "homeLock": "Move to Locked Folder",
+  "homeHiddenAlbums": "Hidden Albums",
+  "homeLockedFolder": "Locked Folder",
+  "albumsFavourites": "Favourites",
+  "albumsBin": "Bin",
+  "albumsItemsCount": "{count} items",
+  "@albumsItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsHiddenCount": "Hid {count} album(s) from Recents",
+  "@albumsHiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsUnhiddenCount": "Unhid {count} album(s) from Recents",
+  "@albumsUnhiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsEmptySelection": "Selected albums are empty",
+  "albumsDeleteTitle": "Delete album contents",
+  "albumsDeleteContent": "Delete {photoCount} photo(s) from {albumCount} album(s)?",
+  "@albumsDeleteContent": {
+    "placeholders": {
+      "photoCount": {
+        "type": "int"
+      },
+      "albumCount": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsDeleteWarning": "The folder itself will not be removed.",
+  "albumsMoveToBin": "Move to bin",
+  "albumsBinDesc": "Items can be restored from the recycle bin",
+  "albumsPermDeleteDesc": "Items will be permanently deleted",
+  "cancel": "Cancel",
+  "deletePermanently": "Delete permanently",
+  "albumsMovedToBin": "Moved {count} item(s) to trash",
+  "@albumsMovedToBin": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsPermDeletedCount": "Permanently deleted {count} item(s)",
+  "@albumsPermDeletedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLanguage": "Language",
+  "settingsLanguageDesc": "Choose your preferred language",
+  "languageSystemDefault": "System Default",
+  "languageEnglish": "English"
+}

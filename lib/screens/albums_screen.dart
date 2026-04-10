@@ -8,6 +8,7 @@ import '../widgets/aves_entry_image.dart';
 import 'photo_screen.dart';
 import 'recycle_bin_screen.dart';
 import 'favourites_screen.dart';
+import 'package:lumina_gallery/l10n/app_localizations.dart';
 
 class AlbumsScreen extends StatefulWidget {
   final void Function(bool selecting, int count)? onSelectionChanged;
@@ -139,8 +140,8 @@ class AlbumsScreenState extends State<AlbumsScreen> {
         SnackBar(
           content: Text(
             allHidden
-                ? 'Unhid $count album(s) from Recents'
-                : 'Hid $count album(s) from Recents',
+                ? AppLocalizations.of(context)!.albumsUnhiddenCount(count)
+                : AppLocalizations.of(context)!.albumsHiddenCount(count),
           ),
         ),
       );
@@ -159,7 +160,7 @@ class AlbumsScreenState extends State<AlbumsScreen> {
       clearSelections();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Selected albums are empty')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.albumsEmptySelection)),
         );
       }
       return;
@@ -170,16 +171,16 @@ class AlbumsScreenState extends State<AlbumsScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setStateDialog) => AlertDialog(
-          title: const Text('Delete album contents'),
+          title: Text(AppLocalizations.of(context)!.albumsDeleteTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Delete $totalPhotos photo(s) from ${selectedAlbums.length} album(s)?',
+                AppLocalizations.of(context)!.albumsDeleteContent(totalPhotos, selectedAlbums.length),
               ),
               const SizedBox(height: 4),
               Text(
-                'The folder itself will not be removed.',
+                AppLocalizations.of(context)!.albumsDeleteWarning,
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(ctx).colorScheme.onSurfaceVariant,
@@ -189,11 +190,11 @@ class AlbumsScreenState extends State<AlbumsScreen> {
               SwitchListTile(
                 value: moveToTrash,
                 onChanged: (v) => setStateDialog(() => moveToTrash = v),
-                title: const Text('Move to bin'),
+                title: Text(AppLocalizations.of(context)!.albumsMoveToBin),
                 subtitle: Text(
                   moveToTrash
-                      ? 'Items can be restored from the recycle bin'
-                      : 'Items will be permanently deleted',
+                      ? AppLocalizations.of(context)!.albumsBinDesc
+                      : AppLocalizations.of(context)!.albumsPermDeleteDesc,
                 ),
                 contentPadding: EdgeInsets.zero,
               ),
@@ -202,12 +203,12 @@ class AlbumsScreenState extends State<AlbumsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(
-                moveToTrash ? 'Move to bin' : 'Delete permanently',
+                moveToTrash ? AppLocalizations.of(context)!.albumsMoveToBin : AppLocalizations.of(context)!.deletePermanently,
                 style: const TextStyle(color: Colors.red),
               ),
             ),
@@ -235,8 +236,8 @@ class AlbumsScreenState extends State<AlbumsScreen> {
         SnackBar(
           content: Text(
             moveToTrash
-                ? 'Moved $totalPhotos item(s) to trash'
-                : 'Permanently deleted $totalPhotos item(s)',
+                ? AppLocalizations.of(context)!.albumsMovedToBin(totalPhotos)
+                : AppLocalizations.of(context)!.albumsPermDeletedCount(totalPhotos),
           ),
         ),
       );
@@ -296,7 +297,7 @@ class AlbumsScreenState extends State<AlbumsScreen> {
                           child: _buildHeaderButton(
                             context,
                             icon: Icons.star_outline,
-                            label: 'Favourites',
+                            label: AppLocalizations.of(context)!.albumsFavourites,
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -313,7 +314,7 @@ class AlbumsScreenState extends State<AlbumsScreen> {
                           child: _buildHeaderButton(
                             context,
                             icon: Icons.delete_outline,
-                            label: 'Bin',
+                            label: AppLocalizations.of(context)!.albumsBin,
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -421,7 +422,7 @@ class AlbumsScreenState extends State<AlbumsScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           Text(
-            '${album.assetCount} items',
+            AppLocalizations.of(context)!.albumsItemsCount(album.assetCount),
             style: TextStyle(
               fontSize: 13,
               color: Theme.of(context).colorScheme.onSurfaceVariant,

@@ -11,6 +11,7 @@ class SettingsService {
   static const String topEntryIdsKey = 'top_entry_ids';
   static const String hiddenAlbumsKey = 'hidden_albums';
   static const String hiddenFiltersKey = 'hidden_filters';
+  static const String languageKey = 'language_code';
 
   SharedPreferences? _prefs;
 
@@ -66,5 +67,15 @@ class SettingsService {
 
   Future<void> setHiddenFilters(Set<GalleryFilter> value) async {
     await _prefs?.setStringList(hiddenFiltersKey, value.map((f) => f.toJson()).toList());
+  }
+
+  // Language
+  String? get languageCode => _prefs?.getString(languageKey);
+  set languageCode(String? value) {
+    if (value == null) {
+      _prefs?.remove(languageKey);
+    } else {
+      _prefs?.setString(languageKey, value);
+    }
   }
 }
