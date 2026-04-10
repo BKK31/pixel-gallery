@@ -5,11 +5,17 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:lumina_gallery/screens/licenses_screen.dart';
 import 'package:lumina_gallery/screens/excluded_folders_screen.dart';
 import 'package:lumina_gallery/services/settings_service.dart';
+import 'package:lumina_gallery/l10n/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback? onThemeChange;
+  final VoidCallback? onLanguageChange;
 
-  const SettingsScreen({super.key, this.onThemeChange});
+  const SettingsScreen({
+    super.key,
+    this.onThemeChange,
+    this.onLanguageChange,
+  });
 
   static const String accentKey = SettingsService.accentKey;
   static const String defaultPageKey = SettingsService.defaultPageKey;
@@ -33,6 +39,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _materialYou = SettingsService().materialYou;
     _albums = SettingsService().startupAtAlbums;
+  }
+
+  String _getLanguageName(String? code, BuildContext context) {
+    if (code == null) return AppLocalizations.of(context)!.languageSystemDefault;
+    if (code == 'en') return AppLocalizations.of(context)!.languageEnglish;
+    return code;
+  }
+
+  void _showLanguageDialog() {
+    final currentCode = SettingsService().languageCode;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(AppLocalizations.of(context)!.settingsLanguage),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String?>(
+              title: Text(AppLocalizations.of(context)!.languageSystemDefault),
+              value: null,
+              groupValue: currentCode,
+              onChanged: (val) {
+                SettingsService().languageCode = val;
+                Navigator.pop(context);
+                widget.onLanguageChange?.call();
+                setState(() {});
+              },
+            ),
+            RadioListTile<String?>(
+              title: Text(AppLocalizations.of(context)!.languageEnglish),
+              value: 'en',
+              groupValue: currentCode,
+              onChanged: (val) {
+                SettingsService().languageCode = val;
+                Navigator.pop(context);
+                widget.onLanguageChange?.call();
+                setState(() {});
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // Saves a boolean preference setting and updates local state.
@@ -63,16 +112,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBarM3E(
-        title: const Text(
-          "Settings",
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        title: Text(
+          AppLocalizations.of(context)!.settingsTitle,
+          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButtonM3E(
             icon: const Icon(FontAwesomeIcons.github),
-            tooltip: "Source Code",
+            tooltip: AppLocalizations.of(context)!.settingsSourceCode,
             onPressed: _openSourceCode,
           ),
         ],
@@ -80,12 +129,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         children: [
           SwitchListTile(
-            title: const Text(
-              "Material You",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            title: Text(
+              AppLocalizations.of(context)!.settingsMaterialYou,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             subtitle: Text(
-              "Use dynamic colors from wallpaper",
+              AppLocalizations.of(context)!.settingsMaterialYouDesc,
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
             value: _materialYou,
@@ -95,12 +144,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           Divider(height: 1),
           SwitchListTile(
-            title: const Text(
-              "Startup at Albums",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            title: Text(
+              AppLocalizations.of(context)!.settingsStartupAlbums,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             subtitle: Text(
-              "Start on Albums page instead of Photos",
+              AppLocalizations.of(context)!.settingsStartupAlbumsDesc,
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
             value: _albums,
@@ -110,12 +159,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           Divider(height: 1),
           ListTile(
-            title: const Text(
-              "Excluded Folders",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            title: Text(
+              AppLocalizations.of(context)!.settingsExcludedFolders,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             subtitle: Text(
-              "Hide folders from the gallery",
+              AppLocalizations.of(context)!.settingsExcludedFoldersDesc,
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
             trailing: const Icon(Icons.chevron_right),
@@ -130,12 +179,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           Divider(height: 1),
           ListTile(
-            title: const Text(
-              "Open Source Licenses",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            title: Text(
+              AppLocalizations.of(context)!.settingsLicenses,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             subtitle: Text(
-              "Credits and license information",
+              AppLocalizations.of(context)!.settingsLicensesDesc,
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
             trailing: const Icon(Icons.chevron_right),
@@ -145,6 +194,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 MaterialPageRoute(builder: (context) => const LicensesScreen()),
               );
             },
+          ),
+          Divider(height: 1),
+          ListTile(
+            title: Text(
+              AppLocalizations.of(context)!.settingsLanguage,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            subtitle: Text(
+              _getLanguageName(SettingsService().languageCode, context),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            trailing: const Icon(Icons.language),
+            onTap: _showLanguageDialog,
           ),
           Divider(height: 1),
         ],
