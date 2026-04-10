@@ -138,7 +138,7 @@ Pixel Gallery is built with a curated list of top-tier libraries:
 
 We want to make Pixel Gallery accessible to everyone! You can help us translate the app into your language:
 
-- **Localizely (Highly Recommended)**: The easiest way to contribute. Use our [Localizely project](https://localizely.com/projects/YOUR_PROJECT_URL) to translate strings directly in your browser. No coding knowledge required!
+- **Localizely (Highly Recommended)**: The easiest way to contribute. Use our [Localizely project](https://app.localizely.com/projects/08078485-f0d5-4b12-8c75-f1acb8747f05)) to translate strings directly in your browser. No coding knowledge required!
 - **Manual Contribution**:
   1. Fork the repository.
   2. Add/edit the `.arb` files in `lib/l10n/` (e.g., `app_es.arb` for Spanish).
