@@ -15,6 +15,9 @@ class LocalMediaDbMigrations {
     if (oldVersion < 5 && newVersion >= 5) {
       await _migrateToV5(db);
     }
+    if (oldVersion < 6 && newVersion >= 6) {
+      await _migrateToV6(db);
+    }
   }
 
   /// Migration from v3 (single table) to v4 (multi-table schema)
@@ -101,5 +104,14 @@ class LocalMediaDbMigrations {
     await db.execute(
       'ALTER TABLE ${LocalMediaDbSchema.metadataTable} ADD COLUMN model TEXT',
     );
+  }
+
+  /// Migration to v6: Add isHdr column and clear metadata for forced re-scan
+  static Future<void> _migrateToV6(Database db) async {
+    await db.execute(
+      'ALTER TABLE ${LocalMediaDbSchema.metadataTable} ADD COLUMN isHdr INTEGER DEFAULT 0',
+    );
+    // Force re-cataloging to detect HDR by clearing all metadata
+    await db.delete(LocalMediaDbSchema.metadataTable);
   }
 }

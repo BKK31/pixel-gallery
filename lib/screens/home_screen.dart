@@ -10,6 +10,7 @@ import 'package:lumina_gallery/services/media_service.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:lumina_gallery/l10n/app_localizations.dart';
+import 'package:lumina_gallery/services/catalog_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback? onThemeRefresh;
@@ -64,6 +65,9 @@ class _HomeScreenState extends State<HomeScreen>
 
     // Permissions are handled inside the sub-screens on demand or in background
     // No need to block the entire HomeScreen build.
+
+    // Start background cataloging (Metadata, HDR, etc.)
+    CatalogService().startCataloging();
   }
 
   @override
