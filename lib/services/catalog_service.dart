@@ -104,6 +104,14 @@ class CatalogService {
       final latLong = await exif.getLatLong();
       final attributes = await exif.getAttributes();
 
+      // Native HDR detection
+      bool isHdr = false;
+      try {
+        isHdr = await _platform.invokeMethod('checkImageHdr', {'path': path});
+      } catch (e) {
+        debugPrint("Error checking native HDR: $e");
+      }
+
       final metadata = {
         'latitude': latLong?.latitude,
         'longitude': latLong?.longitude,
@@ -112,6 +120,7 @@ class CatalogService {
         'xmpSubjects': null,
         'xmpTitle': null,
         'rating': null,
+        'isHdr': isHdr,
       };
       await exif.close();
       return metadata;
@@ -124,6 +133,7 @@ class CatalogService {
         'xmpSubjects': null,
         'xmpTitle': null,
         'rating': null,
+        'isHdr': false,
       };
     }
   }

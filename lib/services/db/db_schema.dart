@@ -56,7 +56,8 @@ class LocalMediaDbSchema {
             model TEXT,
             xmpSubjects TEXT,
             xmpTitle TEXT,
-            rating INTEGER
+            rating INTEGER,
+            isHdr INTEGER DEFAULT 0
           )
         ''');
 

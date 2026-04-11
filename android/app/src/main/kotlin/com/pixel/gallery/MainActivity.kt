@@ -64,6 +64,14 @@ class MainActivity : FlutterFragmentActivity() {
                         result.error("INVALID_ARGUMENT", "Path or MIME type is null", null)
                     }
                 }
+                "checkImageHdr" -> {
+                    val path = call.argument<String>("path")
+                    if (path != null) {
+                        result.success(checkImageHdr(path))
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Path is null", null)
+                    }
+                }
                 "getVideoMetadata" -> {
                     val path = call.argument<String>("path")
                     if (path != null) {
@@ -88,6 +96,11 @@ class MainActivity : FlutterFragmentActivity() {
                     eventSink = null
                 }
             }
+        )
+
+        // Window handler for HDR, orientation, etc.
+        MethodChannel(messenger, com.pixel.gallery.channel.calls.WindowHandler.CHANNEL).setMethodCallHandler(
+            com.pixel.gallery.channel.calls.WindowHandler(this)
         )
 
         // Aves MediaStore engine channels
@@ -200,14 +213,50 @@ class MainActivity : FlutterFragmentActivity() {
         try {
             retriever.setDataSource(path)
             metadata["location"] = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LOCATION)
-            // Note: Extraction of Make/Model from video is less standard than EXIF.
-            // Some devices might store it in other keys or user data.
+
+            // Check for HDR via color transfer (ST2084 = HDR10, HLG = HLG)
+            var isHdr = false
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                val colorTransfer = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_COLOR_TRANSFER)?.toIntOrNull()
+                if (colorTransfer != null) {
+                    isHdr = colorTransfer == android.media.MediaFormat.COLOR_TRANSFER_ST2084 ||
+                            colorTransfer == android.media.MediaFormat.COLOR_TRANSFER_HLG
+                }
+            }
+            metadata["isHdr"] = isHdr
         } catch (e: Exception) {
             android.util.Log.e("MainActivity", "Error extracting video metadata: $e")
         } finally {
             retriever.release()
         }
         return metadata
+    }
+
+    /**
+     * Check if an image file has HDR gain map metadata.
+     * Uses ExifInterface to look for XMP HDR gain map properties (pin to pin with Aves).
+     */
+    private fun checkImageHdr(path: String): Boolean {
+        try {
+            val file = java.io.File(path)
+            if (!file.exists()) return false
+
+            val exif = androidx.exifinterface.media.ExifInterface(path)
+            val xmpData = exif.getAttribute("Xmp")
+            if (xmpData != null) {
+                // Check for standard HDR gain map namespaces as used in Aves
+                if (xmpData.contains("http://ns.adobe.com/hdr-gain-map/1.0/") ||
+                    xmpData.contains("http://ns.apple.com/HDRGainMap/1.0/") ||
+                    xmpData.contains("hdrgm:Version") ||
+                    xmpData.contains("HDRGainMapVersion") ||
+                    xmpData.contains("http://ns.google.com/photos/1.0/ultrahighdynamicrange/")) {
+                    return true
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error checking image HDR: $e")
+        }
+        return false
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
