@@ -4,98 +4,97 @@ import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
 
-/// The translations for English (`en`).
-class AppLocalizationsEn extends AppLocalizations {
-  AppLocalizationsEn([String locale = 'en']) : super(locale);
+/// The translations for Chinese (`zh`).
+class AppLocalizationsZh extends AppLocalizations {
+  AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
-  String get appTitle => 'Pixel Gallery';
+  String get appTitle => 'Pixel 相册';
 
   @override
-  String get settingsTitle => 'Settings';
+  String get settingsTitle => '设置';
 
   @override
   String get settingsMaterialYou => 'Material You';
 
   @override
-  String get settingsMaterialYouDesc => 'Use dynamic colors from wallpaper';
+  String get settingsMaterialYouDesc => '使用壁纸中的动态颜色';
 
   @override
-  String get settingsStartupAlbums => 'Startup at Albums';
+  String get settingsStartupAlbums => '启动时显示相册';
 
   @override
-  String get settingsStartupAlbumsDesc =>
-      'Start on Albums page instead of Photos';
+  String get settingsStartupAlbumsDesc => '启动时打开相册页而非照片页';
 
   @override
-  String get settingsExcludedFolders => 'Excluded Folders';
+  String get settingsExcludedFolders => '排除的文件夹';
 
   @override
-  String get settingsExcludedFoldersDesc => 'Hide folders from the gallery';
+  String get settingsExcludedFoldersDesc => '从相册中隐藏文件夹';
 
   @override
-  String get settingsLicenses => 'Open Source Licenses';
+  String get settingsLicenses => '开源许可';
 
   @override
-  String get settingsLicensesDesc => 'Credits and license information';
+  String get settingsLicensesDesc => '鸣谢及许可信息';
 
   @override
-  String get settingsSourceCode => 'Source Code';
+  String get settingsSourceCode => '源代码';
 
   @override
   String homeSelectedCount(int count) {
-    return '$count Selected';
+    return '已选择 $count 项';
   }
 
   @override
-  String get homeShare => 'Share';
+  String get homeShare => '分享';
 
   @override
-  String get homeDelete => 'Delete';
+  String get homeDelete => '删除';
 
   @override
-  String get homeLock => 'Move to Locked Folder';
+  String get homeLock => '移动到锁定文件夹';
 
   @override
-  String get homeHiddenAlbums => 'Hidden Albums';
+  String get homeHiddenAlbums => '隐藏的相册';
 
   @override
-  String get homeLockedFolder => 'Locked Folder';
+  String get homeLockedFolder => '锁定文件夹';
 
   @override
-  String get albumsFavourites => 'Favourites';
+  String get albumsFavourites => '收藏';
 
   @override
-  String get albumsBin => 'Bin';
+  String get albumsBin => '回收站';
 
   @override
   String albumsItemsCount(int count) {
-    return '$count items';
+    return '$count 个项目';
   }
 
   @override
   String albumsHiddenCount(int count) {
-    return 'Hid $count album(s) from Recents';
+    return '已从“最近”中隐藏 $count 个相册';
   }
 
   @override
   String albumsUnhiddenCount(int count) {
-    return 'Unhid $count album(s) from Recents';
+    return '已从“最近”中取消隐藏 $count 个相册';
   }
 
   @override
-  String get albumsEmptySelection => 'Selected albums are empty';
+  String get albumsEmptySelection => '选中的相册为空';
 
   @override
-  String get albumsDeleteTitle => 'Delete album contents';
+  String get albumsDeleteTitle => '删除相册内容';
 
   @override
   String albumsDeleteContent(int photoCount, int albumCount) {
-    return 'Delete $photoCount photo(s) from $albumCount album(s)?';
+    return '从 $albumCount 个相册中删除 $photoCount 张照片？';
   }
 
   @override
-  String get albumsDeleteWarning => 'The folder itself will not be removed.';
+  String get albumsDeleteWarning => '文件夹本身不会被删除。';
 
   @override
   String get moveToBin => 'Move to bin';
@@ -107,32 +106,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deletePermanentlyDesc => 'Items will be permanently deleted';
 
   @override
-  String get cancel => 'Cancel';
+  String get cancel => '取消';
 
   @override
-  String get deletePermanently => 'Delete permanently';
+  String get deletePermanently => '永久删除';
 
   @override
   String albumsMovedToBin(int count) {
-    return 'Moved $count item(s) to trash';
+    return '已将 $count 个项目移至回收站';
   }
 
   @override
   String albumsPermDeletedCount(int count) {
-    return 'Permanently deleted $count item(s)';
+    return '已永久删除 $count 个项目';
   }
 
   @override
-  String get settingsLanguage => 'Language';
+  String get settingsLanguage => '语言';
 
   @override
-  String get settingsLanguageDesc => 'Choose your preferred language';
+  String get settingsLanguageDesc => '选择您的首选语言';
 
   @override
-  String get languageSystemDefault => 'System Default';
+  String get languageSystemDefault => '系统默认';
 
   @override
-  String get languageEnglish => 'English';
+  String get languageEnglish => '英语';
 
   @override
   String get deleteItems => 'Delete items';

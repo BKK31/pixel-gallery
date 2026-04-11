@@ -1,0 +1,91 @@
+{
+  "appTitle": "ಪಿಕ್ಸೆಲ್ ಗ್ಯಾಲರಿ",
+  "settingsTitle": "ಸೆಟ್ಟಿಂಗ್ಸ್",
+  "settingsMaterialYou": "ಮೆಟೀರಿಯಲ್ ಯೂ",
+  "settingsMaterialYouDesc": "ವಾಲ್‌ಪೇಪರ್‌ನಿಂದ ಡೈನಾಮಿಕ್ ಬಣ್ಣಗಳನ್ನು ಬಳಸಿ",
+  "settingsStartupAlbums": "ಆಲ್ಬಮ್‌ಗಳಲ್ಲಿ ಪ್ರಾರಂಭಿಸಿ",
+  "settingsStartupAlbumsDesc": "ಫೋಟೋಗಳ ಬದಲಿಗೆ ಆಲ್ಬಮ್‌ಗಳ ಪುಟದಲ್ಲಿ ಪ್ರಾರಂಭಿಸಿ",
+  "settingsExcludedFolders": "ಹೊರಗಿಡಲಾದ ಫೋಲ್ಡರ್‌ಗಳು",
+  "settingsExcludedFoldersDesc": "ಗ್ಯಾಲರಿಯಿಂದ ಫೋಲ್ಡರ್‌ಗಳನ್ನು ಮರೆಮಾಡಿ",
+  "settingsLicenses": "ಓಪನ್ ಸೋರ್ಸ್ ಪರವಾನಗಿಗಳು",
+  "settingsLicensesDesc": "ಕ್ರೆಡಿಟ್ಸ್ ಮತ್ತು ಪರವಾನಗಿ ಮಾಹಿತಿ",
+  "settingsSourceCode": "ಸೋರ್ಸ್ ಕೋಡ್",
+  "homeSelectedCount": "{count} ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ",
+  "@homeSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeShare": "ಹಂಚಿಕೊಳ್ಳಿ",
+  "homeDelete": "ಅಳಿಸಿ",
+  "homeLock": "ಲಾಕ್ ಮಾಡಲಾದ ಫೋಲ್ಡರ್‌ಗೆ ಸರಿಸಿ",
+  "homeHiddenAlbums": "ಮರೆಮಾಡಿದ ಆಲ್ಬಮ್‌ಗಳು",
+  "homeLockedFolder": "ಲಾಕ್ ಮಾಡಲಾದ ಫೋಲ್ಡರ್",
+  "albumsFavourites": "ಮೆಚ್ಚಿನವುಗಳು",
+  "albumsBin": "ಬಿನ್",
+  "albumsItemsCount": "{count} ಐಟಂಗಳು",
+  "@albumsItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsHiddenCount": "ಇತ್ತೀಚಿನವುಗಳಿಂದ {count} ಆಲ್ಬಮ್‌(ಗಳನ್ನು) ಮರೆಮಾಡಲಾಗಿದೆ",
+  "@albumsHiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsUnhiddenCount": "ಇತ್ತೀಚಿನವುಗಳಿಂದ {count} ಆಲ್ಬಮ್‌(ಗಳನ್ನು) ತೋರಿಸಲಾಗಿದೆ",
+  "@albumsUnhiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsEmptySelection": "ಆಯ್ಕೆ ಮಾಡಿದ ಆಲ್ಬಮ್‌ಗಳು ಖಾಲಿಯಾಗಿವೆ",
+  "albumsDeleteTitle": "ಆಲ್ಬಮ್ ವಿಷಯಗಳನ್ನು ಅಳಿಸಿ",
+  "albumsDeleteContent": "{albumCount} ಆಲ್ಬಮ್‌(ಗಳಿಂದ) {photoCount} ಫೋಟೋ(ಗಳನ್ನು) ಅಳಿಸುವುದೇ?",
+  "@albumsDeleteContent": {
+    "placeholders": {
+      "photoCount": {
+        "type": "int"
+      },
+      "albumCount": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsDeleteWarning": "ಫೋಲ್ಡರ್ ಅನ್ನು ತೆಗೆದುಹಾಕಲಾಗುವುದಿಲ್ಲ.",
+  "albumsMoveToBin": "ಬಿನ್‌ಗೆ ಸರಿಸಿ",
+  "albumsBinDesc": "ರಿಸೈಕಲ್ ಬಿನ್‌ನಿಂದ ಐಟಂಗಳನ್ನು ಮರುಸ್ಥಾಪಿಸಬಹುದು",
+  "albumsPermDeleteDesc": "ಐಟಂಗಳನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಲಾಗುತ್ತದೆ",
+  "cancel": "ರದ್ದುಮಾಡಿ",
+  "deletePermanently": "ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಿ",
+  "albumsMovedToBin": "{count} ಐಟಂ(ಗಳನ್ನು) ಕಸದ ಬುಟ್ಟಿಗೆ ಸರಿಸಲಾಗಿದೆ",
+  "@albumsMovedToBin": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsPermDeletedCount": "{count} ಐಟಂ(ಗಳನ್ನು) ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಲಾಗಿದೆ",
+  "@albumsPermDeletedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLanguage": "ಭಾಷೆ",
+  "settingsLanguageDesc": "ನಿಮ್ಮ ಆದ್ಯತೆಯ ಭಾಷೆಯನ್ನು ಆರಿಸಿ",
+  "languageSystemDefault": "ಸಿಸ್ಟಮ್ ಡೀಫಾಲ್ಟ್",
+  "languageEnglish": "ಇಂಗ್ಲೀಷ್"
+}

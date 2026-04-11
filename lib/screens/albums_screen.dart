@@ -190,11 +190,11 @@ class AlbumsScreenState extends State<AlbumsScreen> {
               SwitchListTile(
                 value: moveToTrash,
                 onChanged: (v) => setStateDialog(() => moveToTrash = v),
-                title: Text(AppLocalizations.of(context)!.albumsMoveToBin),
+                title: Text(AppLocalizations.of(context)!.moveToBin),
                 subtitle: Text(
                   moveToTrash
-                      ? AppLocalizations.of(context)!.albumsBinDesc
-                      : AppLocalizations.of(context)!.albumsPermDeleteDesc,
+                      ? AppLocalizations.of(context)!.moveToBinDesc
+                      : AppLocalizations.of(context)!.deletePermanentlyDesc,
                 ),
                 contentPadding: EdgeInsets.zero,
               ),
@@ -208,7 +208,7 @@ class AlbumsScreenState extends State<AlbumsScreen> {
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(
-                moveToTrash ? AppLocalizations.of(context)!.albumsMoveToBin : AppLocalizations.of(context)!.deletePermanently,
+                moveToTrash ? AppLocalizations.of(context)!.moveToBin : AppLocalizations.of(context)!.deletePermanently,
                 style: const TextStyle(color: Colors.red),
               ),
             ),

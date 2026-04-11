@@ -5,6 +5,7 @@ import '../services/trash_service.dart';
 import '../services/settings_service.dart';
 import '../models/album_model.dart';
 import '../widgets/aves_entry_image.dart';
+import '../l10n/app_localizations.dart';
 import 'photo_screen.dart';
 
 class HiddenAlbumsScreen extends StatefulWidget {
@@ -94,7 +95,7 @@ class _HiddenAlbumsScreenState extends State<HiddenAlbumsScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unhid $count album(s)')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.albumsUnhiddenCount(count))),
       );
     }
   }
@@ -110,7 +111,7 @@ class _HiddenAlbumsScreenState extends State<HiddenAlbumsScreen> {
       _clearSelections();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Selected albums are empty')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.albumsEmptySelection)),
         );
       }
       return;
@@ -121,16 +122,16 @@ class _HiddenAlbumsScreenState extends State<HiddenAlbumsScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setStateDialog) => AlertDialog(
-          title: const Text('Delete album contents'),
+          title: Text(AppLocalizations.of(context)!.albumsDeleteTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Delete $totalPhotos photo(s) from ${selectedAlbums.length} album(s)?',
+                AppLocalizations.of(context)!.albumsDeleteContent(totalPhotos, selectedAlbums.length),
               ),
               const SizedBox(height: 4),
               Text(
-                'The folder itself will not be removed.',
+                AppLocalizations.of(context)!.albumsDeleteWarning,
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(ctx).colorScheme.onSurfaceVariant,
@@ -140,11 +141,11 @@ class _HiddenAlbumsScreenState extends State<HiddenAlbumsScreen> {
               SwitchListTile(
                 value: moveToTrash,
                 onChanged: (v) => setStateDialog(() => moveToTrash = v),
-                title: const Text('Move to bin'),
+                title: Text(AppLocalizations.of(context)!.moveToBin),
                 subtitle: Text(
                   moveToTrash
-                      ? 'Items can be restored from the recycle bin'
-                      : 'Items will be permanently deleted',
+                      ? AppLocalizations.of(context)!.moveToBinDesc
+                      : AppLocalizations.of(context)!.deletePermanentlyDesc,
                 ),
                 contentPadding: EdgeInsets.zero,
               ),
@@ -153,12 +154,12 @@ class _HiddenAlbumsScreenState extends State<HiddenAlbumsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(
-                moveToTrash ? 'Move to bin' : 'Delete permanently',
+                moveToTrash ? AppLocalizations.of(context)!.moveToBin : AppLocalizations.of(context)!.deletePermanently,
                 style: const TextStyle(color: Colors.red),
               ),
             ),
@@ -186,8 +187,8 @@ class _HiddenAlbumsScreenState extends State<HiddenAlbumsScreen> {
         SnackBar(
           content: Text(
             moveToTrash
-                ? 'Moved $totalPhotos item(s) to trash'
-                : 'Permanently deleted $totalPhotos item(s)',
+                ? AppLocalizations.of(context)!.albumsMovedToBin(totalPhotos)
+                : AppLocalizations.of(context)!.albumsPermDeletedCount(totalPhotos),
           ),
         ),
       );
@@ -205,8 +206,8 @@ class _HiddenAlbumsScreenState extends State<HiddenAlbumsScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: _isSelecting
-              ? Text('${_selectedAlbumIds.length} Selected')
-              : const Text('Hidden Albums'),
+              ? Text(AppLocalizations.of(context)!.homeSelectedCount(_selectedAlbumIds.length))
+              : Text(AppLocalizations.of(context)!.homeHiddenAlbums),
           leading: _isSelecting
               ? IconButton(
                   icon: const Icon(Icons.close),
@@ -217,12 +218,12 @@ class _HiddenAlbumsScreenState extends State<HiddenAlbumsScreen> {
               ? [
                   IconButton(
                     icon: const Icon(Icons.visibility),
-                    tooltip: 'Unhide selected',
+                    tooltip: AppLocalizations.of(context)!.unhideSelected,
                     onPressed: _unhideSelected,
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
-                    tooltip: 'Delete contents',
+                    tooltip: AppLocalizations.of(context)!.deleteContents,
                     onPressed: _deleteSelected,
                   ),
                 ]
@@ -245,7 +246,7 @@ class _HiddenAlbumsScreenState extends State<HiddenAlbumsScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'No hidden albums',
+                          AppLocalizations.of(context)!.noHiddenAlbums,
                           style: TextStyle(
                             fontSize: 16,
                             color: Theme.of(context)
@@ -256,7 +257,7 @@ class _HiddenAlbumsScreenState extends State<HiddenAlbumsScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Long-press an album to hide it from Recents',
+                          AppLocalizations.of(context)!.hiddenAlbumsDesc,
                           style: TextStyle(
                             fontSize: 13,
                             color: Theme.of(context)
@@ -313,7 +314,7 @@ class _HiddenAlbumsScreenState extends State<HiddenAlbumsScreen> {
                           ),
                         ),
                         title: Text(album.name),
-                        subtitle: Text('${album.assetCount} items'),
+                        subtitle: Text(AppLocalizations.of(context)!.albumsItemsCount(album.assetCount)),
                         selected: isSelected,
                         onLongPress: () {
                           if (!_isSelecting) {

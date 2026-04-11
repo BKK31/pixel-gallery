@@ -4,98 +4,97 @@ import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
 
-/// The translations for English (`en`).
-class AppLocalizationsEn extends AppLocalizations {
-  AppLocalizationsEn([String locale = 'en']) : super(locale);
+/// The translations for Japanese (`ja`).
+class AppLocalizationsJa extends AppLocalizations {
+  AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
-  String get appTitle => 'Pixel Gallery';
+  String get appTitle => 'Pixel ギャラリー';
 
   @override
-  String get settingsTitle => 'Settings';
+  String get settingsTitle => '設定';
 
   @override
   String get settingsMaterialYou => 'Material You';
 
   @override
-  String get settingsMaterialYouDesc => 'Use dynamic colors from wallpaper';
+  String get settingsMaterialYouDesc => '壁紙のダイナミックカラーを使用する';
 
   @override
-  String get settingsStartupAlbums => 'Startup at Albums';
+  String get settingsStartupAlbums => '起動時にアルバムを表示';
 
   @override
-  String get settingsStartupAlbumsDesc =>
-      'Start on Albums page instead of Photos';
+  String get settingsStartupAlbumsDesc => '写真ではなくアルバムページを最初に表示します';
 
   @override
-  String get settingsExcludedFolders => 'Excluded Folders';
+  String get settingsExcludedFolders => '除外設定';
 
   @override
-  String get settingsExcludedFoldersDesc => 'Hide folders from the gallery';
+  String get settingsExcludedFoldersDesc => 'ギャラリーに表示しないフォルダを選択します';
 
   @override
-  String get settingsLicenses => 'Open Source Licenses';
+  String get settingsLicenses => 'オープンソースライセンス';
 
   @override
-  String get settingsLicensesDesc => 'Credits and license information';
+  String get settingsLicensesDesc => 'クレジットとライセンス情報';
 
   @override
-  String get settingsSourceCode => 'Source Code';
+  String get settingsSourceCode => 'ソースコード';
 
   @override
   String homeSelectedCount(int count) {
-    return '$count Selected';
+    return '$count 件選択中';
   }
 
   @override
-  String get homeShare => 'Share';
+  String get homeShare => '共有';
 
   @override
-  String get homeDelete => 'Delete';
+  String get homeDelete => '削除';
 
   @override
-  String get homeLock => 'Move to Locked Folder';
+  String get homeLock => 'ロックされたフォルダに移動';
 
   @override
-  String get homeHiddenAlbums => 'Hidden Albums';
+  String get homeHiddenAlbums => '非表示のアルバム';
 
   @override
-  String get homeLockedFolder => 'Locked Folder';
+  String get homeLockedFolder => 'ロックされたフォルダ';
 
   @override
-  String get albumsFavourites => 'Favourites';
+  String get albumsFavourites => 'お気に入り';
 
   @override
-  String get albumsBin => 'Bin';
+  String get albumsBin => 'ゴミ箱';
 
   @override
   String albumsItemsCount(int count) {
-    return '$count items';
+    return '$count 個のアイテム';
   }
 
   @override
   String albumsHiddenCount(int count) {
-    return 'Hid $count album(s) from Recents';
+    return '「最近」から $count 個のアルバムを非表示にしました';
   }
 
   @override
   String albumsUnhiddenCount(int count) {
-    return 'Unhid $count album(s) from Recents';
+    return '「最近」から $count 個のアルバムを再表示しました';
   }
 
   @override
-  String get albumsEmptySelection => 'Selected albums are empty';
+  String get albumsEmptySelection => '選択されたアルバムは空です';
 
   @override
-  String get albumsDeleteTitle => 'Delete album contents';
+  String get albumsDeleteTitle => 'アルバムの内容を削除';
 
   @override
   String albumsDeleteContent(int photoCount, int albumCount) {
-    return 'Delete $photoCount photo(s) from $albumCount album(s)?';
+    return '$albumCount 個のアルバムから $photoCount 枚の写真を削除しますか？';
   }
 
   @override
-  String get albumsDeleteWarning => 'The folder itself will not be removed.';
+  String get albumsDeleteWarning => 'フォルダ自体は削除されません。';
 
   @override
   String get moveToBin => 'Move to bin';
@@ -107,32 +106,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deletePermanentlyDesc => 'Items will be permanently deleted';
 
   @override
-  String get cancel => 'Cancel';
+  String get cancel => 'キャンセル';
 
   @override
-  String get deletePermanently => 'Delete permanently';
+  String get deletePermanently => '完全に削除';
 
   @override
   String albumsMovedToBin(int count) {
-    return 'Moved $count item(s) to trash';
+    return '$count 個のアイテムをゴミ箱に移動しました';
   }
 
   @override
   String albumsPermDeletedCount(int count) {
-    return 'Permanently deleted $count item(s)';
+    return '$count 個のアイテムを完全に削除しました';
   }
 
   @override
-  String get settingsLanguage => 'Language';
+  String get settingsLanguage => '言語';
 
   @override
-  String get settingsLanguageDesc => 'Choose your preferred language';
+  String get settingsLanguageDesc => '使用する言語を選択します';
 
   @override
-  String get languageSystemDefault => 'System Default';
+  String get languageSystemDefault => 'システムのデフォルト';
 
   @override
-  String get languageEnglish => 'English';
+  String get languageEnglish => '英語';
 
   @override
   String get deleteItems => 'Delete items';

@@ -5,6 +5,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:intl/intl.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:lumina_gallery/l10n/app_localizations.dart';
 
 class SingleViewerScreen extends StatefulWidget {
   final File file;
@@ -82,8 +83,8 @@ class _SingleViewerScreenState extends State<SingleViewerScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "File Details",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                AppLocalizations.of(context)!.details,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 20),
               ListTile(

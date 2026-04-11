@@ -1,0 +1,91 @@
+{
+  "appTitle": "معرض بيكسل",
+  "settingsTitle": "الإعدادات",
+  "settingsMaterialYou": "ماتيريال يو",
+  "settingsMaterialYouDesc": "استخدام ألوان ديناميكية من خلفية الشاشة",
+  "settingsStartupAlbums": "البدء عند الألبومات",
+  "settingsStartupAlbumsDesc": "ابدأ بصفحة الألبومات بدلاً من الصور",
+  "settingsExcludedFolders": "المجلدات المستبعدة",
+  "settingsExcludedFoldersDesc": "إخفاء المجلدات من المعرض",
+  "settingsLicenses": "تراخيص المصادر المفتوحة",
+  "settingsLicensesDesc": "بيانات المطورين ومعلومات الترخيص",
+  "settingsSourceCode": "الكود المصدري",
+  "homeSelectedCount": "تم تحديد {count}",
+  "@homeSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeShare": "مشاركة",
+  "homeDelete": "حذف",
+  "homeLock": "نقل إلى المجلد المقفل",
+  "homeHiddenAlbums": "الألبومات المخفية",
+  "homeLockedFolder": "المجلد المقفل",
+  "albumsFavourites": "المفضلة",
+  "albumsBin": "سلة المهملات",
+  "albumsItemsCount": "{count} عناصر",
+  "@albumsItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsHiddenCount": "تم إخفاء {count} ألبوم(ألبومات) من الألبومات الحديثة",
+  "@albumsHiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsUnhiddenCount": "تم إظهار {count} ألبوم(ألبومات) من الألبومات الحديثة",
+  "@albumsUnhiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsEmptySelection": "الألبومات المحددة فارغة",
+  "albumsDeleteTitle": "حذف محتويات الألبوم",
+  "albumsDeleteContent": "حذف {photoCount} صورة(صور) من {albumCount} ألبوم(ألبومات)؟",
+  "@albumsDeleteContent": {
+    "placeholders": {
+      "photoCount": {
+        "type": "int"
+      },
+      "albumCount": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsDeleteWarning": "لن يتم إزالة المجلد نفسه.",
+  "albumsMoveToBin": "نقل إلى سلة المهملات",
+  "albumsBinDesc": "يمكن استعادة العناصر من سلة المهملات",
+  "albumsPermDeleteDesc": "سيتم حذف العناصر نهائيًا",
+  "cancel": "إلغاء",
+  "deletePermanently": "حذف نهائيًا",
+  "albumsMovedToBin": "تم نقل {count} عنصر(عناصر) إلى المهملات",
+  "@albumsMovedToBin": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsPermDeletedCount": "تم حذف {count} عنصر(عناصر) نهائيًا",
+  "@albumsPermDeletedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLanguage": "اللغة",
+  "settingsLanguageDesc": "اختر لغتك المفضلة",
+  "languageSystemDefault": "تلقائي حسب النظام",
+  "languageEnglish": "الإنجليزية"
+}

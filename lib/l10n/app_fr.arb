@@ -1,0 +1,91 @@
+{
+  "appTitle": "Pixel Gallery",
+  "settingsTitle": "Paramètres",
+  "settingsMaterialYou": "Material You",
+  "settingsMaterialYouDesc": "Utiliser les couleurs dynamiques du fond d'écran",
+  "settingsStartupAlbums": "Démarrer sur les albums",
+  "settingsStartupAlbumsDesc": "Démarrer sur la page Albums au lieu de Photos",
+  "settingsExcludedFolders": "Dossiers exclus",
+  "settingsExcludedFoldersDesc": "Masquer des dossiers de la galerie",
+  "settingsLicenses": "Licences open source",
+  "settingsLicensesDesc": "Crédits et informations sur les licences",
+  "settingsSourceCode": "Code source",
+  "homeSelectedCount": "{count} sélectionnés",
+  "@homeSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeShare": "Partager",
+  "homeDelete": "Supprimer",
+  "homeLock": "Déplacer vers le dossier verrouillé",
+  "homeHiddenAlbums": "Albums masqués",
+  "homeLockedFolder": "Dossier verrouillé",
+  "albumsFavourites": "Favoris",
+  "albumsBin": "Corbeille",
+  "albumsItemsCount": "{count} éléments",
+  "@albumsItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsHiddenCount": "{count} album(s) masqué(s) des récents",
+  "@albumsHiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsUnhiddenCount": "{count} album(s) affiché(s) dans les récents",
+  "@albumsUnhiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsEmptySelection": "Les albums sélectionnés sont vides",
+  "albumsDeleteTitle": "Supprimer le contenu de l'album",
+  "albumsDeleteContent": "Supprimer {photoCount} photo(s) de {albumCount} album(s) ?",
+  "@albumsDeleteContent": {
+    "placeholders": {
+      "photoCount": {
+        "type": "int"
+      },
+      "albumCount": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsDeleteWarning": "Le dossier lui-même ne sera pas supprimé.",
+  "albumsMoveToBin": "Déplacer vers la corbeille",
+  "albumsBinDesc": "Les éléments peuvent être restaurés depuis la corbeille",
+  "albumsPermDeleteDesc": "Les éléments seront supprimés définitivement",
+  "cancel": "Annuler",
+  "deletePermanently": "Supprimer définitivement",
+  "albumsMovedToBin": "{count} élément(s) déplacé(s) vers la corbeille",
+  "@albumsMovedToBin": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsPermDeletedCount": "{count} élément(s) supprimé(s) définitivement",
+  "@albumsPermDeletedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLanguage": "Langue",
+  "settingsLanguageDesc": "Choisissez votre langue préférée",
+  "languageSystemDefault": "Par défaut du système",
+  "languageEnglish": "Anglais"
+}

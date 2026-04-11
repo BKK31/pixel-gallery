@@ -162,6 +162,17 @@ class _MyAppState extends State<MyApp> {
           ],
           supportedLocales: const [
             Locale('en', ''), // English
+            Locale('hi', ''), // Hindi
+            Locale('kn', ''), // Kannada
+            Locale('es', ''), // Spanish
+            Locale('fr', ''), // French
+            Locale('de', ''), // German
+            Locale('pt', ''), // Portuguese
+            Locale('ru', ''), // Russian
+            Locale('zh', ''), // Chinese Simplified
+            Locale('ja', ''), // Japanese
+            Locale('ar', ''), // Arabic
+            Locale('it', ''), // Italian
           ],
 
           /// 🌞 LIGHT THEME

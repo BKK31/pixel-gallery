@@ -1,0 +1,91 @@
+{
+  "appTitle": "Pixel 相册",
+  "settingsTitle": "设置",
+  "settingsMaterialYou": "Material You",
+  "settingsMaterialYouDesc": "使用壁纸中的动态颜色",
+  "settingsStartupAlbums": "启动时显示相册",
+  "settingsStartupAlbumsDesc": "启动时打开相册页而非照片页",
+  "settingsExcludedFolders": "排除的文件夹",
+  "settingsExcludedFoldersDesc": "从相册中隐藏文件夹",
+  "settingsLicenses": "开源许可",
+  "settingsLicensesDesc": "鸣谢及许可信息",
+  "settingsSourceCode": "源代码",
+  "homeSelectedCount": "已选择 {count} 项",
+  "@homeSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeShare": "分享",
+  "homeDelete": "删除",
+  "homeLock": "移动到锁定文件夹",
+  "homeHiddenAlbums": "隐藏的相册",
+  "homeLockedFolder": "锁定文件夹",
+  "albumsFavourites": "收藏",
+  "albumsBin": "回收站",
+  "albumsItemsCount": "{count} 个项目",
+  "@albumsItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsHiddenCount": "已从“最近”中隐藏 {count} 个相册",
+  "@albumsHiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsUnhiddenCount": "已从“最近”中取消隐藏 {count} 个相册",
+  "@albumsUnhiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsEmptySelection": "选中的相册为空",
+  "albumsDeleteTitle": "删除相册内容",
+  "albumsDeleteContent": "从 {albumCount} 个相册中删除 {photoCount} 张照片？",
+  "@albumsDeleteContent": {
+    "placeholders": {
+      "photoCount": {
+        "type": "int"
+      },
+      "albumCount": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsDeleteWarning": "文件夹本身不会被删除。",
+  "albumsMoveToBin": "移至回收站",
+  "albumsBinDesc": "项目可以从回收站恢复",
+  "albumsPermDeleteDesc": "项目将被永久删除",
+  "cancel": "取消",
+  "deletePermanently": "永久删除",
+  "albumsMovedToBin": "已将 {count} 个项目移至回收站",
+  "@albumsMovedToBin": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsPermDeletedCount": "已永久删除 {count} 个项目",
+  "@albumsPermDeletedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLanguage": "语言",
+  "settingsLanguageDesc": "选择您的首选语言",
+  "languageSystemDefault": "系统默认",
+  "languageEnglish": "英语"
+}

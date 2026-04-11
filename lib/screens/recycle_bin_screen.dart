@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import '../services/trash_service.dart';
 import 'trash_viewer_screen.dart';
+import 'package:lumina_gallery/l10n/app_localizations.dart';
 
 class RecycleBinScreen extends StatefulWidget {
   const RecycleBinScreen({super.key});
@@ -70,8 +71,8 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
     _clearSelection();
     _init();
     if (mounted) {
-      String msg = "Restored $successCount items";
-      if (failCount > 0) msg += ", failed $failCount";
+      String msg = AppLocalizations.of(context)!.restoredCount(successCount);
+      if (failCount > 0) msg = AppLocalizations.of(context)!.restoredCountWithFail(successCount, failCount);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
@@ -85,7 +86,7 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
     _init();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Permanently deleted selected items")),
+        SnackBar(content: Text(AppLocalizations.of(context)!.deletedPermanentlySnackbar)),
       );
     }
   }
@@ -123,9 +124,9 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 )
-              : const Text(
-                  "Recycle Bin",
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              : Text(
+                  AppLocalizations.of(context)!.recycleBin,
+                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                 ),
           centerTitle: false,
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -152,7 +153,7 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
               : [],
         ),
         body: _trashedFiles.isEmpty
-            ? const Center(child: Text("Recycle Bin is empty"))
+            ? Center(child: Text(AppLocalizations.of(context)!.recycleBinEmpty))
             : Column(
                 children: [
                   Padding(
@@ -163,7 +164,7 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        '${_trashedFiles.length} items',
+                        AppLocalizations.of(context)!.albumsItemsCount(_trashedFiles.length),
                         style: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -266,7 +267,7 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
                                             ),
                                           ),
                                           child: Text(
-                                            '${daysRemaining}d',
+                                            AppLocalizations.of(context)!.daysRemaining(daysRemaining),
                                             style: const TextStyle(
                                               color: Colors.white,
                                               fontSize: 11,

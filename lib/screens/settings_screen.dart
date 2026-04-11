@@ -43,42 +43,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _getLanguageName(String? code, BuildContext context) {
     if (code == null) return AppLocalizations.of(context)!.languageSystemDefault;
-    if (code == 'en') return AppLocalizations.of(context)!.languageEnglish;
-    return code;
+    final Map<String, String> languages = {
+      'en': 'English',
+      'hi': 'हिन्दी (Hindi)',
+      'kn': 'ಕನ್ನಡ (Kannada)',
+      'es': 'Español (Spanish)',
+      'fr': 'Français (French)',
+      'de': 'Deutsch (German)',
+      'pt': 'Português (Portuguese)',
+      'ru': 'Русский (Russian)',
+      'zh': '中文 (Chinese)',
+      'ja': '日本語 (Japanese)',
+      'ar': 'العربية (Arabic)',
+      'it': 'Italiano (Italian)',
+    };
+    return languages[code] ?? code;
   }
 
   void _showLanguageDialog() {
     final currentCode = SettingsService().languageCode;
+    final Map<String?, String> languageOptions = {
+      null: AppLocalizations.of(context)!.languageSystemDefault,
+      'en': 'English',
+      'hi': 'हिन्दी',
+      'kn': 'ಕನ್ನಡ',
+      'es': 'Español',
+      'fr': 'Français',
+      'de': 'Deutsch',
+      'pt': 'Português',
+      'ru': 'Русский',
+      'zh': '中文',
+      'ja': '日本語',
+      'ar': 'العربية',
+      'it': 'Italiano',
+    };
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(AppLocalizations.of(context)!.settingsLanguage),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<String?>(
-              title: Text(AppLocalizations.of(context)!.languageSystemDefault),
-              value: null,
-              groupValue: currentCode,
-              onChanged: (val) {
-                SettingsService().languageCode = val;
-                Navigator.pop(context);
-                widget.onLanguageChange?.call();
-                setState(() {});
-              },
-            ),
-            RadioListTile<String?>(
-              title: Text(AppLocalizations.of(context)!.languageEnglish),
-              value: 'en',
-              groupValue: currentCode,
-              onChanged: (val) {
-                SettingsService().languageCode = val;
-                Navigator.pop(context);
-                widget.onLanguageChange?.call();
-                setState(() {});
-              },
-            ),
-          ],
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            shrinkWrap: true,
+            children: languageOptions.entries.map((entry) {
+              return RadioListTile<String?>(
+                title: Text(entry.value),
+                value: entry.key,
+                groupValue: currentCode,
+                onChanged: (val) {
+                  SettingsService().languageCode = val;
+                  Navigator.pop(context);
+                  widget.onLanguageChange?.call();
+                  setState(() {});
+                },
+              );
+            }).toList(),
+          ),
         ),
       ),
     );

@@ -174,43 +174,56 @@ class _HomeScreenState extends State<HomeScreen>
               onPressed: _clearSelection,
             )
           : Icon(null),
-      actions: _isSelecting
+      actions: _isAlbumSelecting && _selectedIndex == 1
           ? [
               IconButton(
-                icon: const Icon(Icons.share),
-                onPressed: _shareSelected,
+                icon: const Icon(Icons.visibility_off),
+                tooltip: AppLocalizations.of(context)!.hideSelected + " / " + AppLocalizations.of(context)!.unhideSelected,
+                onPressed: () => _albumsKey.currentState?.hideSelected(),
               ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) {
-                  if (value == 'delete') {
-                    _deleteSelected();
-                  } else if (value == 'lock') {
-                    _lockSelected();
-                  }
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: ListTile(
-                      leading: const Icon(Icons.delete_outline),
-                      title: Text(AppLocalizations.of(context)!.homeDelete),
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'lock',
-                    child: ListTile(
-                      leading: const Icon(Icons.lock_outline),
-                      title: Text(AppLocalizations.of(context)!.homeLock),
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ],
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: AppLocalizations.of(context)!.deleteContents,
+                onPressed: () => _albumsKey.currentState?.deleteSelected(),
               ),
             ]
+          : _isSelecting
+              ? [
+                  IconButton(
+                    icon: const Icon(Icons.share),
+                    onPressed: _shareSelected,
+                  ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        _deleteSelected();
+                      } else if (value == 'lock') {
+                        _lockSelected();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: ListTile(
+                          leading: const Icon(Icons.delete_outline),
+                          title: Text(AppLocalizations.of(context)!.homeDelete),
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'lock',
+                        child: ListTile(
+                          leading: const Icon(Icons.lock_outline),
+                          title: Text(AppLocalizations.of(context)!.homeLock),
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
+                  ),
+                ]
           : [
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),

@@ -9,6 +9,7 @@ import '../services/trash_service.dart';
 import '../services/locked_folder_service.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import '../widgets/aves_entry_image.dart';
+import '../l10n/app_localizations.dart';
 
 class FavouritesScreen extends StatefulWidget {
   const FavouritesScreen({super.key});
@@ -110,20 +111,20 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setStateDialog) => AlertDialog(
-          title: const Text('Delete items'),
+          title: Text(AppLocalizations.of(context)!.deleteItems),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Delete ${_selectedIds.length} selected item(s)?'),
+              Text(AppLocalizations.of(context)!.deleteSelectedCount(_selectedIds.length)),
               const SizedBox(height: 12),
               SwitchListTile(
                 value: moveToTrash,
                 onChanged: (v) => setStateDialog(() => moveToTrash = v),
-                title: const Text('Move to bin'),
+                title: Text(AppLocalizations.of(context)!.moveToBin),
                 subtitle: Text(
                   moveToTrash
-                      ? 'Items can be restored from the recycle bin'
-                      : 'Items will be permanently deleted',
+                      ? AppLocalizations.of(context)!.moveToBinDesc
+                      : AppLocalizations.of(context)!.deletePermanentlyDesc,
                 ),
                 contentPadding: EdgeInsets.zero,
               ),
@@ -132,12 +133,12 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(
-                moveToTrash ? 'Move to bin' : 'Delete permanently',
+                moveToTrash ? AppLocalizations.of(context)!.moveToBin : AppLocalizations.of(context)!.deletePermanently,
                 style: const TextStyle(color: Colors.red),
               ),
             ),
@@ -170,8 +171,8 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
         SnackBar(
           content: Text(
             moveToTrash
-                ? 'Moved selected items to trash'
-                : 'Permanently deleted selected items',
+                ? AppLocalizations.of(context)!.movedToTrashSnackbar
+                : AppLocalizations.of(context)!.deletedPermanentlySnackbar,
           ),
         ),
       );
@@ -216,7 +217,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
     _init();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Moved $successCount item(s) to Locked Folder')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.movedToLockedFolderSnackbar(successCount))),
       );
     }
   }
@@ -244,15 +245,15 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
         appBar: AppBarM3E(
           title: _isSelecting
               ? Text(
-                  "${_selectedIds.length} Selected",
+                  AppLocalizations.of(context)!.homeSelectedCount(_selectedIds.length),
                   style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
                   ),
                 )
-              : const Text(
-                  "Favourites",
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              : Text(
+                  AppLocalizations.of(context)!.albumsFavourites,
+                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                 ),
           centerTitle: false,
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -283,20 +284,20 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                       }
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'delete',
                         child: ListTile(
-                          leading: Icon(Icons.delete_outline),
-                          title: Text('Delete'),
+                          leading: const Icon(Icons.delete_outline),
+                          title: Text(AppLocalizations.of(context)!.homeDelete),
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'lock',
                         child: ListTile(
-                          leading: Icon(Icons.lock_outline),
-                          title: Text('Move to Locked Folder'),
+                          leading: const Icon(Icons.lock_outline),
+                          title: Text(AppLocalizations.of(context)!.homeLock),
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -309,7 +310,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : _photos.isEmpty
-            ? const Center(child: Text("No favourites yet"))
+            ? Center(child: Text(AppLocalizations.of(context)!.noFavourites))
             : Column(
                 children: [
                   Padding(
@@ -320,7 +321,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        '${_photos.length} favourites',
+                        AppLocalizations.of(context)!.favouritesCount(_photos.length),
                         style: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).colorScheme.onSurfaceVariant,

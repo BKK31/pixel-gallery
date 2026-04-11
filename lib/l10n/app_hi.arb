@@ -1,0 +1,91 @@
+{
+  "appTitle": "पिक्सेल गैलरी",
+  "settingsTitle": "सेटिंग्स",
+  "settingsMaterialYou": "मटीरियल यू",
+  "settingsMaterialYouDesc": "वॉलपेपर से डायनेमिक रंगों का उपयोग करें",
+  "settingsStartupAlbums": "एल्बम से स्टार्टअप",
+  "settingsStartupAlbumsDesc": "फ़ोटो के बजाय एल्बम पेज पर शुरू करें",
+  "settingsExcludedFolders": "बाहर रखे गए फोल्डर",
+  "settingsExcludedFoldersDesc": "गैलरी से फोल्डर छिपाएं",
+  "settingsLicenses": "ओपन सोर्स लाइसेंस",
+  "settingsLicensesDesc": "क्रेडिट और लाइसेंस की जानकारी",
+  "settingsSourceCode": "सोर्स कोड",
+  "homeSelectedCount": "{count} चयनित",
+  "@homeSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeShare": "शेयर करें",
+  "homeDelete": "हटाएं",
+  "homeLock": "लॉक किए गए फोल्डर में ले जाएं",
+  "homeHiddenAlbums": "छिपे हुए एल्बम",
+  "homeLockedFolder": "लॉक किया गया फोल्डर",
+  "albumsFavourites": "पसंदीदा",
+  "albumsBin": "बिन",
+  "albumsItemsCount": "{count} आइटम",
+  "@albumsItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsHiddenCount": "हाल ही के एल्बम से {count} एल्बम छिपाए गए",
+  "@albumsHiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsUnhiddenCount": "हाल ही के एल्बम से {count} एल्बम वापस दिखाए गए",
+  "@albumsUnhiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsEmptySelection": "चयनित एल्बम खाली हैं",
+  "albumsDeleteTitle": "एल्बम की सामग्री हटाएं",
+  "albumsDeleteContent": "{albumCount} एल्बम से {photoCount} फ़ोटो हटाएं?",
+  "@albumsDeleteContent": {
+    "placeholders": {
+      "photoCount": {
+        "type": "int"
+      },
+      "albumCount": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsDeleteWarning": "फोल्डर खुद नहीं हटाया जाएगा।",
+  "albumsMoveToBin": "बिन में ले जाएं",
+  "albumsBinDesc": "रीसाइकिल बिन से आइटम बहाल किए जा सकते हैं",
+  "albumsPermDeleteDesc": "आइटम स्थायी रूप से हटा दिए जाएंगे",
+  "cancel": "रद्द करें",
+  "deletePermanently": "स्थायी रूप से हटाएं",
+  "albumsMovedToBin": "{count} आइटम ट्रैश में ले जाए गए",
+  "@albumsMovedToBin": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsPermDeletedCount": "स्थायी रूप से {count} आइटम हटा दिए गए",
+  "@albumsPermDeletedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLanguage": "भाषा",
+  "settingsLanguageDesc": "अपनी पसंदीदा भाषा चुनें",
+  "languageSystemDefault": "सिस्टम डिफ़ॉल्ट",
+  "languageEnglish": "अंग्रेज़ी"
+}

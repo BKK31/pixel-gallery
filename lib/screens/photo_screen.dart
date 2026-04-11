@@ -13,6 +13,7 @@ import 'package:share_plus/share_plus.dart';
 import '../services/settings_service.dart';
 import '../models/filters.dart';
 import '../widgets/add_to_album_sheet.dart';
+import '../l10n/app_localizations.dart';
 
 class PhotoScreen extends StatefulWidget {
   final AlbumModel album;
@@ -174,20 +175,20 @@ class _PhotoScreenState extends State<PhotoScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setStateDialog) => AlertDialog(
-          title: const Text('Delete items'),
+          title: Text(AppLocalizations.of(context)!.deleteItems),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Delete ${_selectedIds.length} selected item(s)?'),
+              Text(AppLocalizations.of(context)!.deleteSelectedCount(_selectedIds.length)),
               const SizedBox(height: 12),
               SwitchListTile(
                 value: moveToTrash,
                 onChanged: (v) => setStateDialog(() => moveToTrash = v),
-                title: const Text('Move to bin'),
+                title: Text(AppLocalizations.of(context)!.moveToBin),
                 subtitle: Text(
                   moveToTrash
-                      ? 'Items can be restored from the recycle bin'
-                      : 'Items will be permanently deleted',
+                      ? AppLocalizations.of(context)!.moveToBinDesc
+                      : AppLocalizations.of(context)!.deletePermanentlyDesc,
                 ),
                 contentPadding: EdgeInsets.zero,
               ),
@@ -196,12 +197,12 @@ class _PhotoScreenState extends State<PhotoScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(
-                moveToTrash ? 'Move to bin' : 'Delete permanently',
+                moveToTrash ? AppLocalizations.of(context)!.moveToBin : AppLocalizations.of(context)!.deletePermanently,
                 style: const TextStyle(color: Colors.red),
               ),
             ),
@@ -234,8 +235,8 @@ class _PhotoScreenState extends State<PhotoScreen> {
         SnackBar(
           content: Text(
             moveToTrash
-                ? 'Moved selected items to trash'
-                : 'Permanently deleted selected items',
+                ? AppLocalizations.of(context)!.movedToTrashSnackbar
+                : AppLocalizations.of(context)!.deletedPermanentlySnackbar,
           ),
         ),
       );
@@ -280,7 +281,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
     _init();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Moved $successCount item(s) to Locked Folder')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.movedToLockedFolderSnackbar(successCount))),
       );
     }
   }
@@ -331,7 +332,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
         appBar: AppBarM3E(
           title: _isSelecting
               ? Text(
-                  "${_selectedIds.length} Selected",
+                  AppLocalizations.of(context)!.homeSelectedCount(_selectedIds.length),
                   style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
@@ -375,29 +376,29 @@ class _PhotoScreenState extends State<PhotoScreen> {
                       }
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'delete',
                         child: ListTile(
-                          leading: Icon(Icons.delete_outline),
-                          title: Text('Delete'),
+                          leading: const Icon(Icons.delete_outline),
+                          title: Text(AppLocalizations.of(context)!.homeDelete),
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'lock',
                         child: ListTile(
-                          leading: Icon(Icons.lock_outline),
-                          title: Text('Move to Locked Folder'),
+                          leading: const Icon(Icons.lock_outline),
+                          title: Text(AppLocalizations.of(context)!.homeLock),
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'add_to_album',
                         child: ListTile(
-                          leading: Icon(Icons.create_new_folder_outlined),
-                          title: Text('Add to Album'),
+                          leading: const Icon(Icons.create_new_folder_outlined),
+                          title: Text(AppLocalizations.of(context)!.addToAlbum),
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -416,16 +417,16 @@ class _PhotoScreenState extends State<PhotoScreen> {
                         MediaService().rebuildAlbums();
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Folder excluded')),
+                            SnackBar(content: Text(AppLocalizations.of(context)!.folderExcluded)),
                           );
                           Navigator.pop(context);
                         }
                       }
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'exclude',
-                        child: Text('Exclude Folder'),
+                        child: Text(AppLocalizations.of(context)!.excludeFolder),
                       ),
                     ],
                   ),
@@ -443,7 +444,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        '${widget.album.assetCount} items',
+                        AppLocalizations.of(context)!.albumsItemsCount(widget.album.assetCount),
                         style: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).colorScheme.onSurfaceVariant,

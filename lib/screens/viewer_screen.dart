@@ -11,6 +11,7 @@ import '../models/photo_model.dart';
 import '../models/album_model.dart';
 import '../models/extensions/favourites_extension.dart';
 import '../widgets/aves_entry_image_provider.dart';
+import '../l10n/app_localizations.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:photo_view/photo_view.dart';
@@ -236,20 +237,20 @@ class _ViewerScreenState extends State<ViewerScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setStateDialog) => AlertDialog(
-          title: const Text('Delete photo'),
+          title: Text(AppLocalizations.of(context)!.deletePhoto),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('What would you like to do with this photo?'),
+              Text(AppLocalizations.of(context)!.deletePhotoDesc),
               const SizedBox(height: 12),
               SwitchListTile(
                 value: moveToTrash,
                 onChanged: (v) => setStateDialog(() => moveToTrash = v),
-                title: const Text('Move to bin'),
+                title: Text(AppLocalizations.of(context)!.moveToBin),
                 subtitle: Text(
                   moveToTrash
-                      ? 'Can be restored from the recycle bin'
-                      : 'Will be permanently deleted',
+                      ? AppLocalizations.of(context)!.moveToBinDesc
+                      : AppLocalizations.of(context)!.deletePermanentlyDesc,
                 ),
                 contentPadding: EdgeInsets.zero,
               ),
@@ -258,12 +259,12 @@ class _ViewerScreenState extends State<ViewerScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(
-                moveToTrash ? 'Move to bin' : 'Delete permanently',
+                moveToTrash ? AppLocalizations.of(context)!.moveToBin : AppLocalizations.of(context)!.deletePermanently,
                 style: const TextStyle(color: Colors.red),
               ),
             ),
@@ -278,14 +279,14 @@ class _ViewerScreenState extends State<ViewerScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Moved to trash')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.movedToTrashSnackbar)));
       }
     } else {
       await _service.permanentlyDelete(photo.asset);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Permanently deleted')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.deletedPermanentlySnackbar)));
       }
     }
 
@@ -302,8 +303,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(success
-                ? 'Restored to gallery'
-                : 'Failed to restore'),
+                ? AppLocalizations.of(context)!.restoredToGallery
+                : AppLocalizations.of(context)!.failedToRestore),
           ),
         );
         if (success) setState(() {});
@@ -314,8 +315,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(success
-                ? 'Moved to Locked Folder'
-                : 'Failed to move to Locked Folder'),
+                ? AppLocalizations.of(context)!.movedToLockedFolderSnackbar(1)
+                : AppLocalizations.of(context)!.failedToMoveToLocked),
           ),
         );
         if (success) Navigator.pop(context);
@@ -342,7 +343,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
         debugPrint("Error launching edit: $e");
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Failed to launch editor")),
+            SnackBar(content: Text(AppLocalizations.of(context)!.failedToLaunchEditor)),
           );
         }
       }
@@ -358,14 +359,14 @@ class _ViewerScreenState extends State<ViewerScreen> {
       await WallpaperManagerPlus().setWallpaper(file, location);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Wallpaper set successfully")),
+          SnackBar(content: Text(AppLocalizations.of(context)!.wallpaperSetSuccess)),
         );
       }
     } catch (e) {
       debugPrint("Error setting wallpaper: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to set wallpaper")),
+          SnackBar(content: Text(AppLocalizations.of(context)!.wallpaperSetFailed)),
         );
       }
     }
@@ -379,7 +380,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
         children: [
           ListTile(
             leading: const Icon(Icons.wallpaper),
-            title: const Text("Home Screen"),
+            title: Text(AppLocalizations.of(context)!.homeScreen),
             onTap: () {
               Navigator.pop(context);
               _setWallpaper(photo, WallpaperManagerPlus.homeScreen);
@@ -387,7 +388,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.lock),
-            title: const Text("Lock Screen"),
+            title: Text(AppLocalizations.of(context)!.lockScreen),
             onTap: () {
               Navigator.pop(context);
               _setWallpaper(photo, WallpaperManagerPlus.lockScreen);
@@ -395,7 +396,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.smartphone),
-            title: const Text("Both"),
+            title: Text(AppLocalizations.of(context)!.bothScreens),
             onTap: () {
               Navigator.pop(context);
               _setWallpaper(photo, WallpaperManagerPlus.bothScreens);
@@ -417,7 +418,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     int? sizeBytes = await file?.length();
     String sizeStr = sizeBytes != null
         ? "${(sizeBytes / (1024 * 1024)).toStringAsFixed(2)} MB"
-        : "Unknown";
+        : AppLocalizations.of(context)!.unknown;
 
     final db = LocalDatabase();
     Map<String, dynamic>? dbMetadata;
@@ -471,14 +472,14 @@ class _ViewerScreenState extends State<ViewerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Details",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  AppLocalizations.of(context)!.details,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
                 ListTile(
                   leading: const Icon(Icons.image),
-                  title: Text(photo.asset.title ?? "Unknown"),
+                  title: Text(photo.asset.title ?? AppLocalizations.of(context)!.unknown),
                   subtitle: Text(
                     "${photo.asset.width}x${photo.asset.height} • $sizeStr",
                   ),
@@ -492,9 +493,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
                         (dbMetadata['make'] != null ||
                             dbMetadata['model'] != null))) ...[
                   const SizedBox(height: 20),
-                  const Text(
-                    "Camera Info",
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Text(
+                    AppLocalizations.of(context)!.cameraInfo,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
                   if (exifData?['Model'] != null ||
@@ -512,7 +513,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
                             : "${dbMetadata?['make'] ?? ''} ${dbMetadata?['model'] ?? ''}"
                                   .trim(),
                       ),
-                      subtitle: const Text("Camera"),
+                      subtitle: Text(AppLocalizations.of(context)!.camera),
                     ),
                   if (exifData != null &&
                       (exifData['FNumber'] != null ||
@@ -530,16 +531,16 @@ class _ViewerScreenState extends State<ViewerScreen> {
                             "ISO ${exifData['ISOSpeedRatings']}",
                         ].join(" • "),
                       ),
-                      subtitle: const Text("Settings"),
+                      subtitle: Text(AppLocalizations.of(context)!.exifSettings),
                     ),
                 ],
                 if (location != null &&
                     location['latitude'] != null &&
                     location['longitude'] != null) ...[
                   const SizedBox(height: 20),
-                  const Text(
-                    "Location",
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Text(
+                    AppLocalizations.of(context)!.location,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
                   Container(
@@ -787,16 +788,16 @@ class _ViewerScreenState extends State<ViewerScreen> {
                         _photos[_currentIndex].asset.contentId,
                       );
                       return <PopupMenuEntry<String>>[
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'wallpaper',
-                          child: Text('Set as wallpaper'),
+                          child: Text(AppLocalizations.of(context)!.setAsWallpaper),
                         ),
                         PopupMenuItem<String>(
                           value: 'lock',
                           child: Text(
                             isLocked
-                                ? 'Remove from Locked Folder'
-                                : 'Move to Locked Folder',
+                                ? AppLocalizations.of(context)!.removeFromLockedFolder
+                                : AppLocalizations.of(context)!.moveToLockedFolder,
                           ),
                         ),
                       ];

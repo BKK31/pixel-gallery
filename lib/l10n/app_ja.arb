@@ -1,0 +1,92 @@
+{
+  "@@locale": "ja",
+  "appTitle": "Pixel ギャラリー",
+  "settingsTitle": "設定",
+  "settingsMaterialYou": "Material You",
+  "settingsMaterialYouDesc": "壁紙のダイナミックカラーを使用する",
+  "settingsStartupAlbums": "起動時にアルバムを表示",
+  "settingsStartupAlbumsDesc": "写真ではなくアルバムページを最初に表示します",
+  "settingsExcludedFolders": "除外設定",
+  "settingsExcludedFoldersDesc": "ギャラリーに表示しないフォルダを選択します",
+  "settingsLicenses": "オープンソースライセンス",
+  "settingsLicensesDesc": "クレジットとライセンス情報",
+  "settingsSourceCode": "ソースコード",
+  "homeSelectedCount": "{count} 件選択中",
+  "@homeSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeShare": "共有",
+  "homeDelete": "削除",
+  "homeLock": "ロックされたフォルダに移動",
+  "homeHiddenAlbums": "非表示のアルバム",
+  "homeLockedFolder": "ロックされたフォルダ",
+  "albumsFavourites": "お気に入り",
+  "albumsBin": "ゴミ箱",
+  "albumsItemsCount": "{count} 個のアイテム",
+  "@albumsItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsHiddenCount": "「最近」から {count} 個のアルバムを非表示にしました",
+  "@albumsHiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsUnhiddenCount": "「最近」から {count} 個のアルバムを再表示しました",
+  "@albumsUnhiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsEmptySelection": "選択されたアルバムは空です",
+  "albumsDeleteTitle": "アルバムの内容を削除",
+  "albumsDeleteContent": "{albumCount} 個のアルバムから {photoCount} 枚の写真を削除しますか？",
+  "@albumsDeleteContent": {
+    "placeholders": {
+      "photoCount": {
+        "type": "int"
+      },
+      "albumCount": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsDeleteWarning": "フォルダ自体は削除されません。",
+  "albumsMoveToBin": "ゴミ箱へ移動",
+  "albumsBinDesc": "アイテムはゴミ箱から復元できます",
+  "albumsPermDeleteDesc": "アイテムは完全に削除されます",
+  "cancel": "キャンセル",
+  "deletePermanently": "完全に削除",
+  "albumsMovedToBin": "{count} 個のアイテムをゴミ箱に移動しました",
+  "@albumsMovedToBin": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsPermDeletedCount": "{count} 個のアイテムを完全に削除しました",
+  "@albumsPermDeletedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLanguage": "言語",
+  "settingsLanguageDesc": "使用する言語を選択します",
+  "languageSystemDefault": "システムのデフォルト",
+  "languageEnglish": "英語"
+}

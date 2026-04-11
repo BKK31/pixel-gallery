@@ -5,7 +5,18 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_ar.dart';
+import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
+import 'app_localizations_es.dart';
+import 'app_localizations_fr.dart';
+import 'app_localizations_hi.dart';
+import 'app_localizations_it.dart';
+import 'app_localizations_ja.dart';
+import 'app_localizations_kn.dart';
+import 'app_localizations_pt.dart';
+import 'app_localizations_ru.dart';
+import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
 
@@ -92,7 +103,20 @@ abstract class AppLocalizations {
       ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('en')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('ar'),
+    Locale('de'),
+    Locale('en'),
+    Locale('es'),
+    Locale('fr'),
+    Locale('hi'),
+    Locale('it'),
+    Locale('ja'),
+    Locale('kn'),
+    Locale('pt'),
+    Locale('ru'),
+    Locale('zh'),
+  ];
 
   /// The title of the application
   ///
@@ -250,23 +274,23 @@ abstract class AppLocalizations {
   /// **'The folder itself will not be removed.'**
   String get albumsDeleteWarning;
 
-  /// No description provided for @albumsMoveToBin.
+  /// No description provided for @moveToBin.
   ///
   /// In en, this message translates to:
   /// **'Move to bin'**
-  String get albumsMoveToBin;
+  String get moveToBin;
 
-  /// No description provided for @albumsBinDesc.
+  /// No description provided for @moveToBinDesc.
   ///
   /// In en, this message translates to:
   /// **'Items can be restored from the recycle bin'**
-  String get albumsBinDesc;
+  String get moveToBinDesc;
 
-  /// No description provided for @albumsPermDeleteDesc.
+  /// No description provided for @deletePermanentlyDesc.
   ///
   /// In en, this message translates to:
   /// **'Items will be permanently deleted'**
-  String get albumsPermDeleteDesc;
+  String get deletePermanentlyDesc;
 
   /// No description provided for @cancel.
   ///
@@ -315,6 +339,360 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'English'**
   String get languageEnglish;
+
+  /// No description provided for @deleteItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete items'**
+  String get deleteItems;
+
+  /// No description provided for @deleteSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {count} selected item(s)?'**
+  String deleteSelectedCount(int count);
+
+  /// No description provided for @movedToTrashSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved selected items to trash'**
+  String get movedToTrashSnackbar;
+
+  /// No description provided for @deletedPermanentlySnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently deleted selected items'**
+  String get deletedPermanentlySnackbar;
+
+  /// No description provided for @movedToLockedFolderSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved {count} item(s) to Locked Folder'**
+  String movedToLockedFolderSnackbar(int count);
+
+  /// No description provided for @photosCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} photos'**
+  String photosCount(int count);
+
+  /// No description provided for @deletePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete photo'**
+  String get deletePhoto;
+
+  /// No description provided for @deletePhotoDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'What would you like to do with this photo?'**
+  String get deletePhotoDesc;
+
+  /// No description provided for @restoredToGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored to gallery'**
+  String get restoredToGallery;
+
+  /// No description provided for @failedToRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to restore'**
+  String get failedToRestore;
+
+  /// No description provided for @failedToMoveToLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to move to Locked Folder'**
+  String get failedToMoveToLocked;
+
+  /// No description provided for @failedToLaunchEditor.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to launch editor'**
+  String get failedToLaunchEditor;
+
+  /// No description provided for @wallpaperSetSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallpaper set successfully'**
+  String get wallpaperSetSuccess;
+
+  /// No description provided for @wallpaperSetFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to set wallpaper'**
+  String get wallpaperSetFailed;
+
+  /// No description provided for @homeScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Home Screen'**
+  String get homeScreen;
+
+  /// No description provided for @lockScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock Screen'**
+  String get lockScreen;
+
+  /// No description provided for @bothScreens.
+  ///
+  /// In en, this message translates to:
+  /// **'Both'**
+  String get bothScreens;
+
+  /// No description provided for @details.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get details;
+
+  /// No description provided for @unknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get unknown;
+
+  /// No description provided for @cameraInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera Info'**
+  String get cameraInfo;
+
+  /// No description provided for @camera.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get camera;
+
+  /// No description provided for @exifSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get exifSettings;
+
+  /// No description provided for @location.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get location;
+
+  /// No description provided for @removeFromLockedFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from Locked Folder'**
+  String get removeFromLockedFolder;
+
+  /// No description provided for @moveToLockedFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to Locked Folder'**
+  String get moveToLockedFolder;
+
+  /// No description provided for @setAsWallpaper.
+  ///
+  /// In en, this message translates to:
+  /// **'Set as wallpaper'**
+  String get setAsWallpaper;
+
+  /// No description provided for @recycleBin.
+  ///
+  /// In en, this message translates to:
+  /// **'Recycle Bin'**
+  String get recycleBin;
+
+  /// No description provided for @recycleBinEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Recycle Bin is empty'**
+  String get recycleBinEmpty;
+
+  /// No description provided for @restoredCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored {count} items'**
+  String restoredCount(int count);
+
+  /// No description provided for @restoredCountWithFail.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored {successCount} items, failed {failCount}'**
+  String restoredCountWithFail(int successCount, int failCount);
+
+  /// No description provided for @daysRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}d'**
+  String daysRemaining(int count);
+
+  /// No description provided for @lockedFolderNoItems.
+  ///
+  /// In en, this message translates to:
+  /// **'No locked items'**
+  String get lockedFolderNoItems;
+
+  /// No description provided for @lockedFolderDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Move photos here from the viewer to hide them behind biometric lock'**
+  String get lockedFolderDesc;
+
+  /// No description provided for @lockedItemsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} locked items'**
+  String lockedItemsCount(int count);
+
+  /// No description provided for @movingFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Moving files…'**
+  String get movingFiles;
+
+  /// No description provided for @uninstallWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Uninstalling the app will permanently delete locked files.'**
+  String get uninstallWarning;
+
+  /// No description provided for @addToAlbum.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Album'**
+  String get addToAlbum;
+
+  /// No description provided for @addToSpecificAlbum.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to {albumName}'**
+  String addToSpecificAlbum(String albumName);
+
+  /// No description provided for @moveOrCopyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you want to move or copy the selected items?'**
+  String get moveOrCopyDesc;
+
+  /// No description provided for @copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get copy;
+
+  /// No description provided for @move.
+  ///
+  /// In en, this message translates to:
+  /// **'Move'**
+  String get move;
+
+  /// No description provided for @createNewAlbum.
+  ///
+  /// In en, this message translates to:
+  /// **'Create New Album'**
+  String get createNewAlbum;
+
+  /// No description provided for @albumName.
+  ///
+  /// In en, this message translates to:
+  /// **'Album Name'**
+  String get albumName;
+
+  /// No description provided for @albumNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Vacation'**
+  String get albumNameHint;
+
+  /// No description provided for @create.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get create;
+
+  /// No description provided for @movingItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Moving items...'**
+  String get movingItems;
+
+  /// No description provided for @copyingItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Copying items...'**
+  String get copyingItems;
+
+  /// No description provided for @moveSuccessCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully moved {count} items.'**
+  String moveSuccessCount(int count);
+
+  /// No description provided for @copySuccessCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully copied {count} items.'**
+  String copySuccessCount(int count);
+
+  /// No description provided for @errorCreateAlbum.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create album folder. Check permissions.'**
+  String get errorCreateAlbum;
+
+  /// No description provided for @noHiddenAlbums.
+  ///
+  /// In en, this message translates to:
+  /// **'No hidden albums'**
+  String get noHiddenAlbums;
+
+  /// No description provided for @hiddenAlbumsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press an album to hide it from Recents'**
+  String get hiddenAlbumsDesc;
+
+  /// No description provided for @unhideSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Unhide selected'**
+  String get unhideSelected;
+
+  /// No description provided for @hideSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide selected'**
+  String get hideSelected;
+
+  /// No description provided for @deleteContents.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete contents'**
+  String get deleteContents;
+
+  /// No description provided for @excludeFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Exclude Folder'**
+  String get excludeFolder;
+
+  /// No description provided for @folderExcluded.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder excluded'**
+  String get folderExcluded;
+
+  /// No description provided for @noFavourites.
+  ///
+  /// In en, this message translates to:
+  /// **'No favourites yet'**
+  String get noFavourites;
+
+  /// No description provided for @favouritesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} favourites'**
+  String favouritesCount(int count);
 }
 
 class _AppLocalizationsDelegate
@@ -327,8 +705,20 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>[
+    'ar',
+    'de',
+    'en',
+    'es',
+    'fr',
+    'hi',
+    'it',
+    'ja',
+    'kn',
+    'pt',
+    'ru',
+    'zh',
+  ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -337,8 +727,30 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'ar':
+      return AppLocalizationsAr();
+    case 'de':
+      return AppLocalizationsDe();
     case 'en':
       return AppLocalizationsEn();
+    case 'es':
+      return AppLocalizationsEs();
+    case 'fr':
+      return AppLocalizationsFr();
+    case 'hi':
+      return AppLocalizationsHi();
+    case 'it':
+      return AppLocalizationsIt();
+    case 'ja':
+      return AppLocalizationsJa();
+    case 'kn':
+      return AppLocalizationsKn();
+    case 'pt':
+      return AppLocalizationsPt();
+    case 'ru':
+      return AppLocalizationsRu();
+    case 'zh':
+      return AppLocalizationsZh();
   }
 
   throw FlutterError(

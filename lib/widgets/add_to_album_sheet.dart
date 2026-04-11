@@ -5,6 +5,7 @@ import '../models/album_model.dart';
 import '../services/media_service.dart';
 import '../services/album_operation_service.dart';
 import '../widgets/aves_entry_image.dart';
+import '../l10n/app_localizations.dart';
 
 class AddToAlbumSheet extends StatefulWidget {
   final List<PhotoModel> selectedPhotos;
@@ -56,7 +57,7 @@ class _AddToAlbumSheetState extends State<AddToAlbumSheet> {
       destination = await _albumOperationService.createAlbumDirectory(albumName);
       if (destination == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to create album folder. Check permissions.')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.errorCreateAlbum)));
         }
         return;
       }
@@ -69,20 +70,20 @@ class _AddToAlbumSheetState extends State<AddToAlbumSheet> {
     final String? action = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(albumName != null ? 'Add to $albumName' : 'Add to Album'),
-        content: const Text('Do you want to move or copy the selected items?'),
+        title: Text(albumName != null ? AppLocalizations.of(context)!.addToSpecificAlbum(albumName) : AppLocalizations.of(context)!.addToAlbum),
+        content: Text(AppLocalizations.of(context)!.moveOrCopyDesc),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, null),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'copy'),
-            child: const Text('Copy'),
+            child: Text(AppLocalizations.of(context)!.copy),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'move'),
-            child: const Text('Move', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(AppLocalizations.of(context)!.move, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       )
@@ -100,7 +101,7 @@ class _AddToAlbumSheetState extends State<AddToAlbumSheet> {
             children: [
               const CircularProgressIndicator(),
               const SizedBox(width: 20),
-              Text("${action == 'move' ? 'Moving' : 'Copying'} items..."),
+              Text(action == 'move' ? AppLocalizations.of(context)!.movingItems : AppLocalizations.of(context)!.copyingItems),
             ],
           ),
         ),
@@ -119,7 +120,7 @@ class _AddToAlbumSheetState extends State<AddToAlbumSheet> {
       Navigator.pop(context); // close progress dialog
       Navigator.pop(context); // close AddToAlbumSheet
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Successfully \${action == 'move' ? 'moved' : 'copied'} \$count items.")),
+        SnackBar(content: Text(action == 'move' ? AppLocalizations.of(context)!.moveSuccessCount(count) : AppLocalizations.of(context)!.copySuccessCount(count))),
       );
     }
   }
@@ -129,17 +130,17 @@ class _AddToAlbumSheetState extends State<AddToAlbumSheet> {
     final String? albumName = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Create New Album'),
+        title: Text(AppLocalizations.of(context)!.createNewAlbum),
         content: TextField(
           controller: nameController,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Album Name',
-            hintText: 'e.g. Vacation',
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.albumName,
+            hintText: AppLocalizations.of(context)!.albumNameHint,
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, null), child: Text(AppLocalizations.of(context)!.cancel)),
           TextButton(
             onPressed: () {
               final name = nameController.text.trim();
@@ -147,7 +148,7 @@ class _AddToAlbumSheetState extends State<AddToAlbumSheet> {
                 Navigator.pop(ctx, name);
               }
             }, 
-            child: const Text('Create')
+            child: Text(AppLocalizations.of(context)!.create)
           ),
         ],
       )
@@ -175,11 +176,11 @@ class _AddToAlbumSheetState extends State<AddToAlbumSheet> {
       builder: (context, scrollController) {
         return Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: Text(
-                'Add to Album',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                AppLocalizations.of(context)!.addToAlbum,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
             ListTile(
@@ -195,7 +196,7 @@ class _AddToAlbumSheetState extends State<AddToAlbumSheet> {
                   color: Theme.of(context).colorScheme.onPrimaryContainer
                 ),
               ),
-              title: const Text('Create New Album', style: TextStyle(fontWeight: FontWeight.w600)),
+              title: Text(AppLocalizations.of(context)!.createNewAlbum, style: const TextStyle(fontWeight: FontWeight.w600)),
               onTap: _createNewAlbum,
             ),
             const Divider(),
@@ -222,7 +223,7 @@ class _AddToAlbumSheetState extends State<AddToAlbumSheet> {
                         : const Icon(Icons.photo_library),
                     ),
                     title: Text(album.name),
-                    subtitle: Text('${album.assetCount} items'),
+                    subtitle: Text(AppLocalizations.of(context)!.albumsItemsCount(album.assetCount)),
                     onTap: () async {
                       if (album.id == null || album.id.isEmpty) return;
                       await _handleAlbumSelection(album.name, Directory(album.id));

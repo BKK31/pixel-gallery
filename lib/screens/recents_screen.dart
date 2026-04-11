@@ -7,6 +7,7 @@ import 'package:lumina_gallery/services/trash_service.dart';
 import 'package:lumina_gallery/services/locked_folder_service.dart';
 import 'package:lumina_gallery/models/album_model.dart';
 import 'package:lumina_gallery/widgets/aves_entry_image.dart';
+import 'package:lumina_gallery/l10n/app_localizations.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:async';
 
@@ -189,22 +190,22 @@ class RecentsScreenState extends State<RecentsScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setStateDialog) => AlertDialog(
-          title: const Text('Delete items'),
+          title: Text(AppLocalizations.of(context)!.deleteItems),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Delete ${_selectedIds.length} selected item(s)?',
+                AppLocalizations.of(context)!.deleteSelectedCount(_selectedIds.length),
               ),
               const SizedBox(height: 12),
               SwitchListTile(
                 value: moveToTrash,
                 onChanged: (v) => setStateDialog(() => moveToTrash = v),
-                title: const Text('Move to bin'),
+                title: Text(AppLocalizations.of(context)!.moveToBin),
                 subtitle: Text(
                   moveToTrash
-                      ? 'Items can be restored from the recycle bin'
-                      : 'Items will be permanently deleted',
+                      ? AppLocalizations.of(context)!.moveToBinDesc
+                      : AppLocalizations.of(context)!.deletePermanentlyDesc,
                 ),
                 contentPadding: EdgeInsets.zero,
               ),
@@ -213,12 +214,12 @@ class RecentsScreenState extends State<RecentsScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(
-                moveToTrash ? 'Move to bin' : 'Delete permanently',
+                moveToTrash ? AppLocalizations.of(context)!.moveToBin : AppLocalizations.of(context)!.deletePermanently,
                 style: const TextStyle(color: Colors.red),
               ),
             ),
@@ -249,8 +250,8 @@ class RecentsScreenState extends State<RecentsScreen>
         SnackBar(
           content: Text(
             moveToTrash
-                ? 'Moved selected items to trash'
-                : 'Permanently deleted selected items',
+                ? AppLocalizations.of(context)!.movedToTrashSnackbar
+                : AppLocalizations.of(context)!.deletedPermanentlySnackbar,
           ),
         ),
       );
@@ -295,7 +296,7 @@ class RecentsScreenState extends State<RecentsScreen>
     _init();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Moved $successCount item(s) to Locked Folder')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.movedToLockedFolderSnackbar(successCount))),
       );
     }
   }
@@ -339,7 +340,7 @@ class RecentsScreenState extends State<RecentsScreen>
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                '${_photos.length} photos',
+                AppLocalizations.of(context)!.photosCount(_photos.length),
                 style: TextStyle(
                   fontSize: 14,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,

@@ -138,11 +138,9 @@ Pixel Gallery is built with a curated list of top-tier libraries:
 
 We want to make Pixel Gallery accessible to everyone! You can help us translate the app into your language:
 
-- **Localizely (Highly Recommended)**: The easiest way to contribute. Use our [Localizely project](https://app.localizely.com/projects/08078485-f0d5-4b12-8c75-f1acb8747f05)) to translate strings directly in your browser. No coding knowledge required!
-- **Manual Contribution**:
-  1. Fork the repository.
-  2. Add/edit the `.arb` files in `lib/l10n/` (e.g., `app_es.arb` for Spanish).
-  3. Submit a Pull Request.
+1.  **Fork the repository.**
+2.  **Add or edit the `.arb` files** in `lib/l10n/` (e.g., `app_hi.arb` for Hindi, `app_es.arb` for Spanish).
+3.  **Submit a Pull Request** with your translations.
 
 *Note: If you are adding a new language, please check the [Flutter language codes](https://docs.flutter.dev/development/accessibility-and-localization/internationalization#supported-languages) first.*
 

@@ -6,6 +6,7 @@ import '../services/biometric_service.dart';
 import '../models/photo_model.dart';
 import '../models/album_model.dart';
 import '../widgets/aves_entry_image.dart';
+import '../l10n/app_localizations.dart';
 import 'viewer_screen.dart';
 
 class LockedFolderScreen extends StatefulWidget {
@@ -116,7 +117,7 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${entriesToUnlock.length} item(s) restored to gallery',
+            AppLocalizations.of(context)!.restoredCount(entriesToUnlock.length),
           ),
         ),
       );
@@ -136,8 +137,8 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: _isSelecting
-              ? Text('${_selectedIds.length} Selected')
-              : const Text('Locked Folder'),
+              ? Text(AppLocalizations.of(context)!.homeSelectedCount(_selectedIds.length))
+              : Text(AppLocalizations.of(context)!.homeLockedFolder),
           leading: _isSelecting
               ? IconButton(
                   icon: const Icon(Icons.close),
@@ -148,7 +149,7 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
               ? [
                   IconButton(
                     icon: const Icon(Icons.lock_open),
-                    tooltip: 'Restore to gallery',
+                    tooltip: AppLocalizations.of(context)!.restoredToGallery,
                     onPressed: _isProcessing ? null : _unlockSelected,
                   ),
                 ]
@@ -175,7 +176,7 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No locked items',
+                      AppLocalizations.of(context)!.lockedFolderNoItems,
                       style: TextStyle(
                         fontSize: 16,
                         color: Theme.of(context)
@@ -188,7 +189,7 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
                       child: Text(
-                        'Move photos here from the viewer to hide them behind biometric lock',
+                        AppLocalizations.of(context)!.lockedFolderDesc,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
@@ -214,7 +215,7 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        '${_photos.length} locked items',
+                        AppLocalizations.of(context)!.lockedItemsCount(_photos.length),
                         style: TextStyle(
                           fontSize: 14,
                           color:
@@ -286,15 +287,15 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
             if (_isProcessing)
               Container(
                 color: Colors.black54,
-                child: const Center(
+                child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(color: Colors.white),
-                      SizedBox(height: 16),
+                      const CircularProgressIndicator(color: Colors.white),
+                      const SizedBox(height: 16),
                       Text(
-                        'Moving files…',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
+                        AppLocalizations.of(context)!.movingFiles,
+                        style: const TextStyle(color: Colors.white, fontSize: 16),
                       ),
                     ],
                   ),
@@ -319,7 +320,7 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Uninstalling the app will permanently delete locked files.',
+              AppLocalizations.of(context)!.uninstallWarning,
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onErrorContainer,
@@ -343,7 +344,7 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
           const SizedBox(width: 6),
           Flexible(
             child: Text(
-              'Uninstalling the app will delete locked files.',
+              AppLocalizations.of(context)!.uninstallWarning,
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.error,
@@ -366,7 +367,7 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
         } else {
           final album = AlbumModel(
             id: 'locked',
-            name: 'Locked Folder',
+            name: AppLocalizations.of(context)!.homeLockedFolder,
             entries: _photos.map((p) => p.asset).toList(),
           );
           await Navigator.push(
