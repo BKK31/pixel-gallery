@@ -1,5 +1,5 @@
-- **HDR Detection & Support**: Automatically detects HDR content and switches display modes for optimal, high-fidelity viewing.
-- **Album Management**: Introduced a new service and UI to create albums and seamlessly move or copy photos between them.
-- **Multi-Window Support**: Improved application resizability for a smoother experience in split-screen or multi-window modes on Android.
-- **Global Localization**: Added full internationalization support for 11 new locales, including Arabic, German, Hindi, Japanese, and more.
-- **Translation Updates**: Refreshed and updated translations across all supported languages for better local accuracy.
+* **HDR Detection:** Automatically switches display modes for high-fidelity viewing.
+ * **Album Management:** New UI for seamless photo organization and transfers.
+ * **Multi-Window Support:** Enhanced app resizability for smoother split-screen multitasking on Android.
+ * **Global Localization:** Full support for 11 new locales, including Arabic, Hindi, and Japanese.
+ * **Translation Refinement:** Updated all supported languages to ensure better local accuracy and flow.
