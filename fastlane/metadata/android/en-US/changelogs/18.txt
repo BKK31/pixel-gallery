@@ -1,0 +1,1 @@
+* Bug fixes: Fixed a bug with zooming an image causing to move to next or previous image when zoomed

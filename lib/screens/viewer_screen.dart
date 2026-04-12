@@ -21,7 +21,6 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latLng;
-import 'package:native_exif/native_exif.dart';
 import 'package:motion_photos/motion_photos.dart';
 import 'package:wallpaper_manager_plus/wallpaper_manager_plus.dart';
 import '../services/window_service.dart';
@@ -58,6 +57,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   bool _isPlayingMotion = false;
   bool _isAutoRotate = false;
   bool _isCurrentHdr = false;
+  bool _isZoomed = false;
   final LocalDatabase _db = LocalDatabase();
 
   final List<String> _popupActions = ['Set as Wallpaper', 'Move to Locked Folder'];
@@ -135,21 +135,45 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   void _startUiTimer() {
     _uiTimer?.cancel();
-    _uiTimer = Timer(const Duration(milliseconds: 1500), () {
-      if (mounted && _showUI && _player?.state.playing == true) {
-        setState(() {
-          _showUI = false;
-          _updateSystemUI();
-        });
+    _uiTimer = Timer(const Duration(milliseconds: 3000), () {
+      if (mounted && _showUI) {
+        final photo = _photos[_currentIndex];
+        bool shouldHide = false;
+        if (photo.asset.isVideo) {
+          if (_player?.state.playing == true) {
+            shouldHide = true;
+          }
+        } else {
+          shouldHide = true;
+        }
+
+        if (shouldHide) {
+          setState(() {
+            _showUI = false;
+            _updateSystemUI();
+          });
+        }
       }
     });
   }
 
   void _resetUiTimer() {
     _uiTimer?.cancel();
-    if (_showUI && _player?.state.playing == true) {
+    if (_showUI) {
       _startUiTimer();
     }
+  }
+
+  void _toggleUI() {
+    setState(() {
+      _showUI = !_showUI;
+      _updateSystemUI();
+      if (_showUI) {
+        _startUiTimer();
+      } else {
+        _uiTimer?.cancel();
+      }
+    });
   }
 
   Future<void> _checkMotionPhoto(int index) async {
@@ -262,6 +286,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     if (mounted) {
       setState(() {
         _currentIndex = index;
+        _isZoomed = false;
       });
     }
     _initializeVideoController(index);
@@ -271,11 +296,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
       _autoRotate();
     }
 
-    if (_photos[index].asset.isVideo) {
-      _startUiTimer();
-    } else {
-      _uiTimer?.cancel();
-    }
+    _startUiTimer();
 
     if (index >= _photos.length - 5) {
       _loadMore();
@@ -296,9 +317,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     _applyHdrMode(widget.index);
     _updateSystemUI();
 
-    if (widget.initialPhotos[widget.index].asset.isVideo) {
-      _startUiTimer();
-    }
+    _startUiTimer();
 
     _updateSubscription = _service.entryUpdateStream.listen((entry) {
       if (mounted) {
@@ -439,48 +458,75 @@ class _ViewerScreenState extends State<ViewerScreen> {
         children: [
           // Main Content
           GestureDetector(
-            onTap: () {
-              setState(() {
-                _showUI = !_showUI;
-                _updateSystemUI();
-                if (_showUI) _resetUiTimer();
-              });
-            },
-            child: PageView.builder(
-              controller: _controller,
-              itemCount: _photos.length,
+            onTap: _toggleUI,
+            child: PhotoViewGallery.builder(
+              scrollPhysics: _isZoomed ? const NeverScrollableScrollPhysics() : const BouncingScrollPhysics(),
+              pageController: _controller,
               onPageChanged: _onPageChanged,
-              itemBuilder: (context, index) {
+              itemCount: _photos.length,
+              builder: (context, index) {
                 final photo = _photos[index];
                 if (photo.asset.isVideo) {
-                  return VideoScreen(
-                    asset: photo.asset,
-                    controlsVisible: _showUI,
-                    player: _player,
-                    controller: _videoKitController,
-                    onUserInteraction: _resetUiTimer,
+                  return PhotoViewGalleryPageOptions.customChild(
+                    child: GestureDetector(
+                      onTapUp: (_) => _toggleUI(),
+                      behavior: HitTestBehavior.translucent,
+                      child: VideoScreen(
+                        asset: photo.asset,
+                        controlsVisible: _showUI,
+                        player: _player,
+                        controller: _videoKitController,
+                        onUserInteraction: _resetUiTimer,
+                      ),
+                    ),
+                    initialScale: PhotoViewComputedScale.contained,
+                    minScale: PhotoViewComputedScale.contained,
+                    maxScale: PhotoViewComputedScale.contained,
+                    disableGestures: true,
                   );
                 } else if (_isMotionPhoto && index == _currentIndex && _isPlayingMotion && _motionVideoController != null) {
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image(image: AvesEntryImageProvider(photo.asset), fit: BoxFit.contain),
-                      Positioned.fill(
-                        child: Center(child: Video(controller: _motionVideoController!, controls: NoVideoControls)),
+                  return PhotoViewGalleryPageOptions.customChild(
+                    child: GestureDetector(
+                      onTapUp: (_) => _toggleUI(),
+                      behavior: HitTestBehavior.translucent,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image(image: AvesEntryImageProvider(photo.asset), fit: BoxFit.contain),
+                          Positioned.fill(
+                            child: Center(child: Video(controller: _motionVideoController!, controls: NoVideoControls)),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                    initialScale: PhotoViewComputedScale.contained,
+                    minScale: PhotoViewComputedScale.contained,
+                    maxScale: PhotoViewComputedScale.contained,
+                    disableGestures: true,
                   );
                 } else {
-                  return PhotoView(
-                    imageProvider: AvesEntryImageProvider(photo.asset),
-                    minScale: PhotoViewComputedScale.contained,
-                    maxScale: PhotoViewComputedScale.covered * 4,
-                    heroAttributes: PhotoViewHeroAttributes(tag: photo.asset.id),
+                  return PhotoViewGalleryPageOptions.customChild(
+                    child: PhotoView(
+                      imageProvider: AvesEntryImageProvider(photo.asset),
+                      initialScale: PhotoViewComputedScale.contained,
+                      minScale: PhotoViewComputedScale.contained,
+                      maxScale: PhotoViewComputedScale.covered * 4,
+                      heroAttributes: PhotoViewHeroAttributes(tag: photo.asset.id),
+                      onTapUp: (context, details, value) => _toggleUI(),
+                      scaleStateChangedCallback: (state) {
+                        if (mounted) {
+                          setState(() {
+                            _isZoomed = state != PhotoViewScaleState.initial;
+                          });
+                        }
+                      },
+                    ),
                   );
                 }
               },
             ),
           ),
+
 
           // Top Bar
           AnimatedPositioned(
