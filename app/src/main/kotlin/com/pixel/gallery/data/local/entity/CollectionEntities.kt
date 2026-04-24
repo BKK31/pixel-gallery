@@ -1,0 +1,16 @@
+package com.pixel.gallery.data.local.entity
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "favourites")
+data class FavouriteEntry(
+    @PrimaryKey val id: Long
+)
+
+@Entity(tableName = "trash")
+data class TrashEntry(
+    @PrimaryKey val id: Long,
+    val path: String,
+    val dateMillis: Long
+)
