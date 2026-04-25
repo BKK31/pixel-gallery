@@ -1,0 +1,8 @@
+Pixel Gallery is now native! Ported to Kotlin for a smoother, faster experience.
+✨ New:
+- Ultra HDR image support.
+- Seamless 4K video playback.
+⚠️ CRITICAL:
+- Current Recycle Bin will become obsolete; back up important items before updating.
+- Favorites will be reset due to database changes; media must be re-favorited.
+Welcome to the future of Pixel Gallery!
