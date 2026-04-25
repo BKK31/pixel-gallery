@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Pixel Gallery</string>
+    
+    <!-- Navigation -->
+    <string name="nav_photos">Photos</string>
+    <string name="nav_albums">Albums</string>
+    <string name="back">Back</string>
+    <string name="more">More</string>
+    <string name="cancel">Cancel</string>
+    
+    <!-- Screens -->
+    <string name="settings">Settings</string>
+    <string name="favourites">Favourites</string>
+    <string name="recycle_bin">Recycle Bin</string>
+    <string name="hidden_albums">Hidden Albums</string>
+    <string name="locked_folder">Locked Folder</string>
+    <string name="locked_folder_auth_subtitle">Authenticate to view hidden media</string>
+    <string name="locked_folder_locked">Locked Folder is Locked</string>
+    <string name="locked_folder_empty">No Items in Locked Folder</string>
+    <string name="locked_folder_empty_text">Move sensitive photos and videos here to hide them from your main gallery and other apps.</string>
+    <string name="edit">Edit</string>
+    <string name="excluded_folders">Excluded Folders</string>
+    <string name="licenses">Licenses</string>
+    <string name="about">About</string>
+    <string name="open_source_licenses">Open Source Licenses</string>
+    <string name="licenses_intro">This app uses the following open source libraries:</string>
+    
+    <!-- Settings -->
+    <string name="material_you">Material You</string>
+    <string name="material_you_desc">Use system dynamic colors</string>
+    <string name="start_at_albums">Start at Albums</string>
+    <string name="start_at_albums_desc">Open the albums tab by default</string>
+    <string name="language">Language</string>
+    <string name="language_desc">Change application language</string>
+    <string name="excluded_folders_desc">Manage ignored media locations</string>
+    <string name="select_language">Select Language</string>
+    
+    <!-- Hidden / Excluded -->
+    <string name="no_hidden_albums">No Hidden Albums</string>
+    <string name="hidden_albums_empty_text">Albums you hide from the main gallery will appear here. They are not visible in Recents or Albums grid.</string>
+    <string name="no_favourites">No Favourites Yet</string>
+    <string name="favourites_empty_text">Photos and videos you mark as favourites will appear here.</string>
+    <string name="bin_empty">Bin is Empty</string>
+    <string name="bin_empty_text">Items in the bin will be permanently deleted after 30 days.</string>
+    <string name="no_excluded_folders">No Excluded Folders</string>
+    <string name="excluded_folders_empty_text">Folders you exclude will not be scanned for media. This is useful for folders containing many non-gallery images.</string>
+    <string name="hide_album">Hide Album</string>
+    <string name="unhide">Unhide</string>
+    <string name="exclude_album">Exclude Album</string>
+    <string name="remove">Remove</string>
+    
+    <!-- Actions -->
+    <string name="item_count">%1$d items</string>
+    <string name="share">Share</string>
+    <string name="delete">Delete</string>
+    <string name="restore">Restore</string>
+    <string name="delete_permanently">Delete permanently</string>
+    <string name="move_to_locked">Move to Locked</string>
+    <string name="unlock">Unlock</string>
+    <string name="clear_selection">Clear selection</string>
+    <string name="selected">Selected</string>
+    <string name="selected_count">%1$d selected</string>
+    <string name="set_as_wallpaper">Set as Wallpaper</string>
+    <string name="move_to_locked_folder">Move to locked folder</string>
+    <string name="unlock_with_biometrics">Unlock with Biometrics</string>
+    <string name="auto_rotate">Auto-Rotate</string>
+    <string name="motion_photo">Motion Photo</string>
+    <string name="details">Details</string>
+    <string name="date_taken">Date Taken</string>
+    <string name="camera_info">Camera Info</string>
+    <string name="location">Location</string>
+    <string name="pause">Pause</string>
+    <string name="play">Play</string>
+    <string name="share_media">Share Media</string>
+    <string name="edit_media">Edit Media</string>
+    <string name="map_placeholder">Map Placeholder (%1$f, %2$f)</string>
+    <string name="unknown">Unknown</string>
+</resources>
