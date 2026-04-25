@@ -1,5 +1,5 @@
 # Android
-build/
+/app/build/
 *.iml
 .gradle
 /local.properties
