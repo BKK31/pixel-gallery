@@ -8,7 +8,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Tab
-import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
@@ -17,8 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.clickable
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.os.LocaleListCompat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,7 +27,6 @@ fun SettingsScreen(
 ) {
     val materialYou by viewModel.materialYou.collectAsState()
     val startupAtAlbums by viewModel.startupAtAlbums.collectAsState()
-    var showLanguagePicker by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -74,14 +70,6 @@ fun SettingsScreen(
             }
             item {
                 SettingsClickItem(
-                    title = "Language",
-                    description = "Change application language",
-                    icon = Icons.Outlined.Language,
-                    onClick = { showLanguagePicker = true }
-                )
-            }
-            item {
-                SettingsClickItem(
                     title = "Excluded Folders",
                     description = "Manage ignored media locations",
                     icon = Icons.Outlined.FolderOff,
@@ -92,53 +80,13 @@ fun SettingsScreen(
             item {
                 SettingsClickItem(
                     title = "About",
-                    description = "Pixel Gallery v3.3.0",
+                    description = "Pixel Gallery v4.0.0",
                     icon = Icons.Outlined.Info,
                     onClick = onNavigateToLicenses
                 )
             }
         }
-
-        if (showLanguagePicker) {
-            LanguagePickerDialog(onDismiss = { showLanguagePicker = false })
-        }
     }
-}
-
-@Composable
-fun LanguagePickerDialog(onDismiss: () -> Unit) {
-    val languages = listOf(
-        "English" to "en",
-        "Spanish" to "es",
-        "French" to "fr",
-        "German" to "de",
-        "Italian" to "it",
-        "Portuguese" to "pt",
-        "Kannada" to "kn"
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Select Language") },
-        text = {
-            LazyColumn {
-                items(languages.size) { index ->
-                    val (name, code) = languages[index]
-                    ListItem(
-                        headlineContent = { Text(name) },
-                        modifier = Modifier.clickable {
-                            val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(code)
-                            AppCompatDelegate.setApplicationLocales(appLocale)
-                            onDismiss()
-                        }
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
 }
 
 @Composable
