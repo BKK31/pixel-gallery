@@ -7,19 +7,30 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.pixel.gallery.ui.theme.EmphasizedTypography
+import com.pixel.gallery.ui.viewmodel.PhotosViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HiddenAlbumsScreen(onBack: () -> Unit) {
+fun HiddenAlbumsScreen(
+    onBack: () -> Unit,
+    viewModel: PhotosViewModel = hiltViewModel()
+) {
+    val hiddenFolders by viewModel.hiddenFolders.collectAsState()
+    val hiddenAlbums by viewModel.hiddenAlbums.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -37,10 +48,7 @@ fun HiddenAlbumsScreen(onBack: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        // Placeholder for hidden albums list
-        val hasHiddenAlbums = false // TODO: Bind to settings/database
-        
-        if (!hasHiddenAlbums) {
+        if (hiddenFolders.isEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -75,21 +83,24 @@ fun HiddenAlbumsScreen(onBack: () -> Unit) {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                items(5) { index ->
+                items(hiddenAlbums) { album ->
                     ListItem(
-                        headlineContent = { Text("Hidden Album $index") },
-                        supportingContent = { Text("42 items") },
+                        headlineContent = { Text(album.name) },
+                        supportingContent = { Text(album.path) },
                         leadingContent = {
                             Box(
                                 modifier = Modifier
                                     .size(56.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                            )
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Outlined.VisibilityOff, contentDescription = null)
+                            }
                         },
                         trailingContent = {
-                            IconButton(onClick = { /* TODO: Unhide */ }) {
-                                Icon(Icons.Outlined.VisibilityOff, contentDescription = "Unhide")
+                            IconButton(onClick = { viewModel.removeHiddenFolder(album.path) }) {
+                                Icon(Icons.Outlined.Visibility, contentDescription = "Unhide")
                             }
                         }
                     )

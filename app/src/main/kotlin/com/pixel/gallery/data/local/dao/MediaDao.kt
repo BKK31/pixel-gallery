@@ -5,13 +5,14 @@ import com.pixel.gallery.data.local.entity.MediaEntry
 import com.pixel.gallery.data.local.entity.MetadataEntry
 import com.pixel.gallery.data.local.entity.FavouriteEntry
 import com.pixel.gallery.data.local.entity.TrashEntry
+import com.pixel.gallery.data.local.entity.VaultEntry
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MediaDao {
     
     // --- All Media ---
-    @Query("SELECT * FROM media_entries WHERE isTrashed = 0 ORDER BY dateModifiedMillis DESC")
+    @Query("SELECT * FROM media_entries WHERE isTrashed = 0 ORDER BY bestTimestamp DESC")
     fun getAllEntries(): Flow<List<MediaEntry>>
 
     @Query("SELECT contentId, dateModifiedMillis, isTrashed FROM media_entries")
@@ -24,7 +25,7 @@ interface MediaDao {
     suspend fun deleteByIds(ids: List<Long>)
 
     // --- Favourites ---
-    @Query("SELECT * FROM media_entries WHERE isTrashed = 0 AND contentId IN (SELECT id FROM favourites) ORDER BY dateModifiedMillis DESC")
+    @Query("SELECT * FROM media_entries WHERE isTrashed = 0 AND contentId IN (SELECT id FROM favourites) ORDER BY bestTimestamp DESC")
     fun getFavourites(): Flow<List<MediaEntry>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -37,8 +38,21 @@ interface MediaDao {
     fun isFavourite(id: Long): Flow<Boolean>
 
     // --- Trash ---
-    @Query("SELECT * FROM media_entries WHERE isTrashed = 1 ORDER BY dateModifiedMillis DESC")
+    @Query("SELECT * FROM media_entries WHERE isTrashed = 1 ORDER BY bestTimestamp DESC")
     fun getTrash(): Flow<List<MediaEntry>>
+
+    // --- Vault ---
+    @Query("SELECT * FROM vault")
+    fun getVaultEntries(): Flow<List<VaultEntry>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertVaultEntry(entry: VaultEntry)
+
+    @Query("DELETE FROM vault WHERE id = :id")
+    suspend fun deleteVaultEntry(id: Long)
+
+    @Query("SELECT * FROM vault WHERE id = :id")
+    suspend fun getVaultEntry(id: Long): VaultEntry?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun moveToTrash(trashEntry: TrashEntry)

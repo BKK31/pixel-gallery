@@ -14,3 +14,11 @@ data class TrashEntry(
     val path: String,
     val dateMillis: Long
 )
+
+@Entity(tableName = "vault")
+data class VaultEntry(
+    @PrimaryKey val id: Long,
+    val vaultPath: String,
+    val originalPath: String,
+    val entryJson: String
+)

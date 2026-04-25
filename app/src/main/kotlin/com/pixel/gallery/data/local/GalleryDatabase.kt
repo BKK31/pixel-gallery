@@ -7,15 +7,17 @@ import com.pixel.gallery.data.local.entity.MediaEntry
 import com.pixel.gallery.data.local.entity.MetadataEntry
 import com.pixel.gallery.data.local.entity.FavouriteEntry
 import com.pixel.gallery.data.local.entity.TrashEntry
+import com.pixel.gallery.data.local.entity.VaultEntry
 
 @Database(
     entities = [
         MediaEntry::class,
         MetadataEntry::class,
         FavouriteEntry::class,
-        TrashEntry::class
+        TrashEntry::class,
+        VaultEntry::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class GalleryDatabase : RoomDatabase() {

@@ -28,6 +28,8 @@ class SettingsRepository @Inject constructor(
 ) {
     private val STARTUP_AT_ALBUMS = booleanPreferencesKey("flutter.albums")
     private val MATERIAL_YOU = booleanPreferencesKey("flutter.material_you")
+    private val EXCLUDED_FOLDERS = stringSetPreferencesKey("excluded_folders")
+    private val HIDDEN_FOLDERS = stringSetPreferencesKey("hidden_folders")
 
     val startupAtAlbums: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[STARTUP_AT_ALBUMS] ?: false }
@@ -44,6 +46,40 @@ class SettingsRepository @Inject constructor(
     suspend fun setMaterialYou(value: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[MATERIAL_YOU] = value
+        }
+    }
+
+    val excludedFolders: Flow<Set<String>> = context.dataStore.data
+        .map { preferences -> preferences[EXCLUDED_FOLDERS] ?: emptySet() }
+
+    suspend fun addExcludedFolder(path: String) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[EXCLUDED_FOLDERS] ?: emptySet()
+            preferences[EXCLUDED_FOLDERS] = current + path
+        }
+    }
+
+    suspend fun removeExcludedFolder(path: String) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[EXCLUDED_FOLDERS] ?: emptySet()
+            preferences[EXCLUDED_FOLDERS] = current - path
+        }
+    }
+
+    val hiddenFolders: Flow<Set<String>> = context.dataStore.data
+        .map { preferences -> preferences[HIDDEN_FOLDERS] ?: emptySet() }
+
+    suspend fun addHiddenFolder(path: String) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[HIDDEN_FOLDERS] ?: emptySet()
+            preferences[HIDDEN_FOLDERS] = current + path
+        }
+    }
+
+    suspend fun removeHiddenFolder(path: String) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[HIDDEN_FOLDERS] ?: emptySet()
+            preferences[HIDDEN_FOLDERS] = current - path
         }
     }
 }

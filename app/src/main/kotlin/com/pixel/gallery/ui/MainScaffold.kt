@@ -3,6 +3,7 @@ package com.pixel.gallery.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.PhotoAlbum
@@ -13,6 +14,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.FloatingToolbarExitDirection
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -37,49 +39,77 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel
+
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import kotlinx.coroutines.launch
 
 // Height of the toolbar + gap, used to pad content so last items aren't hidden
 private val FloatingBarHeight = 80.dp
 
-sealed class Screen {
-    object Home : Screen()
-    object Settings : Screen()
-    object Favourites : Screen()
-    object Trash : Screen()
-    object HiddenAlbums : Screen()
-    object LockedFolder : Screen()
-    data class Viewer(val initialId: Long, val source: ViewerSource = ViewerSource.All) : Screen()
-    object ExcludedFolders : Screen()
-    object Licenses : Screen()
-    data class Photo(val albumName: String) : Screen()
+sealed class Screen : Parcelable {
+    @Parcelize object Home : Screen()
+    @Parcelize object Settings : Screen()
+    @Parcelize object Favourites : Screen()
+    @Parcelize object Trash : Screen()
+    @Parcelize object HiddenAlbums : Screen()
+    @Parcelize object LockedFolder : Screen()
+    @Parcelize data class Viewer(
+        val initialId: Long, 
+        val source: ViewerSource = ViewerSource.All,
+        val albumName: String? = null
+    ) : Screen()
+    @Parcelize object ExcludedFolders : Screen()
+    @Parcelize object Licenses : Screen()
+    @Parcelize data class Photo(val albumName: String) : Screen()
 
-    enum class ViewerSource { All, Favourites, Trash, Album }
+    enum class ViewerSource { All, Favourites, Trash, Album, Vault }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun MainScaffold(
     photosViewModel: PhotosViewModel = hiltViewModel()
 ) {
     val allPhotos by photosViewModel.photos.collectAsState()
+    val groupedPhotos by photosViewModel.groupedPhotos.collectAsState()
     val favourites by photosViewModel.favourites.collectAsState()
+    val groupedFavourites by photosViewModel.groupedFavourites.collectAsState()
     val trash by photosViewModel.trashedMedia.collectAsState()
+    val groupedTrash by photosViewModel.groupedTrashedMedia.collectAsState()
+    val vault by photosViewModel.vaultEntries.collectAsState()
+    val groupedVault by photosViewModel.groupedVaultEntries.collectAsState()
     val albums by photosViewModel.albums.collectAsState()
     
     // Simple navigation stack
-    var navigationStack by remember { mutableStateOf(listOf<Screen>(Screen.Home)) }
+    var navigationStack by rememberSaveable { mutableStateOf(listOf<Screen>(Screen.Home)) }
     val currentScreen = navigationStack.last()
     
+    // Hoisted Grid States for persistence
+    val recentsGridState = rememberLazyGridState()
+    val albumsGridState = rememberLazyGridState()
+    val favouritesGridState = rememberLazyGridState()
+    val trashGridState = rememberLazyGridState()
+    val vaultGridState = rememberLazyGridState()
+    val albumPhotoGridState = rememberLazyGridState() // Shared for individual albums
+    
     val startupAtAlbums by photosViewModel.startupAtAlbums.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) }
-    var hasInitializedTab by remember { mutableStateOf(false) }
+    val homePagerState = rememberPagerState(pageCount = { 2 })
+    val scope = rememberCoroutineScope()
 
     // Initialize tab based on preference once
+    var hasInitializedTab by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(startupAtAlbums) {
         if (!hasInitializedTab) {
-            selectedTab = if (startupAtAlbums) 1 else 0
+            val initialPage = if (startupAtAlbums) 1 else 0
+            homePagerState.scrollToPage(initialPage)
             hasInitializedTab = true
         }
     }
@@ -115,17 +145,25 @@ fun MainScaffold(
         exitDirection = FloatingToolbarExitDirection.Bottom
     )
 
+    // Window Insets
+    val systemBarsPadding = WindowInsets.systemBars.asPaddingValues()
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val contentBottomPadding = FloatingBarHeight + 16.dp + navBarPadding
+    val contentBottomPadding = if (currentScreen == Screen.Home) {
+        FloatingBarHeight + 16.dp + navBarPadding
+    } else {
+        navBarPadding + 16.dp
+    }
+    
     val colorScheme = MaterialTheme.colorScheme
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    val selectedEntries = remember(selectedIds, allPhotos, trash) {
-        (allPhotos + trash).filter { selectedIds.contains(it.contentId) }
+    val selectedEntries = remember(selectedIds, allPhotos, trash, vault) {
+        (allPhotos + trash + vault).filter { selectedIds.contains(it.contentId) }
     }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0),
+        contentWindowInsets = WindowInsets(0), // Manual padding for full control
+        modifier = Modifier.nestedScroll(scrollBehavior),
         topBar = {
             if (selectedIds.isNotEmpty()) {
                 // Contextual Top Bar for Selection
@@ -150,9 +188,24 @@ fun MainScaffold(
                             }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete permanently")
                             }
+                        } else if (currentScreen == Screen.LockedFolder) {
+                            IconButton(onClick = { 
+                                selectedEntries.forEach { photosViewModel.restoreFromVault(it.contentId) }
+                                selectedIds = emptySet()
+                            }) {
+                                Icon(Icons.Outlined.LockOpen, contentDescription = "Unlock")
+                            }
                         } else {
                             IconButton(onClick = { 
-                                val uris = selectedEntries.map { android.net.Uri.parse(it.uri) }
+                                selectedEntries.forEach { photosViewModel.moveToVault(it) }
+                                selectedIds = emptySet()
+                            }) {
+                                Icon(Icons.Outlined.Lock, contentDescription = "Move to Locked")
+                            }
+                            IconButton(onClick = { 
+                                val uris = selectedEntries.map { 
+                                    FileProvider.getUriForFile(context, "com.pixel.gallery.fileprovider", java.io.File(it.path))
+                                }
                                 val intent = android.content.Intent(android.content.Intent.ACTION_SEND_MULTIPLE).apply {
                                     type = "*/*" // Could be more specific if all are same type
                                     putParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, ArrayList(uris))
@@ -226,26 +279,36 @@ fun MainScaffold(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(top = if (currentScreen is Screen.Viewer) 0.dp else innerPadding.calculateTopPadding())
         ) {
             // Screen content management
             when (currentScreen) {
                 Screen.Home -> {
-                    when (selectedTab) {
-                        0 -> PhotosScreen(
-                            photos = allPhotos,
-                            onNavigateToViewer = { id -> navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.All) },
-                            selectedIds = selectedIds,
-                            onToggleSelection = toggleSelection,
-                            bottomPadding = contentBottomPadding
-                        )
-                        1 -> AlbumsScreen(
-                            albums = albums,
-                            bottomPadding = contentBottomPadding,
-                            onNavigateToFavourites = { navigationStack = navigationStack + Screen.Favourites },
-                            onNavigateToTrash = { navigationStack = navigationStack + Screen.Trash },
-                            onNavigateToAlbum = { name -> navigationStack = navigationStack + Screen.Photo(name) }
-                        )
+                    HorizontalPager(
+                        state = homePagerState,
+                        modifier = Modifier.fillMaxSize(),
+                        userScrollEnabled = selectedIds.isEmpty() // Disable swiping during selection
+                    ) { page ->
+                        when (page) {
+                            0 -> PhotosScreen(
+                                items = groupedPhotos,
+                                onNavigateToViewer = { id -> navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.All) },
+                                selectedIds = selectedIds,
+                                onToggleSelection = toggleSelection,
+                                bottomPadding = contentBottomPadding,
+                                state = recentsGridState
+                            )
+                            1 -> AlbumsScreen(
+                                albums = albums,
+                                bottomPadding = contentBottomPadding,
+                                gridState = albumsGridState,
+                                onNavigateToFavourites = { navigationStack = navigationStack + Screen.Favourites },
+                                onNavigateToTrash = { navigationStack = navigationStack + Screen.Trash },
+                                onNavigateToAlbum = { name -> navigationStack = navigationStack + Screen.Photo(name) },
+                                onExclude = { path -> photosViewModel.addExcludedFolder(path) },
+                                onHide = { path -> photosViewModel.addHiddenFolder(path) }
+                            )
+                        }
                     }
                 }
                 Screen.Settings -> SettingsScreen(
@@ -257,23 +320,39 @@ fun MainScaffold(
                     onBack = { navigationStack = navigationStack.dropLast(1) },
                     onNavigateToViewer = { id -> navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.Favourites) },
                     selectedIds = selectedIds,
-                    onToggleSelection = toggleSelection
+                    onToggleSelection = toggleSelection,
+                    items = groupedFavourites,
+                    gridState = favouritesGridState
                 )
                 Screen.Trash -> TrashScreen(
                     onBack = { navigationStack = navigationStack.dropLast(1) },
                     onNavigateToViewer = { id -> navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.Trash) },
                     selectedIds = selectedIds,
-                    onToggleSelection = toggleSelection
+                    onToggleSelection = toggleSelection,
+                    items = groupedTrash,
+                    gridState = trashGridState
                 )
                 Screen.HiddenAlbums -> HiddenAlbumsScreen(onBack = { navigationStack = navigationStack.dropLast(1) })
-                Screen.LockedFolder -> LockedFolderScreen(onBack = { navigationStack = navigationStack.dropLast(1) })
+                Screen.LockedFolder -> LockedFolderScreen(
+                    onBack = { navigationStack = navigationStack.dropLast(1) },
+                    onNavigateToViewer = { id -> navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.Vault) },
+                    selectedIds = selectedIds,
+                    onToggleSelection = toggleSelection,
+                    items = groupedVault
+                )
                 is Screen.Viewer -> {
                     val viewer = currentScreen as Screen.Viewer
                     val photosForViewer = when (viewer.source) {
                         Screen.ViewerSource.All -> allPhotos
                         Screen.ViewerSource.Favourites -> favourites
                         Screen.ViewerSource.Trash -> trash
-                        Screen.ViewerSource.Album -> allPhotos // Simplified
+                        Screen.ViewerSource.Vault -> vault
+                        Screen.ViewerSource.Album -> {
+                            allPhotos.filter { 
+                                val file = java.io.File(it.path)
+                                file.parentFile?.name == viewer.albumName
+                            }
+                        }
                     }
                     ViewerScreen(
                         initialId = viewer.initialId,
@@ -288,9 +367,12 @@ fun MainScaffold(
                     PhotoScreen(
                         albumName = albumName,
                         onBack = { navigationStack = navigationStack.dropLast(1) },
-                        onNavigateToViewer = { id -> navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.Album) },
+                        onNavigateToViewer = { id -> 
+                            navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.Album, albumName) 
+                        },
                         selectedIds = selectedIds,
-                        onToggleSelection = toggleSelection
+                        onToggleSelection = toggleSelection,
+                        gridState = albumPhotoGridState
                     )
                 }
             }
@@ -312,11 +394,15 @@ fun MainScaffold(
                         )
 
                         tabs.forEachIndexed { index, tab ->
-                            val isSelected = selectedTab == index
+                            val isSelected = homePagerState.currentPage == index
                             
                             // Using a pill-shaped item that shows a label when selected
                             Surface(
-                                onClick = { selectedTab = index },
+                                onClick = { 
+                                    scope.launch {
+                                        homePagerState.animateScrollToPage(index)
+                                    }
+                                },
                                 shape = FloatingToolbarDefaults.ContainerShape,
                                 color = if (isSelected) colorScheme.primaryContainer else colorScheme.surface,
                                 contentColor = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant,

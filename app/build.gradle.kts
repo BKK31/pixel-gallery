@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
+    id("kotlin-parcelize")
     id("com.google.devtools.ksp")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
@@ -33,8 +34,8 @@ android {
         applicationId = "com.pixel.gallery"
         minSdk = 26
         targetSdk = 35
-        versionCode = 18
-        versionName = "3.2.1"
+        versionCode = 19
+        versionName = "3.2.2"
     }
 
     signingConfigs {
@@ -52,6 +53,22 @@ android {
                     storeFile = rootProject.file(storeFileEnv)
                 }
             }
+
+            // Force enable V1 and V2 to match Flutter's behavior
+            // V3 and V4 are disabled to avoid installation issues with manual updates
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = false
+            enableV4Signing = false
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = true
         }
     }
 
@@ -61,8 +78,7 @@ android {
             if (releaseConfig.storeFile != null && releaseConfig.storeFile!!.exists()) {
                 signingConfig = releaseConfig
             } else {
-                signingConfig = signingConfigs.getByName("debug")
-                println("Release keystore not found; falling back to debug signing.")
+                error("Release keystore not found at ${releaseConfig.storeFile}. Release build requires valid signing config.")
             }
         }
     }
@@ -85,6 +101,27 @@ android {
             useLegacyPackaging = true
         }
     }
+
+    // Apply Flutter-style version code offsets for ABI splits
+    // This ensures that the version code is strictly higher than previous split builds
+    applicationVariants.all {
+        val variant = this
+        variant.outputs.map { it as com.android.build.gradle.internal.api.ApkVariantOutputImpl }.forEach { output ->
+            val abi = output.getFilter(com.android.build.OutputFile.ABI)
+            if (abi != null) {
+                val abiMultiplier = when (abi) {
+                    "armeabi-v7a" -> 1
+                    "arm64-v8a" -> 2
+                    "x86" -> 3
+                    "x86_64" -> 4
+                    else -> 0
+                }
+                if (abiMultiplier > 0) {
+                    output.versionCodeOverride = (variant.versionCode ?: 0) + abiMultiplier * 1000
+                }
+            }
+        }
+    }
 }
 
 dependencies {
@@ -102,6 +139,7 @@ dependencies {
     
     // Core & Lifecycle
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
@@ -131,6 +169,7 @@ dependencies {
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
     
     // Utilities
+    implementation("com.google.code.gson:gson:2.11.0")
     implementation("com.commonsware.cwac:document:0.5.0")
     implementation("com.drewnoakes:metadata-extractor:2.19.0")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
@@ -145,6 +184,7 @@ dependencies {
     // Other formats
     implementation("com.github.deckerst:androidsvg:c7e58e8e59")
     implementation("com.github.deckerst:Android-TiffBitmapFactory:424b18a4ae")
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

@@ -17,5 +17,6 @@ data class MediaEntry(
     val dateModifiedMillis: Long,
     val sourceDateTakenMillis: Long? = null,
     val durationMillis: Long? = null,
-    val isTrashed: Boolean = false
+    val isTrashed: Boolean = false,
+    val bestTimestamp: Long = 0L
 )

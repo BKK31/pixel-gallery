@@ -10,15 +10,24 @@ import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.RemoveCircleOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.pixel.gallery.ui.theme.EmphasizedTypography
+import com.pixel.gallery.ui.viewmodel.PhotosViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExcludedFoldersScreen(onBack: () -> Unit) {
+fun ExcludedFoldersScreen(
+    onBack: () -> Unit,
+    viewModel: PhotosViewModel = hiltViewModel()
+) {
+    val excludedFolders by viewModel.excludedFolders.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -32,19 +41,11 @@ fun ExcludedFoldersScreen(onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                },
-                actions = {
-                    IconButton(onClick = { /* TODO: Add folder */ }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add")
-                    }
                 }
             )
         }
     ) { innerPadding ->
-        // Placeholder for excluded folders list
-        val hasExcluded = false 
-        
-        if (!hasExcluded) {
+        if (excludedFolders.isEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -79,12 +80,12 @@ fun ExcludedFoldersScreen(onBack: () -> Unit) {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                items(3) { index ->
+                items(excludedFolders.toList()) { path ->
                     ListItem(
-                        headlineContent = { Text("/storage/emulated/0/Excluded_$index") },
+                        headlineContent = { Text(path) },
                         leadingContent = { Icon(Icons.Outlined.FolderOff, contentDescription = null) },
                         trailingContent = {
-                            IconButton(onClick = { /* TODO: Remove exclusion */ }) {
+                            IconButton(onClick = { viewModel.removeExcludedFolder(path) }) {
                                 Icon(Icons.Outlined.RemoveCircleOutline, contentDescription = "Remove")
                             }
                         }

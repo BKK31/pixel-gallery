@@ -1,22 +1,24 @@
 package com.pixel.gallery.ui.gallery
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.pixel.gallery.ui.theme.EmphasizedTypography
-
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pixel.gallery.ui.home.PhotosScreen
+import com.pixel.gallery.ui.theme.EmphasizedTypography
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel
+import com.pixel.gallery.ui.viewmodel.PhotosViewModel.GridItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,10 +27,10 @@ fun TrashScreen(
     onNavigateToViewer: (Long) -> Unit,
     selectedIds: Set<Long> = emptySet(),
     onToggleSelection: (Long) -> Unit = {},
+    items: List<GridItem> = emptyList(),
+    gridState: LazyGridState = rememberLazyGridState(),
     viewModel: PhotosViewModel = hiltViewModel()
 ) {
-    val trash by viewModel.trashedMedia.collectAsState()
-
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
@@ -46,7 +48,7 @@ fun TrashScreen(
                         }
                     },
                     actions = {
-                        if (trash.isNotEmpty()) {
+                        if (items.isNotEmpty()) {
                             TextButton(onClick = { /* TODO: Empty bin */ }) {
                                 Text("Empty", color = MaterialTheme.colorScheme.error)
                             }
@@ -56,7 +58,7 @@ fun TrashScreen(
             }
         }
     ) { innerPadding ->
-        if (trash.isEmpty()) {
+        if (items.isEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -88,10 +90,11 @@ fun TrashScreen(
         } else {
             Box(modifier = Modifier.padding(innerPadding)) {
                 PhotosScreen(
-                    photos = trash,
+                    items = items,
                     onNavigateToViewer = onNavigateToViewer,
                     selectedIds = selectedIds,
-                    onToggleSelection = onToggleSelection
+                    onToggleSelection = onToggleSelection,
+                    state = gridState
                 )
             }
         }
