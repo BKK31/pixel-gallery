@@ -87,6 +87,7 @@ fun MainScaffold(
     val vault by photosViewModel.vaultEntries.collectAsState()
     val groupedVault by photosViewModel.groupedVaultEntries.collectAsState()
     val albums by photosViewModel.albums.collectAsState()
+    val gridColumns by photosViewModel.gridColumns.collectAsState()
     
     // Simple navigation stack
     var navigationStack by rememberSaveable { mutableStateOf(listOf<Screen>(Screen.Home)) }
@@ -300,6 +301,8 @@ fun MainScaffold(
                                 selectedIds = selectedIds,
                                 onSelectionChange = updateSelection,
                                 onToggleSelection = toggleSelection,
+                                columns = gridColumns,
+                                onColumnsChange = { photosViewModel.setGridColumns(it) },
                                 bottomPadding = contentBottomPadding,
                                 state = recentsGridState
                             )

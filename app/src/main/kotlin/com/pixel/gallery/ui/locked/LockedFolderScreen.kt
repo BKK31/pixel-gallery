@@ -21,6 +21,7 @@ import com.pixel.gallery.ui.home.PhotosScreen
 import com.pixel.gallery.ui.theme.EmphasizedTypography
 import com.pixel.gallery.ui.theme.ExpressiveShapes
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel.GridItem
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,8 +31,10 @@ fun LockedFolderScreen(
     selectedIds: Set<Long> = emptySet(),
     onSelectionChange: (Set<Long>) -> Unit = {},
     onToggleSelection: (Long) -> Unit = {},
-    items: List<GridItem> = emptyList()
+    items: List<GridItem> = emptyList(),
+    viewModel: com.pixel.gallery.ui.viewmodel.PhotosViewModel = hiltViewModel()
 ) {
+    val gridColumns by viewModel.gridColumns.collectAsState()
     val context = LocalContext.current
     var isAuthenticated by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
@@ -170,7 +173,9 @@ fun LockedFolderScreen(
                     onNavigateToViewer = onNavigateToViewer,
                     selectedIds = selectedIds,
                     onSelectionChange = onSelectionChange,
-                    onToggleSelection = onToggleSelection
+                    onToggleSelection = onToggleSelection,
+                    columns = gridColumns,
+                    onColumnsChange = { viewModel.setGridColumns(it) }
                 )
             }
         }

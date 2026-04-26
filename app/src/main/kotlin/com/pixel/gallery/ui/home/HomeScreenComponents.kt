@@ -15,9 +15,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.PlayArrow
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.pixel.gallery.data.local.entity.MediaEntry
@@ -36,6 +38,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.ui.graphics.graphicsLayer
 import com.pixel.gallery.ui.utils.photoGridDragSelect
+import com.pixel.gallery.ui.utils.pinchToZoomColumns
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel.GridItem
 
 @OptIn(ExperimentalGlideComposeApi::class)
@@ -47,6 +50,7 @@ fun PhotosScreen(
     onSelectionChange: (Set<Long>) -> Unit = {},
     onToggleSelection: (Long) -> Unit = {},
     columns: Int = 3,
+    onColumnsChange: (Int) -> Unit = {},
     bottomPadding: Dp = 0.dp,
     state: LazyGridState = rememberLazyGridState()
 ) {
@@ -63,6 +67,12 @@ fun PhotosScreen(
                     onSelectionChange = onSelectionChange,
                     isPhoto = { index -> items[index] is GridItem.Photo },
                     getPhotoId = { index -> (items[index] as GridItem.Photo).entry.contentId }
+                )
+                .pinchToZoomColumns(
+                    currentColumns = columns,
+                    onColumnsChange = onColumnsChange,
+                    minColumns = 2,
+                    maxColumns = 6
                 ),
             contentPadding = PaddingValues(
                 start = 4.dp,
@@ -156,6 +166,21 @@ fun PhotoTile(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
+    val isVideo = remember(media.sourceMimeType) { media.sourceMimeType.startsWith("video/") }
+    val formattedDuration = remember(media.durationMillis) {
+        media.durationMillis?.let { ms ->
+            val totalSeconds = ms / 1000
+            val minutes = totalSeconds / 60
+            val seconds = totalSeconds % 60
+            val hours = minutes / 60
+            if (hours > 0) {
+                java.lang.String.format(java.util.Locale.getDefault(), "%d:%02d:%02d", hours, minutes % 60, seconds)
+            } else {
+                java.lang.String.format(java.util.Locale.getDefault(), "%d:%02d", minutes, seconds)
+            }
+        }
+    }
+
     val transition = updateTransition(isSelected, label = "SelectionTransition")
     
     val scale by transition.animateFloat(
@@ -246,6 +271,33 @@ fun PhotoTile(
                             .background(Color.White.copy(alpha = 0.5f), CircleShape)
                     )
                 }
+            }
+        }
+        
+        // Video indicators
+        if (isVideo && !isSelectionMode) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (formattedDuration != null) {
+                    Text(
+                        text = formattedDuration,
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(12.dp)
+                )
             }
         }
     }

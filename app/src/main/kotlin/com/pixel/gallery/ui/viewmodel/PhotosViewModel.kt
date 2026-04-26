@@ -39,10 +39,12 @@ class PhotosViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    fun groupMedia(entries: List<MediaEntry>): List<GridItem> {
+    fun groupMedia(entries: List<MediaEntry>, columns: Int = 3): List<GridItem> {
         val items = mutableListOf<GridItem>()
         var lastHeader = ""
-        val sdf = java.text.SimpleDateFormat("MMMM d, yyyy", java.util.Locale.getDefault())
+        // Use monthly grouping if columns are 6 or more
+        val format = if (columns >= 6) "MMMM yyyy" else "MMMM d, yyyy"
+        val sdf = java.text.SimpleDateFormat(format, java.util.Locale.getDefault())
         
         entries.forEach { entry ->
             val timestamp = entry.bestTimestamp
@@ -58,28 +60,35 @@ class PhotosViewModel @Inject constructor(
         return items
     }
 
-    val groupedPhotos: StateFlow<List<GridItem>> = photos.map { groupMedia(it) }
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val gridColumns: StateFlow<Int> = settingsRepository.gridColumns
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 3)
+
+    val groupedPhotos: StateFlow<List<GridItem>> = combine(photos, gridColumns) { media, cols ->
+        groupMedia(media, cols)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val favourites: StateFlow<List<MediaEntry>> = repository.favourites
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val groupedFavourites: StateFlow<List<GridItem>> = favourites.map { groupMedia(it) }
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val groupedFavourites: StateFlow<List<GridItem>> = combine(favourites, gridColumns) { media, cols ->
+        groupMedia(media, cols)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val trashedMedia: StateFlow<List<MediaEntry>> = repository.trash
         .stateIn(viewModelScope, SharingStarted.Lazily, emptySet())
         .map { it.toList() } // Compatibility
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val groupedTrashedMedia: StateFlow<List<GridItem>> = trashedMedia.map { groupMedia(it) }
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val groupedTrashedMedia: StateFlow<List<GridItem>> = combine(trashedMedia, gridColumns) { media, cols ->
+        groupMedia(media, cols)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val vaultEntries: StateFlow<List<MediaEntry>> = repository.vaultEntries
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val groupedVaultEntries: StateFlow<List<GridItem>> = vaultEntries.map { groupMedia(it) }
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val groupedVaultEntries: StateFlow<List<GridItem>> = combine(vaultEntries, gridColumns) { media, cols ->
+        groupMedia(media, cols)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val startupAtAlbums: StateFlow<Boolean> = settingsRepository.startupAtAlbums
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
@@ -89,6 +98,7 @@ class PhotosViewModel @Inject constructor(
 
     val excludedFolders: StateFlow<Set<String>> = settingsRepository.excludedFolders
         .stateIn(viewModelScope, SharingStarted.Lazily, emptySet())
+
 
     val albums: StateFlow<List<Album>> = photos
         .map { photos ->
@@ -256,6 +266,12 @@ class PhotosViewModel @Inject constructor(
     fun removeHiddenFolder(path: String) {
         viewModelScope.launch {
             settingsRepository.removeHiddenFolder(path)
+        }
+    }
+
+    fun setGridColumns(value: Int) {
+        viewModelScope.launch {
+            settingsRepository.setGridColumns(value)
         }
     }
 }

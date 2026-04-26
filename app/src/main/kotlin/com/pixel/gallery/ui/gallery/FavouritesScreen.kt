@@ -7,7 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -30,6 +30,8 @@ fun FavouritesScreen(
     gridState: LazyGridState = rememberLazyGridState(),
     viewModel: PhotosViewModel = hiltViewModel()
 ) {
+    val gridColumns by viewModel.gridColumns.collectAsState()
+
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
@@ -87,6 +89,8 @@ fun FavouritesScreen(
                     selectedIds = selectedIds,
                     onSelectionChange = onSelectionChange,
                     onToggleSelection = onToggleSelection,
+                    columns = gridColumns,
+                    onColumnsChange = { viewModel.setGridColumns(it) },
                     state = gridState
                 )
             }

@@ -1,10 +1,12 @@
 package com.pixel.gallery.ui.utils
 
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.*
@@ -199,4 +201,67 @@ private fun LazyGridState.getItemIndexAt(offset: Offset): Int? {
         val itemRect = IntRect(item.offset, item.size)
         itemRect.contains(offset.round())
     }?.index
+}
+
+/**
+ * A modifier that detects pinch-to-zoom gestures to dynamically change the number of columns in a grid.
+ */
+fun Modifier.pinchToZoomColumns(
+    currentColumns: Int,
+    onColumnsChange: (Int) -> Unit,
+    minColumns: Int = 2,
+    maxColumns: Int = 6
+): Modifier = composed {
+    var zoomAccumulator by remember { mutableFloatStateOf(1f) }
+    
+    LaunchedEffect(currentColumns) {
+        zoomAccumulator = 1f
+    }
+
+    this.pointerInput(currentColumns) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                val changes = event.changes.filter { it.pressed }
+                
+                if (changes.size >= 2) {
+                    val change1 = changes[0]
+                    val change2 = changes[1]
+                    
+                    val prevDistance = (change1.previousPosition - change2.previousPosition).getDistance()
+                    val currDistance = (change1.position - change2.position).getDistance()
+                    
+                    if (prevDistance > 0) {
+                        val zoom = currDistance / prevDistance
+                        
+                        // Sensitivity threshold to trigger consumption
+                        // If it's a pinch, we consume it to block scrolling/paging
+                        if (kotlin.math.abs(1f - zoom) > 0.001f) {
+                            changes.forEach { it.consume() }
+                            zoomAccumulator *= zoom
+                            
+                            if (zoomAccumulator > 1.35f) {
+                                if (currentColumns > minColumns) {
+                                    onColumnsChange(currentColumns - 1)
+                                    zoomAccumulator = 1f
+                                } else {
+                                    zoomAccumulator = 1.15f
+                                }
+                            } else if (zoomAccumulator < 0.65f) {
+                                if (currentColumns < maxColumns) {
+                                    onColumnsChange(currentColumns + 1)
+                                    zoomAccumulator = 1f
+                                } else {
+                                    zoomAccumulator = 0.85f
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Reset if less than 2 fingers
+                    zoomAccumulator = 1f
+                }
+            }
+        }
+    }
 }

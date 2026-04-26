@@ -32,6 +32,8 @@ fun TrashScreen(
     gridState: LazyGridState = rememberLazyGridState(),
     viewModel: PhotosViewModel = hiltViewModel()
 ) {
+    val gridColumns by viewModel.gridColumns.collectAsState()
+
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
@@ -96,6 +98,8 @@ fun TrashScreen(
                     selectedIds = selectedIds,
                     onSelectionChange = onSelectionChange,
                     onToggleSelection = onToggleSelection,
+                    columns = gridColumns,
+                    onColumnsChange = { viewModel.setGridColumns(it) },
                     state = gridState
                 )
             }

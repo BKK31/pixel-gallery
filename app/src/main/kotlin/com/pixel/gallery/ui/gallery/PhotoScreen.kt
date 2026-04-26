@@ -31,12 +31,14 @@ fun PhotoScreen(
     viewModel: PhotosViewModel = hiltViewModel()
 ) {
     val allPhotos by viewModel.allPhotos.collectAsState()
-    val albumItems = remember(allPhotos, albumName) {
+    val gridColumns by viewModel.gridColumns.collectAsState()
+    
+    val albumItems = remember(allPhotos, albumName, gridColumns) {
         val filtered = allPhotos.filter { 
             val file = java.io.File(it.path)
             file.parentFile?.name == albumName
         }
-        viewModel.groupMedia(filtered)
+        viewModel.groupMedia(filtered, gridColumns)
     }
 
     val photoCount = remember(albumItems) {
@@ -116,7 +118,8 @@ fun PhotoScreen(
                 selectedIds = selectedIds,
                 onSelectionChange = onSelectionChange,
                 onToggleSelection = onToggleSelection,
-                columns = 4, // Keep the album view denser
+                columns = gridColumns,
+                onColumnsChange = { viewModel.setGridColumns(it) },
                 state = gridState
             )
         }

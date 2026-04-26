@@ -30,6 +30,7 @@ class SettingsRepository @Inject constructor(
     private val MATERIAL_YOU = booleanPreferencesKey("flutter.material_you")
     private val EXCLUDED_FOLDERS = stringSetPreferencesKey("excluded_folders")
     private val HIDDEN_FOLDERS = stringSetPreferencesKey("hidden_folders")
+    private val GRID_COLUMNS = intPreferencesKey("grid_columns")
 
     val startupAtAlbums: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[STARTUP_AT_ALBUMS] ?: false }
@@ -80,6 +81,15 @@ class SettingsRepository @Inject constructor(
         context.dataStore.edit { preferences ->
             val current = preferences[HIDDEN_FOLDERS] ?: emptySet()
             preferences[HIDDEN_FOLDERS] = current - path
+        }
+    }
+
+    val gridColumns: Flow<Int> = context.dataStore.data
+        .map { preferences -> preferences[GRID_COLUMNS] ?: 3 }
+
+    suspend fun setGridColumns(value: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[GRID_COLUMNS] = value
         }
     }
 }
