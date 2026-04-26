@@ -1,0 +1,5 @@
+- Implemented Samsung-style pinch-to-zoom for dynamically adjusting grid column density.
+- Your preferred zoom level is now saved automatically.
+- Added dynamic grouping: pinch out to 6 columns to view photos grouped by Month.
+- Video thumbnails now display duration and a play icon.
+- Added glide to multi select 
