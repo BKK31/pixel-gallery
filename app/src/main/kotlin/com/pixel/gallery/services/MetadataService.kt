@@ -54,40 +54,64 @@ class MetadataService @Inject constructor(
         
         try {
             val exif = ExifInterface(path)
-            val xmp = exif.getAttribute(ExifInterface.TAG_XMP)
-            if (xmp == null || !xmp.contains("MotionPhoto")) return null
+            val xmp = exif.getAttribute(ExifInterface.TAG_XMP) ?: ""
+            val isMotionPath = path.contains(".MP.", ignoreCase = true)
             
-            // Motion photos usually have the video at the end.
-            // We search for the "ftyp" marker by reading from the end in chunks.
-            val marker = "ftyp".toByteArray()
-            val buffer = ByteArray(8192)
+            // Trigger check
+            if (!isMotionPath && !xmp.contains("MotionPhoto") && !xmp.contains("MicroVideo")) return null
+            
+            val fileSize = file.length()
             var videoOffset = -1L
             
-            file.inputStream().use { fis ->
-                val fileSize = file.length()
-                // Scan the last 1MB or so (most motion videos are 100kb-1MB)
-                val scanLimit = Math.min(fileSize, 2048 * 1024L)
-                val startPos = fileSize - scanLimit
-                fis.skip(startPos)
+            // 1. Try Legacy GCamera format (MicroVideoOffset)
+            val mvOffsetMatch = Regex("MicroVideoOffset\\s*=\\s*[\"'](\\d+)[\"']").find(xmp)
+                ?: Regex("MicroVideoOffset>(\\d+)<").find(xmp)
+            if (mvOffsetMatch != null) {
+                val length = mvOffsetMatch.groupValues[1].toLong()
+                videoOffset = fileSize - length
+            }
+            
+            // 2. Try Modern Container format (Item:Length for MotionPhoto)
+            if (videoOffset <= 0) {
+                val containerMatch = Regex("Item:Semantic\\s*=\\s*[\"']MotionPhoto[\"'].*?Item:Length\\s*=\\s*[\"'](\\d+)[\"']", RegexOption.DOT_MATCHES_ALL).find(xmp)
+                    ?: Regex("<Item:Semantic>MotionPhoto</Item:Semantic>.*?<Item:Length>(\\d+)</Item:Length>", RegexOption.DOT_MATCHES_ALL).find(xmp)
+                    ?: Regex("Item:Mime\\s*=\\s*[\"']video/mp4[\"'].*?Item:Length\\s*=\\s*[\"'](\\d+)[\"']", RegexOption.DOT_MATCHES_ALL).find(xmp)
                 
-                var totalRead = 0L
-                while (totalRead < scanLimit) {
-                    val read = fis.read(buffer)
-                    if (read == -1) break
-                    
-                    // Simple search for marker
-                    for (i in 0 until read - 4) {
-                        if (buffer[i] == marker[0] && buffer[i+1] == marker[1] && 
-                            buffer[i+2] == marker[2] && buffer[i+3] == marker[3]) {
-                            videoOffset = startPos + totalRead + i - 4
-                        }
-                    }
-                    totalRead += read
+                if (containerMatch != null) {
+                    val length = containerMatch.groupValues[1].toLong()
+                    videoOffset = fileSize - length
                 }
             }
             
-            if (videoOffset > 0) {
-                // Use a unique temp file to avoid crashes when swiping quickly
+            // 3. Last resort: Scan for ftyp marker with a much larger limit
+            if (videoOffset <= 0) {
+                val marker = "ftyp".toByteArray()
+                val buffer = ByteArray(8192)
+                file.inputStream().use { fis ->
+                    // Scan up to 25MB from the end (covering almost all motion photos)
+                    val scanLimit = Math.min(fileSize, 25 * 1024 * 1024L)
+                    val startPos = fileSize - scanLimit
+                    fis.skip(startPos)
+                    
+                    var totalRead = 0L
+                    while (totalRead < scanLimit) {
+                        val read = fis.read(buffer)
+                        if (read == -1) break
+                        
+                        for (i in 0 until read - 4) {
+                            if (buffer[i] == marker[0] && buffer[i+1] == marker[1] && 
+                                buffer[i+2] == marker[2] && buffer[i+3] == marker[3]) {
+                                videoOffset = startPos + totalRead + i - 4
+                                break
+                            }
+                        }
+                        if (videoOffset > 0) break
+                        totalRead += read
+                    }
+                }
+            }
+            
+            if (videoOffset > 0 && videoOffset < fileSize) {
                 val tempVideo = File.createTempFile("motion_", ".mp4", context.cacheDir)
                 file.inputStream().use { fis ->
                     fis.skip(videoOffset)

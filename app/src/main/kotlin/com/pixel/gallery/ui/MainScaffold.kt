@@ -124,6 +124,10 @@ fun MainScaffold(
         }
     }
 
+    val updateSelection = { ids: Set<Long> ->
+        selectedIds = ids
+    }
+
     var showMenu by remember { mutableStateOf(false) }
 
     // System back button handling
@@ -294,6 +298,7 @@ fun MainScaffold(
                                 items = groupedPhotos,
                                 onNavigateToViewer = { id -> navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.All) },
                                 selectedIds = selectedIds,
+                                onSelectionChange = updateSelection,
                                 onToggleSelection = toggleSelection,
                                 bottomPadding = contentBottomPadding,
                                 state = recentsGridState
@@ -320,6 +325,7 @@ fun MainScaffold(
                     onBack = { navigationStack = navigationStack.dropLast(1) },
                     onNavigateToViewer = { id -> navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.Favourites) },
                     selectedIds = selectedIds,
+                    onSelectionChange = updateSelection,
                     onToggleSelection = toggleSelection,
                     items = groupedFavourites,
                     gridState = favouritesGridState
@@ -328,6 +334,7 @@ fun MainScaffold(
                     onBack = { navigationStack = navigationStack.dropLast(1) },
                     onNavigateToViewer = { id -> navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.Trash) },
                     selectedIds = selectedIds,
+                    onSelectionChange = updateSelection,
                     onToggleSelection = toggleSelection,
                     items = groupedTrash,
                     gridState = trashGridState
@@ -337,6 +344,7 @@ fun MainScaffold(
                     onBack = { navigationStack = navigationStack.dropLast(1) },
                     onNavigateToViewer = { id -> navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.Vault) },
                     selectedIds = selectedIds,
+                    onSelectionChange = updateSelection,
                     onToggleSelection = toggleSelection,
                     items = groupedVault
                 )
@@ -371,6 +379,7 @@ fun MainScaffold(
                             navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.Album, albumName) 
                         },
                         selectedIds = selectedIds,
+                        onSelectionChange = updateSelection,
                         onToggleSelection = toggleSelection,
                         gridState = albumPhotoGridState
                     )

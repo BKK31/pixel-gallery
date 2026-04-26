@@ -25,6 +25,7 @@ fun PhotoScreen(
     onBack: () -> Unit,
     onNavigateToViewer: (Long) -> Unit,
     selectedIds: Set<Long> = emptySet(),
+    onSelectionChange: (Set<Long>) -> Unit = {},
     onToggleSelection: (Long) -> Unit = {},
     gridState: LazyGridState = rememberLazyGridState(),
     viewModel: PhotosViewModel = hiltViewModel()
@@ -113,6 +114,7 @@ fun PhotoScreen(
                 items = albumItems,
                 onNavigateToViewer = onNavigateToViewer,
                 selectedIds = selectedIds,
+                onSelectionChange = onSelectionChange,
                 onToggleSelection = onToggleSelection,
                 columns = 4, // Keep the album view denser
                 state = gridState

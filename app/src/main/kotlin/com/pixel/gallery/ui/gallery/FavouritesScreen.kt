@@ -24,6 +24,7 @@ fun FavouritesScreen(
     onBack: () -> Unit,
     onNavigateToViewer: (Long) -> Unit,
     selectedIds: Set<Long> = emptySet(),
+    onSelectionChange: (Set<Long>) -> Unit = {},
     onToggleSelection: (Long) -> Unit = {},
     items: List<GridItem> = emptyList(),
     gridState: LazyGridState = rememberLazyGridState(),
@@ -84,6 +85,7 @@ fun FavouritesScreen(
                     items = items,
                     onNavigateToViewer = onNavigateToViewer,
                     selectedIds = selectedIds,
+                    onSelectionChange = onSelectionChange,
                     onToggleSelection = onToggleSelection,
                     state = gridState
                 )

@@ -15,7 +15,6 @@
         android:label="Gallery"
         tools:replace="android:label"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
         <activity
             android:name=".MainActivity"

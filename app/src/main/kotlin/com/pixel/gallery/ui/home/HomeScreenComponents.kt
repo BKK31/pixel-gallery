@@ -24,13 +24,19 @@ import com.pixel.gallery.data.local.entity.MediaEntry
 import com.pixel.gallery.model.Album
 import com.pixel.gallery.ui.theme.EmphasizedTypography
 import com.pixel.gallery.ui.theme.ExpressiveShapes
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.CheckCircle
-import com.pixel.gallery.ui.viewmodel.PhotosViewModel.GridItem
+import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.ui.graphics.graphicsLayer
+import com.pixel.gallery.ui.utils.photoGridDragSelect
+import com.pixel.gallery.ui.viewmodel.PhotosViewModel.GridItem
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
@@ -38,6 +44,7 @@ fun PhotosScreen(
     items: List<GridItem>,
     onNavigateToViewer: (Long) -> Unit,
     selectedIds: Set<Long> = emptySet(),
+    onSelectionChange: (Set<Long>) -> Unit = {},
     onToggleSelection: (Long) -> Unit = {},
     columns: Int = 3,
     bottomPadding: Dp = 0.dp,
@@ -47,7 +54,16 @@ fun PhotosScreen(
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
             state = state,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .photoGridDragSelect(
+                    gridState = state,
+                    items = items,
+                    selectedIds = selectedIds,
+                    onSelectionChange = onSelectionChange,
+                    isPhoto = { index -> items[index] is GridItem.Photo },
+                    getPhotoId = { index -> (items[index] as GridItem.Photo).entry.contentId }
+                ),
             contentPadding = PaddingValues(
                 start = 4.dp,
                 top = 4.dp,
@@ -74,13 +90,28 @@ fun PhotosScreen(
             ) { index ->
                 when (val item = items[index]) {
                     is GridItem.Header -> {
-                        Text(
-                            text = item.title,
-                            style = EmphasizedTypography.LabelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .padding(start = 8.dp, top = 16.dp, bottom = 8.dp)
-                                .fillMaxWidth()
+                        val headerPhotos = remember(item, items) {
+                            val photos = mutableListOf<Long>()
+                            for (i in index + 1 until items.size) {
+                                val nextItem = items[i]
+                                if (nextItem is GridItem.Header) break
+                                if (nextItem is GridItem.Photo) photos.add(nextItem.entry.contentId)
+                            }
+                            photos
+                        }
+                        val isHeaderSelected = headerPhotos.isNotEmpty() && headerPhotos.all { selectedIds.contains(it) }
+                        
+                        DateHeader(
+                            title = item.title,
+                            isSelectionMode = selectedIds.isNotEmpty(),
+                            isSelected = isHeaderSelected,
+                            onToggleSelection = {
+                                if (isHeaderSelected) {
+                                    onSelectionChange(selectedIds - headerPhotos.toSet())
+                                } else {
+                                    onSelectionChange(selectedIds + headerPhotos.toSet())
+                                }
+                            }
                         )
                     }
                     is GridItem.Photo -> {
@@ -125,10 +156,43 @@ fun PhotoTile(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
+    val transition = updateTransition(isSelected, label = "SelectionTransition")
+    
+    val scale by transition.animateFloat(
+        label = "Scale",
+        transitionSpec = { 
+            if (targetState) {
+                spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow) 
+            } else {
+                spring(stiffness = Spring.StiffnessLow)
+            }
+        }
+    ) { state ->
+        if (state) 0.92f else 1.0f
+    }
+    
+    val cornerRadius by transition.animateDp(
+        label = "CornerRadius",
+        transitionSpec = { spring(stiffness = Spring.StiffnessLow) }
+    ) { state ->
+        if (state) 28.dp else 20.dp
+    }
+    
+    val overlayAlpha by transition.animateFloat(
+        label = "OverlayAlpha",
+        transitionSpec = { tween(200) }
+    ) { state ->
+        if (state) 0.3f else 0.0f
+    }
+
     Box(
         modifier = Modifier
             .aspectRatio(1f)
-            .clip(ExpressiveShapes.LargeIncreased)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(RoundedCornerShape(cornerRadius))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .combinedClickable(
                 onClick = onClick,
@@ -139,38 +203,50 @@ fun PhotoTile(
             model = media.uri,
             contentDescription = null,
             contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        
+        // Selection overlay
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .then(
-                    if (isSelected) Modifier.padding(12.dp).clip(MaterialTheme.shapes.medium) else Modifier
-                )
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = overlayAlpha))
         )
-
-        if (isSelected) {
+        
+        // Selection indicators
+        if (isSelectionMode) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-            )
-            Icon(
-                imageVector = Icons.Filled.CheckCircle,
-                contentDescription = "Selected",
-                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(8.dp)
-            )
-        } else if (isSelectionMode) {
-            // Outline for unselected items in selection mode
-            Box(
-                modifier = Modifier
-                    .padding(8.dp)
-                    .size(24.dp)
-                    .align(Alignment.TopEnd)
-                    .background(Color.Black.copy(alpha = 0.3f), CircleShape)
-                    .padding(2.dp)
-                    .background(Color.White.copy(alpha = 0.5f), CircleShape)
-            )
+            ) {
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isSelected,
+                    enter = scaleIn() + fadeIn(),
+                    exit = scaleOut() + fadeOut()
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = "Selected",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp).background(Color.White, CircleShape)
+                    )
+                }
+                
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = !isSelected,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(Color.Black.copy(alpha = 0.3f), CircleShape)
+                            .padding(2.dp)
+                            .background(Color.White.copy(alpha = 0.5f), CircleShape)
+                    )
+                }
+            }
         }
     }
 }
@@ -355,6 +431,37 @@ fun AlbumHeaderButton(
             Text(
                 text = label,
                 style = EmphasizedTypography.LabelLarge
+            )
+        }
+    }
+}
+
+@Composable
+fun DateHeader(
+    title: String,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    onToggleSelection: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .padding(start = 8.dp, top = 16.dp, bottom = 8.dp, end = 16.dp)
+            .fillMaxWidth()
+            .clickable(enabled = isSelectionMode, onClick = onToggleSelection),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = EmphasizedTypography.LabelLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+        if (isSelectionMode) {
+            Icon(
+                imageVector = if (isSelected) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                contentDescription = "Select Group",
+                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp)
             )
         }
     }

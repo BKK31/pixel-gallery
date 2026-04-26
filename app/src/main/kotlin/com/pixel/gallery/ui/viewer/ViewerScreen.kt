@@ -41,11 +41,25 @@ import androidx.media3.ui.PlayerView
 import com.pixel.gallery.data.local.entity.MediaEntry
 import com.pixel.gallery.ui.theme.EmphasizedTypography
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.withContext
 import me.saket.telephoto.zoomable.glide.ZoomableGlideImage
 import me.saket.telephoto.zoomable.rememberZoomableImageState
+import org.osmdroid.tileprovider.tilesource.XYTileSource
 import java.io.File
+
+private val MapnikHttps = XYTileSource(
+    "Mapnik",
+    0, 19, 256, ".png",
+    arrayOf(
+        "https://a.tile.openstreetmap.org/",
+        "https://b.tile.openstreetmap.org/",
+        "https://c.tile.openstreetmap.org/"
+    ),
+    "© OpenStreetMap contributors"
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,12 +90,17 @@ fun ViewerScreen(
 
     LaunchedEffect(currentMedia) {
         isPlayingMotion = false
+        val file = withContext(Dispatchers.IO) {
+            currentMedia?.let { viewModel.extractMotionVideo(it.path) }
+        }
         val oldFile = motionVideoFile
-        motionVideoFile = currentMedia?.let { viewModel.extractMotionVideo(it.path) }
+        motionVideoFile = file
         
         // Clean up old temp file after new one is ready
         if (oldFile != null && oldFile != motionVideoFile) {
-            try { oldFile.delete() } catch (e: Exception) {}
+            try { 
+                withContext(Dispatchers.IO) { oldFile.delete() }
+            } catch (e: Exception) {}
         }
     }
 
@@ -430,7 +449,7 @@ fun InfoBottomSheet(
                     AndroidView(
                         factory = { ctx ->
                             org.osmdroid.views.MapView(ctx).apply {
-                                setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
+                                setTileSource(MapnikHttps)
                                 setMultiTouchControls(true)
                                 zoomController.setVisibility(org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER)
                                 controller.setZoom(15.0)
@@ -481,20 +500,21 @@ fun VideoPlayer(
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
 
     DisposableEffect(isActive, uri) {
-        if (isActive) {
-            val player = ExoPlayer.Builder(context).build().apply {
+        val player = if (isActive) {
+            ExoPlayer.Builder(context).build().apply {
                 setMediaItem(MediaItem.fromUri(Uri.parse(uri)))
                 repeatMode = Player.REPEAT_MODE_ONE
                 prepare()
                 playWhenReady = true
             }
-            exoPlayer = player
-        }
+        } else null
+        
+        exoPlayer = player
         
         onDispose {
-            exoPlayer?.stop()
-            exoPlayer?.release()
             exoPlayer = null
+            player?.stop()
+            player?.release()
         }
     }
 
