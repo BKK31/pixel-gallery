@@ -503,7 +503,7 @@ fun VideoPlayer(
         val player = if (isActive) {
             ExoPlayer.Builder(context).build().apply {
                 setMediaItem(MediaItem.fromUri(Uri.parse(uri)))
-                repeatMode = Player.REPEAT_MODE_ONE
+                repeatMode = if (isMotionPhoto) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
                 prepare()
                 playWhenReady = true
             }

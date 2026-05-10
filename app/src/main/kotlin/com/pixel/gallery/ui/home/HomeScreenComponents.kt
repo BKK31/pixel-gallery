@@ -139,9 +139,7 @@ fun PhotosScreen(
                                     onNavigateToViewer(media.contentId)
                                 }
                             },
-                            onLongClick = {
-                                onToggleSelection(media.contentId)
-                            }
+                            onLongClick = null
                         )
                     }
                 }
@@ -164,7 +162,7 @@ fun PhotoTile(
     isSelected: Boolean,
     isSelectionMode: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: (() -> Unit)? = null
 ) {
     val isVideo = remember(media.sourceMimeType) { media.sourceMimeType.startsWith("video/") }
     val formattedDuration = remember(media.durationMillis) {
