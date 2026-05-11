@@ -1,0 +1,6 @@
+- Fixed viewer screen bug
+- Improved video playback UX and external open handling
+- Support for ACTION_VIEW handling
+- Moved 'Open with' to three dot menu
+- Fixed photo multiple selection trigger
+- Fixed video playback auto-loop issues
