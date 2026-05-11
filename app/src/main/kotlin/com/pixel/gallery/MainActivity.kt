@@ -105,7 +105,13 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun handleIntent(intent: Intent) {
-        // Intent handling logic for direct file opening will be implemented later
+        if (intent.action == Intent.ACTION_VIEW) {
+            val uri = intent.data
+            if (uri != null) {
+                val mimeType = intent.type ?: contentResolver.getType(uri) ?: "image/*"
+                viewModel.setExternalMediaUri(uri.toString(), mimeType)
+            }
+        }
     }
 
     companion object {

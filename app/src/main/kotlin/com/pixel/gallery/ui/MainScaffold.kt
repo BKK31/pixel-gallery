@@ -64,13 +64,15 @@ sealed class Screen : Parcelable {
     @Parcelize data class Viewer(
         val initialId: Long, 
         val source: ViewerSource = ViewerSource.All,
-        val albumName: String? = null
+        val albumName: String? = null,
+        val externalUri: String? = null,
+        val externalMimeType: String? = null
     ) : Screen()
     @Parcelize object ExcludedFolders : Screen()
     @Parcelize object Licenses : Screen()
     @Parcelize data class Photo(val albumName: String) : Screen()
 
-    enum class ViewerSource { All, Favourites, Trash, Album, Vault }
+    enum class ViewerSource { All, Favourites, Trash, Album, Vault, External }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -88,9 +90,18 @@ fun MainScaffold(
     val groupedVault by photosViewModel.groupedVaultEntries.collectAsState()
     val albums by photosViewModel.albums.collectAsState()
     val gridColumns by photosViewModel.gridColumns.collectAsState()
+    val externalMedia by photosViewModel.externalMedia.collectAsState()
     
     // Simple navigation stack
     var navigationStack by rememberSaveable { mutableStateOf(listOf<Screen>(Screen.Home)) }
+
+    LaunchedEffect(externalMedia) {
+        externalMedia?.let { media ->
+            navigationStack = listOf(Screen.Home, Screen.Viewer(initialId = -1L, source = Screen.ViewerSource.External, externalUri = media.uri, externalMimeType = media.mimeType))
+            photosViewModel.clearExternalMediaUri()
+        }
+    }
+
     val currentScreen = navigationStack.last()
     
     // Hoisted Grid States for persistence
@@ -363,6 +374,26 @@ fun MainScaffold(
                                 val file = java.io.File(it.path)
                                 file.parentFile?.name == viewer.albumName
                             }
+                        }
+                        Screen.ViewerSource.External -> {
+                            val uri = viewer.externalUri ?: ""
+                            val mimeType = viewer.externalMimeType ?: "image/*"
+                            listOf(
+                                com.pixel.gallery.data.local.entity.MediaEntry(
+                                    contentId = -1L,
+                                    path = uri,
+                                    uri = uri,
+                                    sourceMimeType = mimeType,
+                                    width = 0,
+                                    height = 0,
+                                    sourceRotationDegrees = 0,
+                                    sizeBytes = 0,
+                                    dateAddedSecs = 0,
+                                    dateModifiedMillis = 0,
+                                    isTrashed = false,
+                                    bestTimestamp = 0L
+                                )
+                            )
                         }
                     }
                     ViewerScreen(

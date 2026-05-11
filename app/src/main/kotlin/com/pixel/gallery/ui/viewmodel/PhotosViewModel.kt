@@ -24,6 +24,23 @@ class PhotosViewModel @Inject constructor(
         data class Photo(val entry: MediaEntry) : GridItem()
     }
 
+    data class ExternalMedia(val uri: String, val mimeType: String)
+
+    private val _externalMedia = MutableStateFlow<ExternalMedia?>(null)
+    val externalMedia: StateFlow<ExternalMedia?> = _externalMedia
+
+    fun setExternalMediaUri(uri: String?, mimeType: String? = null) {
+        if (uri != null) {
+            _externalMedia.value = ExternalMedia(uri, mimeType ?: "image/*")
+        } else {
+            _externalMedia.value = null
+        }
+    }
+
+    fun clearExternalMediaUri() {
+        _externalMedia.value = null
+    }
+
     val allPhotos: StateFlow<List<MediaEntry>> = repository.allEntries
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -231,6 +248,7 @@ class PhotosViewModel @Inject constructor(
     fun getCoordinates(path: String) = metadataService.getCoordinates(path)
     fun extractMotionVideo(path: String) = metadataService.extractMotionVideo(path)
     fun isUltraHdr(path: String) = metadataService.isUltraHdr(path)
+
 
     // --- Settings Actions ---
     fun setStartupAtAlbums(value: Boolean) {
