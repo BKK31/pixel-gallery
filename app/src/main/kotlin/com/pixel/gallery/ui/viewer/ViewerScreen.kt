@@ -16,6 +16,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -26,10 +27,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.FileProvider
+import android.content.res.Configuration
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -301,6 +304,22 @@ fun ViewerScreen(
                                 },
                                 leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) }
                             )
+                            DropdownMenuItem(
+                                text = { Text("Open With") },
+                                onClick = {
+                                    showMenu = false
+                                    currentMedia?.let { media ->
+                                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(Uri.parse(media.uri), media.sourceMimeType)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        try {
+                                            context.startActivity(Intent.createChooser(intent, "Open with..."))
+                                        } catch (e: Exception) { }
+                                    }
+                                },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) }
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -503,7 +522,7 @@ fun VideoPlayer(
         val player = if (isActive) {
             ExoPlayer.Builder(context).build().apply {
                 setMediaItem(MediaItem.fromUri(Uri.parse(uri)))
-                repeatMode = Player.REPEAT_MODE_ONE
+                repeatMode = if (isMotionPhoto) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
                 prepare()
                 playWhenReady = true
             }
@@ -560,15 +579,21 @@ fun VideoControls(
     isVisible: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     var isPlaying by remember { mutableStateOf(false) }
     var currentPosition by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(0L) }
+    var isDragging by remember { mutableStateOf(false) }
 
-    LaunchedEffect(player) {
+    LaunchedEffect(player, isDragging) {
         while (true) {
             try {
                 isPlaying = player.isPlaying
-                currentPosition = player.currentPosition
+                if (!isDragging) {
+                    currentPosition = player.currentPosition
+                }
                 duration = player.duration.coerceAtLeast(0L)
             } catch (e: Exception) {
                 break
@@ -606,15 +631,20 @@ fun VideoControls(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 96.dp)
+                    .padding(bottom = if (isLandscape) 48.dp else 96.dp)
                     .padding(horizontal = 24.dp)
                     .fillMaxWidth()
             ) {
                 Slider(
                     value = currentPosition.toFloat(),
                     onValueChange = { 
+                        isDragging = true
+                        currentPosition = it.toLong()
+                    },
+                    onValueChangeFinished = {
+                        isDragging = false
                         try {
-                            player.seekTo(it.toLong()) 
+                            player.seekTo(currentPosition)
                         } catch (e: Exception) {}
                     },
                     valueRange = 0f..duration.toFloat().coerceAtLeast(1f),
