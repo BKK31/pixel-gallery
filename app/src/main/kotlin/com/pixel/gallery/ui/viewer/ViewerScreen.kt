@@ -304,6 +304,22 @@ fun ViewerScreen(
                                 },
                                 leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) }
                             )
+                            DropdownMenuItem(
+                                text = { Text("Open With") },
+                                onClick = {
+                                    showMenu = false
+                                    currentMedia?.let { media ->
+                                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(Uri.parse(media.uri), media.sourceMimeType)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        try {
+                                            context.startActivity(Intent.createChooser(intent, "Open with..."))
+                                        } catch (e: Exception) { }
+                                    }
+                                },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) }
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -356,17 +372,6 @@ fun ViewerScreen(
                             }
                             try {
                                 context.startActivity(Intent.createChooser(intent, "Edit Media"))
-                            } catch (e: Exception) { }
-                        }
-                    }
-                    ViewerAction(Icons.AutoMirrored.Outlined.OpenInNew, "Open With") {
-                        currentMedia?.let { media ->
-                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(Uri.parse(media.uri), media.sourceMimeType)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            try {
-                                context.startActivity(Intent.createChooser(intent, "Open with..."))
                             } catch (e: Exception) { }
                         }
                     }
