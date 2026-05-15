@@ -189,6 +189,13 @@ class PhotosViewModel @Inject constructor(
         }
     }
 
+    fun emptyTrash() {
+        val uris = trashedMedia.value.map { it.uri }
+        if (uris.isNotEmpty()) {
+            deleteMediaBulk(uris)
+        }
+    }
+
     fun isFavourite(id: Long): Flow<Boolean> = repository.isFavourite(id)
 
     fun moveToTrash(id: Long, uri: String, path: String) {

@@ -347,6 +347,7 @@ fun MainScaffold(
                 Screen.Trash -> TrashScreen(
                     onBack = { navigationStack = navigationStack.dropLast(1) },
                     onNavigateToViewer = { id -> navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.Trash) },
+                    onEmptyBin = { photosViewModel.emptyTrash() },
                     selectedIds = selectedIds,
                     onSelectionChange = updateSelection,
                     onToggleSelection = toggleSelection,

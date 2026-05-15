@@ -25,6 +25,7 @@ import com.pixel.gallery.ui.viewmodel.PhotosViewModel.GridItem
 fun TrashScreen(
     onBack: () -> Unit,
     onNavigateToViewer: (Long) -> Unit,
+    onEmptyBin: () -> Unit,
     selectedIds: Set<Long> = emptySet(),
     onSelectionChange: (Set<Long>) -> Unit = {},
     onToggleSelection: (Long) -> Unit = {},
@@ -52,7 +53,7 @@ fun TrashScreen(
                     },
                     actions = {
                         if (items.isNotEmpty()) {
-                            TextButton(onClick = { /* TODO: Empty bin */ }) {
+                            TextButton(onClick = { onEmptyBin() }) {
                                 Text("Empty", color = MaterialTheme.colorScheme.error)
                             }
                         }
