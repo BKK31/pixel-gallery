@@ -13,7 +13,7 @@ import javax.inject.Singleton
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.preferencesDataStore
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     name = "settings",
     produceMigrations = { context ->
         listOf(
@@ -91,5 +91,17 @@ class SettingsRepository @Inject constructor(
         context.dataStore.edit { preferences ->
             preferences[GRID_COLUMNS] = value
         }
+    }
+
+    suspend fun setWidgetUris(widgetId: Int, uris: Set<String>) {
+        context.dataStore.edit { preferences ->
+            val key = stringSetPreferencesKey("widget_uris_$widgetId")
+            preferences[key] = uris
+        }
+    }
+
+    fun getWidgetUris(widgetId: Int): Flow<Set<String>> {
+        val key = stringSetPreferencesKey("widget_uris_$widgetId")
+        return context.dataStore.data.map { preferences -> preferences[key] ?: emptySet() }
     }
 }
