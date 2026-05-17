@@ -6,7 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.PickVisualMediaRequest
+import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,30 +28,47 @@ class SlideshowWidgetConfigActivity : ComponentActivity() {
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
 
     private val pickMultipleMedia =
-        registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
-            if (uris.isNotEmpty()) {
-                val uriStrings = uris.map {
-                    try {
-                        contentResolver.takePersistableUriPermission(
-                            it,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        )
-                    } catch (e: SecurityException) {
-                        e.printStackTrace()
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val data = result.data
+                val uris = mutableListOf<Uri>()
+
+                if (data?.clipData != null) {
+                    val count = data.clipData!!.itemCount
+                    for (i in 0 until count) {
+                        uris.add(data.clipData!!.getItemAt(i).uri)
                     }
-                    it.toString()
-                }.toSet()
+                } else if (data?.data != null) {
+                    uris.add(data.data!!)
+                }
 
-                lifecycleScope.launch {
-                    settingsRepository.setWidgetUris(appWidgetId, uriStrings)
+                if (uris.isNotEmpty()) {
+                    val uriStrings = uris.map {
+                        try {
+                            contentResolver.takePersistableUriPermission(
+                                it,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            )
+                        } catch (e: SecurityException) {
+                            e.printStackTrace()
+                        }
+                        it.toString()
+                    }.toSet()
 
-                    val appWidgetManager = AppWidgetManager.getInstance(this@SlideshowWidgetConfigActivity)
-                    SlideshowWidgetProvider.updateAppWidget(this@SlideshowWidgetConfigActivity, appWidgetManager, appWidgetId)
+                    lifecycleScope.launch {
+                        settingsRepository.setWidgetUris(appWidgetId, uriStrings)
 
-                    val resultValue = Intent().apply {
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                        val appWidgetManager = AppWidgetManager.getInstance(this@SlideshowWidgetConfigActivity)
+                        SlideshowWidgetProvider.updateAppWidget(this@SlideshowWidgetConfigActivity, appWidgetManager, appWidgetId)
+
+                        val resultValue = Intent().apply {
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                        }
+                        setResult(Activity.RESULT_OK, resultValue)
+                        finish()
                     }
-                    setResult(Activity.RESULT_OK, resultValue)
+                } else {
+                    setResult(Activity.RESULT_CANCELED)
                     finish()
                 }
             } else {
@@ -81,6 +98,11 @@ class SlideshowWidgetConfigActivity : ComponentActivity() {
             }
         }
 
-        pickMultipleMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "image/*"
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+            putExtra(Intent.EXTRA_LOCAL_ONLY, true)
+        }
+        pickMultipleMedia.launch(intent)
     }
 }
