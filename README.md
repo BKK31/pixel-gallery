@@ -20,6 +20,10 @@
   </a>
 </p>
 
+> [!IMPORTANT]
+> ### 🤝 Co-Maintainers & Contributors Wanted!
+> Due to work commitments, I am currently unable to maintain the application and am looking for maintainers or co-contributors. If you are interested in helping support or develop this project, please open an issue or reach out!
+
 <p align="center">
   <a href="#features">Features</a> •
   <a href="#migration-notice">Migration Notice</a> •
