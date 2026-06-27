@@ -2,6 +2,7 @@ package com.pixel.gallery.services
 
 import android.content.Context
 import androidx.exifinterface.media.ExifInterface
+import com.pixel.gallery.utils.FilenameDateParser
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
@@ -13,20 +14,57 @@ class MetadataService @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     fun getMetadata(path: String): Map<String, String> {
-        return try {
+        val metadata = mutableMapOf<String, String>()
+        try {
             val exif = ExifInterface(path)
-            mapOf(
-                "Make" to (exif.getAttribute(ExifInterface.TAG_MAKE) ?: "Unknown"),
-                "Model" to (exif.getAttribute(ExifInterface.TAG_MODEL) ?: "Unknown"),
-                "Aperture" to (exif.getAttribute(ExifInterface.TAG_F_NUMBER) ?: "Unknown"),
-                "Exposure Time" to (exif.getAttribute(ExifInterface.TAG_EXPOSURE_TIME) ?: "Unknown"),
-                "ISO" to (exif.getAttribute(ExifInterface.TAG_ISO_SPEED_RATINGS) ?: "Unknown"),
-                "Focal Length" to (exif.getAttribute(ExifInterface.TAG_FOCAL_LENGTH) ?: "Unknown"),
-                "Date Taken" to (exif.getAttribute(ExifInterface.TAG_DATETIME) ?: "Unknown")
-            )
+            metadata["Make"] = exif.getAttribute(ExifInterface.TAG_MAKE) ?: "Unknown"
+            metadata["Model"] = exif.getAttribute(ExifInterface.TAG_MODEL) ?: "Unknown"
+            metadata["Aperture"] = exif.getAttribute(ExifInterface.TAG_F_NUMBER) ?: "Unknown"
+            metadata["Exposure Time"] = exif.getAttribute(ExifInterface.TAG_EXPOSURE_TIME) ?: "Unknown"
+            metadata["ISO"] = exif.getAttribute(ExifInterface.TAG_ISO_SPEED_RATINGS) ?: "Unknown"
+            metadata["Focal Length"] = exif.getAttribute(ExifInterface.TAG_FOCAL_LENGTH) ?: "Unknown"
+            metadata["Date Taken"] = exif.getAttribute(ExifInterface.TAG_DATETIME) ?: "Unknown"
         } catch (e: Exception) {
-            emptyMap()
+            // File might be a video or doesn't support EXIF
         }
+
+        val rawDateTaken = metadata["Date Taken"]
+        var resolvedDate: String? = null
+        
+        if (rawDateTaken != null && rawDateTaken != "Unknown") {
+            val exifMillis = FilenameDateParser.parseExifDateTime(rawDateTaken)
+            if (exifMillis != null) {
+                resolvedDate = FilenameDateParser.formatEpochMillis(exifMillis)
+            }
+        }
+        
+        if (resolvedDate == null) {
+            // 1. Try Filename Parser
+            val filename = path.substringAfterLast("/")
+            val parsedTime = FilenameDateParser.parseDateFromFilename(filename)
+            if (parsedTime != null) {
+                resolvedDate = FilenameDateParser.formatEpochMillis(parsedTime)
+            }
+        }
+        
+        if (resolvedDate == null) {
+            // 2. Try File system lastModified
+            val fileTime = java.io.File(path).lastModified()
+            if (fileTime > 0) {
+                resolvedDate = FilenameDateParser.formatEpochMillis(fileTime)
+            }
+        }
+        
+        metadata["Date Taken"] = resolvedDate ?: "Unknown"
+
+        val keys = listOf("Make", "Model", "Aperture", "Exposure Time", "ISO", "Focal Length", "Date Taken")
+        for (key in keys) {
+            if (!metadata.containsKey(key)) {
+                metadata[key] = "Unknown"
+            }
+        }
+
+        return metadata
     }
     
     fun getCoordinates(path: String): Pair<Double, Double>? {
