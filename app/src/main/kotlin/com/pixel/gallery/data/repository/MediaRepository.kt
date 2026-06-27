@@ -14,6 +14,7 @@ import com.pixel.gallery.MainActivity
 import com.pixel.gallery.data.local.dao.MediaDao
 import com.pixel.gallery.data.local.entity.MediaEntry
 import com.pixel.gallery.data.local.entity.VaultEntry
+import com.pixel.gallery.utils.FilenameDateParser
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -338,28 +339,40 @@ class MediaRepository @Inject constructor(
                 val knownEntry = knownEntries[id]
                 if (knownEntry?.dateModifiedMillis != modified || knownEntry.isTrashed != queryTrashed) {
                     val mediaStoreTaken = if (takenColumn != -1) cursor.getLong(takenColumn) else 0L
-                    
-                    // DEEP SCAN: If mediaStore report "today" but it's an image, check EXIF
-                    var bestTime = if (mediaStoreTaken > 0) mediaStoreTaken else (cursor.getLong(addedColumn) * 1000)
+                    val hasValidMediaStoreTaken = mediaStoreTaken > 0
+                    var bestTime = if (hasValidMediaStoreTaken) mediaStoreTaken else (cursor.getLong(addedColumn) * 1000)
                     
                     val isRecentlyAdded = Math.abs(System.currentTimeMillis() - bestTime) < 600000 // 10 mins
+                    val fileTime = java.io.File(path).lastModified()
+                    val isRestoredOrOlder = fileTime > 0 && (bestTime == 0L || fileTime < bestTime - 10000)
                     
-                    if (bestTime == 0L || isRecentlyAdded) { 
-                        var foundExif = false
+                    if (!hasValidMediaStoreTaken || isRecentlyAdded || isRestoredOrOlder || bestTime == 0L) {
+                        var foundTime = false
+                        
+                        // 1. Try EXIF
                         if (cursor.getString(mimeColumn).startsWith("image/")) {
                             try {
                                 val exif = ExifInterface(path)
                                 val exifTime = exif.dateTime
                                 if (exifTime != null && exifTime > 0) {
                                     bestTime = exifTime
-                                    foundExif = true
+                                    foundTime = true
                                 }
                             } catch (e: Exception) { }
                         }
                         
-                        if (!foundExif) {
-                            // Fallback to actual file system time if MediaStore is too recent (e.g. after restore)
-                            val fileTime = java.io.File(path).lastModified()
+                        // 2. Try Filename
+                        if (!foundTime) {
+                            val filename = path.substringAfterLast("/")
+                            val parsedTime = FilenameDateParser.parseDateFromFilename(filename)
+                            if (parsedTime != null) {
+                                bestTime = parsedTime
+                                foundTime = true
+                            }
+                        }
+                        
+                        // 3. Try File system last modified
+                        if (!foundTime) {
                             if (fileTime > 0 && (bestTime == 0L || fileTime < bestTime - 10000)) {
                                 bestTime = fileTime
                             }
