@@ -3,6 +3,7 @@ package com.pixel.gallery.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pixel.gallery.data.local.entity.MediaEntry
+import com.pixel.gallery.data.repository.MediaFileOperationResult
 import com.pixel.gallery.data.repository.MediaRepository
 import com.pixel.gallery.data.repository.SettingsRepository
 import com.pixel.gallery.services.MetadataService
@@ -290,6 +291,19 @@ class PhotosViewModel @Inject constructor(
     fun setGridColumns(value: Int) {
         viewModelScope.launch {
             settingsRepository.setGridColumns(value)
+        }
+    }
+
+    fun copyOrMoveMedia(
+        entries: List<MediaEntry>,
+        targetAlbumNameOrPath: String,
+        isMove: Boolean,
+        onComplete: (MediaFileOperationResult) -> Unit
+    ) {
+        viewModelScope.launch {
+            val result = repository.copyOrMoveMedia(entries, targetAlbumNameOrPath, isMove)
+            refresh()
+            onComplete(result)
         }
     }
 }
