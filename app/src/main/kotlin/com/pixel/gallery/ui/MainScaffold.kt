@@ -40,9 +40,16 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.CreateNewFolder
+import androidx.compose.foundation.clickable
+import android.widget.Toast
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
@@ -127,6 +134,8 @@ fun MainScaffold(
     }
 
     var selectedIds by remember { mutableStateOf(setOf<Long>()) }
+    var showMoveToAlbumDialog by remember { mutableStateOf(false) }
+    var isMoveOperation by remember { mutableStateOf(true) }
     
     val toggleSelection = { id: Long ->
         selectedIds = if (selectedIds.contains(id)) {
@@ -213,12 +222,6 @@ fun MainScaffold(
                             }
                         } else {
                             IconButton(onClick = { 
-                                selectedEntries.forEach { photosViewModel.moveToVault(it) }
-                                selectedIds = emptySet()
-                            }) {
-                                Icon(Icons.Outlined.Lock, contentDescription = "Move to Locked")
-                            }
-                            IconButton(onClick = { 
                                 val uris = selectedEntries.map { 
                                     FileProvider.getUriForFile(context, "com.pixel.gallery.fileprovider", java.io.File(it.path))
                                 }
@@ -237,6 +240,45 @@ fun MainScaffold(
                                 selectedIds = emptySet()
                             }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete")
+                            }
+
+                            var showSelectionMenu by remember { mutableStateOf(false) }
+                            Box {
+                                IconButton(onClick = { showSelectionMenu = true }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                                }
+                                DropdownMenu(
+                                    expanded = showSelectionMenu,
+                                    onDismissRequest = { showSelectionMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Copy to folder") },
+                                        onClick = {
+                                            showSelectionMenu = false
+                                            isMoveOperation = false
+                                            showMoveToAlbumDialog = true
+                                        },
+                                        leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Move to folder") },
+                                        onClick = {
+                                            showSelectionMenu = false
+                                            isMoveOperation = true
+                                            showMoveToAlbumDialog = true
+                                        },
+                                        leadingIcon = { Icon(Icons.Outlined.Folder, contentDescription = null) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Lock") },
+                                        onClick = {
+                                            showSelectionMenu = false
+                                            selectedEntries.forEach { photosViewModel.moveToVault(it) }
+                                            selectedIds = emptySet()
+                                        },
+                                        leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -474,6 +516,155 @@ fun MainScaffold(
                         }
                     }
                 )
+            }
+
+            // Dialogs for album copy and move operations
+            if (showMoveToAlbumDialog) {
+                var showNewAlbumNameInput by remember { mutableStateOf(false) }
+                var newAlbumNameInput by remember { mutableStateOf("") }
+                
+                val operationName = if (isMoveOperation) "Move" else "Copy"
+                val operationPastTense = if (isMoveOperation) "Moved" else "Copied"
+
+                if (showNewAlbumNameInput) {
+                    AlertDialog(
+                        onDismissRequest = { showNewAlbumNameInput = false },
+                        title = { Text("Create new album") },
+                        text = {
+                            OutlinedTextField(
+                                value = newAlbumNameInput,
+                                onValueChange = { newAlbumNameInput = it },
+                                label = { Text("Album name") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    val name = newAlbumNameInput.trim()
+                                    if (name.isNotEmpty()) {
+                                        showNewAlbumNameInput = false
+                                        showMoveToAlbumDialog = false
+                                        val entriesToMove = selectedEntries
+                                        photosViewModel.copyOrMoveMedia(entriesToMove, name, isMove = isMoveOperation) { result ->
+                                            val message = when {
+                                                result.hasSuccess && result.hasFailure ->
+                                                    "$operationPastTense ${result.succeeded} items to '$name', failed ${result.failed}"
+                                                result.hasSuccess ->
+                                                    "$operationPastTense ${result.succeeded} items to '$name'"
+                                                result.skipped > 0 && !result.hasFailure ->
+                                                    "No items ${operationPastTense.lowercase()}"
+                                                else ->
+                                                    "Failed to ${operationName.lowercase()} ${entriesToMove.size} items"
+                                            }
+                                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                            if (result.hasSuccess) {
+                                                selectedIds = emptySet()
+                                            }
+                                        }
+                                    }
+                                },
+                                enabled = newAlbumNameInput.trim().isNotEmpty()
+                            ) {
+                                Text(operationName)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showNewAlbumNameInput = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
+                } else {
+                    AlertDialog(
+                        onDismissRequest = { showMoveToAlbumDialog = false },
+                        title = { Text("$operationName to Album") },
+                        text = {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                item {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { showNewAlbumNameInput = true }
+                                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.CreateNewFolder,
+                                            contentDescription = "New Album",
+                                            tint = colorScheme.primary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Text(
+                                            "New Album...",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = colorScheme.primary
+                                        )
+                                    }
+                                }
+                                
+                                items(albums) { album ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                showMoveToAlbumDialog = false
+                                                val entriesToMove = selectedEntries
+                                                photosViewModel.copyOrMoveMedia(entriesToMove, album.path, isMove = isMoveOperation) { result ->
+                                                    val message = when {
+                                                        result.hasSuccess && result.hasFailure ->
+                                                            "$operationPastTense ${result.succeeded} items to '${album.name}', failed ${result.failed}"
+                                                        result.hasSuccess ->
+                                                            "$operationPastTense ${result.succeeded} items to '${album.name}'"
+                                                        result.skipped > 0 && !result.hasFailure ->
+                                                            "No items ${operationPastTense.lowercase()}"
+                                                        else ->
+                                                            "Failed to ${operationName.lowercase()} ${entriesToMove.size} items"
+                                                    }
+                                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                                    if (result.hasSuccess) {
+                                                        selectedIds = emptySet()
+                                                    }
+                                                }
+                                            }
+                                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Folder,
+                                            contentDescription = "Album Folder",
+                                            tint = colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Column {
+                                            Text(
+                                                album.name,
+                                                style = MaterialTheme.typography.bodyLarge
+                                            )
+                                            Text(
+                                                "${album.itemCount} items",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {},
+                        dismissButton = {
+                            TextButton(onClick = { showMoveToAlbumDialog = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
+                }
             }
         }
     }

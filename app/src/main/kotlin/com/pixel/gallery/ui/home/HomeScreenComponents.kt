@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.ui.graphics.graphicsLayer
 import com.pixel.gallery.ui.utils.photoGridDragSelect
 import com.pixel.gallery.ui.utils.pinchToZoomColumns
@@ -150,7 +151,18 @@ fun PhotosScreen(
             gridState = state,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .padding(bottom = bottomPadding)
+                .padding(bottom = bottomPadding),
+            getLabel = { index ->
+                if (index in items.indices) {
+                    when (val item = items[index]) {
+                        is GridItem.Header -> item.title
+                        is GridItem.Photo -> {
+                            val sdf = java.text.SimpleDateFormat("MMM yyyy", java.util.Locale.getDefault())
+                            sdf.format(java.util.Date(item.entry.bestTimestamp))
+                        }
+                    }
+                } else null
+            }
         )
     }
 }
@@ -366,7 +378,12 @@ fun AlbumsScreen(
             gridState = gridState,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .padding(bottom = bottomPadding)
+                .padding(bottom = bottomPadding),
+            getLabel = { index ->
+                if (index in albums.indices) {
+                    albums[index].name.firstOrNull()?.toString()?.uppercase()
+                } else null
+            }
         )
     }
 }

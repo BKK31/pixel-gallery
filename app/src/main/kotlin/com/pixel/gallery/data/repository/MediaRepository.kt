@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import androidx.activity.result.IntentSenderRequest
 import androidx.exifinterface.media.ExifInterface
 import com.pixel.gallery.MainActivity
@@ -24,12 +25,22 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class MediaFileOperationResult(
+    val succeeded: Int,
+    val skipped: Int,
+    val failed: Int
+) {
+    val hasSuccess: Boolean = succeeded > 0
+    val hasFailure: Boolean = failed > 0
+}
+
 @Singleton
 class MediaRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val mediaDao: MediaDao,
     private val settingsRepository: SettingsRepository
 ) {
+    private val logTag = "MediaRepository"
     private val gson = Gson()
     val allEntries: Flow<List<MediaEntry>> = combine(
         mediaDao.getAllEntries(),
@@ -389,5 +400,208 @@ class MediaRepository @Inject constructor(
                 }
             }
         }
+    }
+
+    suspend fun copyOrMoveMedia(
+        entries: List<MediaEntry>,
+        targetAlbumNameOrPath: String,
+        isMove: Boolean
+    ): MediaFileOperationResult = withContext(Dispatchers.IO) {
+        val targetDir = if (targetAlbumNameOrPath.startsWith("/")) {
+            java.io.File(targetAlbumNameOrPath)
+        } else {
+            val defaultPicturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+            java.io.File(defaultPicturesDir, targetAlbumNameOrPath)
+        }
+        
+        if (!targetDir.exists()) {
+            val created = targetDir.mkdirs()
+            if (!created && !targetDir.exists()) {
+                return@withContext MediaFileOperationResult(succeeded = 0, skipped = 0, failed = entries.size)
+            }
+        }
+        
+        val scanPaths = mutableListOf<String>()
+        val idsToRemove = mutableListOf<Long>()
+        var succeeded = 0
+        var skipped = 0
+        var failed = 0
+        
+        entries.forEach { entry ->
+            val sourceFile = java.io.File(entry.path)
+            // Skip if source and target parent are identical
+            if (sourceFile.parentFile?.absolutePath == targetDir.absolutePath) {
+                skipped++
+                return@forEach
+            }
+            val targetFile = uniqueTargetFile(targetDir, sourceFile.name)
+            try {
+                if (isMove) {
+                    val moved = moveMediaEntry(entry, sourceFile, targetFile, scanPaths, idsToRemove)
+                    if (moved) {
+                        succeeded++
+                    } else {
+                        failed++
+                    }
+                } else {
+                    val copied = copyMediaToTarget(entry, sourceFile, targetFile) &&
+                        verifyCopiedMedia(entry, sourceFile, targetFile)
+                    if (copied) {
+                        scanPaths.add(targetFile.absolutePath)
+                        succeeded++
+                    } else {
+                        targetFile.delete()
+                        failed++
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                failed++
+            }
+        }
+        
+        if (idsToRemove.isNotEmpty()) {
+            mediaDao.deleteByIds(idsToRemove)
+        }
+        
+        if (scanPaths.isNotEmpty()) {
+            val scannedLatch = java.util.concurrent.CountDownLatch(scanPaths.size)
+            android.media.MediaScannerConnection.scanFile(
+                context,
+                scanPaths.toTypedArray(),
+                null
+            ) { _, _ ->
+                scannedLatch.countDown()
+            }
+            try {
+                scannedLatch.await(5, java.util.concurrent.TimeUnit.SECONDS)
+            } catch (e: InterruptedException) {
+                // ignore
+            }
+        }
+        
+        syncWithMediaStore()
+        MediaFileOperationResult(succeeded = succeeded, skipped = skipped, failed = failed)
+    }
+
+    private fun moveMediaEntry(
+        entry: MediaEntry,
+        sourceFile: java.io.File,
+        targetFile: java.io.File,
+        scanPaths: MutableList<String>,
+        idsToRemove: MutableList<Long>
+    ): Boolean {
+        val copied = try {
+            copyMediaToTarget(entry, sourceFile, targetFile)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+
+        if (!copied) {
+            Log.w(logTag, "Move failed: copy failed for ${entry.path} -> ${targetFile.absolutePath}")
+            return false
+        }
+
+        val verifiedCopy = verifyCopiedMedia(entry, sourceFile, targetFile)
+        if (!verifiedCopy) {
+            Log.w(logTag, "Move failed: target verification failed for ${targetFile.absolutePath}")
+            targetFile.delete()
+            return false
+        }
+
+        val deleted = deleteOriginalMedia(entry, sourceFile)
+        if (!deleted || sourceFile.exists()) {
+            Log.w(logTag, "Move failed: original still exists after delete for ${entry.path}")
+            targetFile.delete()
+            return false
+        }
+
+        scanPaths.add(sourceFile.absolutePath)
+        scanPaths.add(targetFile.absolutePath)
+        idsToRemove.add(entry.contentId)
+        return true
+    }
+
+    private fun uniqueTargetFile(targetDir: java.io.File, fileName: String): java.io.File {
+        val original = java.io.File(targetDir, fileName)
+        if (!original.exists()) return original
+
+        val dotIndex = fileName.lastIndexOf('.')
+        val baseName = if (dotIndex > 0) fileName.substring(0, dotIndex) else fileName
+        val extension = if (dotIndex > 0) fileName.substring(dotIndex) else ""
+
+        var index = 1
+        while (true) {
+            val candidate = java.io.File(targetDir, "$baseName ($index)$extension")
+            if (!candidate.exists()) return candidate
+            index++
+        }
+    }
+
+    private fun copyMediaToTarget(
+        entry: MediaEntry,
+        sourceFile: java.io.File,
+        targetFile: java.io.File
+    ): Boolean {
+        targetFile.parentFile?.mkdirs()
+        return try {
+            if (sourceFile.exists()) {
+                sourceFile.copyTo(targetFile, overwrite = false)
+                true
+            } else {
+                context.contentResolver.openInputStream(Uri.parse(entry.uri))?.use { input ->
+                    targetFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                    true
+                } ?: false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            targetFile.delete()
+            false
+        }
+    }
+
+    private fun verifyCopiedMedia(
+        entry: MediaEntry,
+        sourceFile: java.io.File,
+        targetFile: java.io.File
+    ): Boolean {
+        if (!targetFile.exists()) return false
+
+        val expectedSize = when {
+            sourceFile.exists() -> sourceFile.length()
+            entry.sizeBytes > 0 -> entry.sizeBytes
+            else -> 0L
+        }
+        return expectedSize <= 0L || targetFile.length() == expectedSize
+    }
+
+    private fun deleteOriginalMedia(entry: MediaEntry, sourceFile: java.io.File): Boolean {
+        val deletedByResolver = try {
+            val deletedRows = context.contentResolver.delete(Uri.parse(entry.uri), null, null)
+            if (deletedRows <= 0) {
+                Log.w(logTag, "MediaStore delete returned $deletedRows for ${entry.uri}")
+            }
+            deletedRows > 0
+        } catch (e: Exception) {
+            Log.w(logTag, "MediaStore delete failed for ${entry.uri}", e)
+            false
+        }
+
+        if (deletedByResolver && !sourceFile.exists()) {
+            return true
+        }
+
+        val deletedByFile = try {
+            sourceFile.delete()
+        } catch (e: Exception) {
+            Log.w(logTag, "File delete failed for ${sourceFile.absolutePath}", e)
+            false
+        }
+
+        return deletedByFile || !sourceFile.exists()
     }
 }
