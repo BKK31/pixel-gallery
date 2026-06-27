@@ -10,6 +10,8 @@ import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Tab
 import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -27,6 +29,8 @@ fun SettingsScreen(
 ) {
     val materialYou by viewModel.materialYou.collectAsState()
     val startupAtAlbums by viewModel.startupAtAlbums.collectAsState()
+    val confirmTrash by viewModel.confirmTrash.collectAsState()
+    val confirmDelete by viewModel.confirmDelete.collectAsState()
 
     Scaffold(
         topBar = {
@@ -74,6 +78,25 @@ fun SettingsScreen(
                     description = "Manage ignored media locations",
                     icon = Icons.Outlined.FolderOff,
                     onClick = onNavigateToExcludedFolders
+                )
+            }
+            item { HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
+            item {
+                SettingsToggleItem(
+                    title = "Confirm before trashing",
+                    description = "Show confirmation dialog when moving media to Recycle Bin",
+                    icon = Icons.Outlined.DeleteSweep,
+                    checked = confirmTrash,
+                    onCheckedChange = { viewModel.setConfirmTrash(it) }
+                )
+            }
+            item {
+                SettingsToggleItem(
+                    title = "Confirm before deleting permanently",
+                    description = "Show confirmation dialog when deleting media permanently",
+                    icon = Icons.Outlined.DeleteForever,
+                    checked = confirmDelete,
+                    onCheckedChange = { viewModel.setConfirmDelete(it) }
                 )
             }
             item { HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }

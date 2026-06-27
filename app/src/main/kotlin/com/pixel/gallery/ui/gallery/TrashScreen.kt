@@ -7,9 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -33,6 +31,7 @@ fun TrashScreen(
     viewModel: PhotosViewModel = hiltViewModel()
 ) {
     val gridColumns by viewModel.gridColumns.collectAsState()
+    var showEmptyConfirmDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -52,7 +51,7 @@ fun TrashScreen(
                     },
                     actions = {
                         if (items.isNotEmpty()) {
-                            TextButton(onClick = { /* TODO: Empty bin */ }) {
+                            TextButton(onClick = { showEmptyConfirmDialog = true }) {
                                 Text("Empty", color = MaterialTheme.colorScheme.error)
                             }
                         }
@@ -103,6 +102,30 @@ fun TrashScreen(
                     state = gridState
                 )
             }
+        }
+
+        if (showEmptyConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showEmptyConfirmDialog = false },
+                title = { Text("Empty Recycle Bin?") },
+                text = { Text("All items in the Recycle Bin will be permanently deleted. This action cannot be undone.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val uris = items.filterIsInstance<GridItem.Photo>().map { it.entry.uri }
+                            viewModel.deleteMediaBulk(uris)
+                            showEmptyConfirmDialog = false
+                        }
+                    ) {
+                        Text("Empty", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showEmptyConfirmDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }

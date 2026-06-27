@@ -37,6 +37,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.pixel.gallery.ui.components.DeleteConfirmationDialog
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -82,6 +83,12 @@ fun ViewerScreen(
     var showMenu by remember { mutableStateOf(false) }
     var rotationLocked by remember { mutableStateOf(true) }
     
+    val confirmTrash by viewModel.confirmTrash.collectAsState()
+    val confirmDelete by viewModel.confirmDelete.collectAsState()
+
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var isPermanentDelete by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
     val currentMedia = remember(pagerState.currentPage, photos) {
         if (photos.isNotEmpty()) photos[pagerState.currentPage] else null
@@ -394,11 +401,27 @@ fun ViewerScreen(
                                 onBack()
                             }
                         }
+                        ViewerAction(Icons.Outlined.Delete, "Delete permanently") {
+                            if (confirmDelete) {
+                                isPermanentDelete = true
+                                showDeleteConfirmDialog = true
+                            } else {
+                                currentMedia?.let { media ->
+                                    viewModel.deleteMediaBulk(listOf(media.uri))
+                                    onBack()
+                                }
+                            }
+                        }
                     } else {
                         ViewerAction(Icons.Outlined.Delete, "Delete") {
-                            currentMedia?.let { media ->
-                                viewModel.moveToTrash(media.contentId, media.uri, media.path)
-                                onBack()
+                            if (confirmTrash) {
+                                isPermanentDelete = false
+                                showDeleteConfirmDialog = true
+                            } else {
+                                currentMedia?.let { media ->
+                                    viewModel.moveToTrash(media.contentId, media.uri, media.path)
+                                    onBack()
+                                }
                             }
                         }
                     }
@@ -411,6 +434,24 @@ fun ViewerScreen(
                 media = currentMedia,
                 viewModel = viewModel,
                 onDismiss = { showInfo = false }
+            )
+        }
+
+        if (showDeleteConfirmDialog && currentMedia != null) {
+            DeleteConfirmationDialog(
+                itemCount = 1,
+                isPermanent = isPermanentDelete,
+                onConfirm = { bypassTrash ->
+                    if (isPermanentDelete || bypassTrash) {
+                        viewModel.deleteMediaBulk(listOf(currentMedia.uri))
+                    } else {
+                        viewModel.moveToTrash(currentMedia.contentId, currentMedia.uri, currentMedia.path)
+                    }
+                    onBack()
+                },
+                onDismiss = {
+                    showDeleteConfirmDialog = false
+                }
             )
         }
     }
