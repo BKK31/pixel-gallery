@@ -1,0 +1,3 @@
+- Fixed media grid sorting and details metadata mismatch for screenshots, videos, and restored files
+- Fixed creating new album, added scrollbar
+- Fixed "Empty Bin" not working bug, added option to bypass recycle bin while deleting
