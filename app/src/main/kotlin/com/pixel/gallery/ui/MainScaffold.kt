@@ -44,6 +44,8 @@ import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel
+import com.pixel.gallery.data.local.entity.MediaEntry
+import com.pixel.gallery.ui.components.DeleteConfirmationDialog
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.outlined.Folder
@@ -120,6 +122,13 @@ fun MainScaffold(
     val albumPhotoGridState = rememberLazyGridState() // Shared for individual albums
     
     val startupAtAlbums by photosViewModel.startupAtAlbums.collectAsState()
+    val confirmTrash by photosViewModel.confirmTrash.collectAsState()
+    val confirmDelete by photosViewModel.confirmDelete.collectAsState()
+
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var isPermanentDelete by remember { mutableStateOf(false) }
+    var pendingDeleteEntries by remember { mutableStateOf<List<MediaEntry>>(emptyList()) }
+
     val homePagerState = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
 
@@ -208,8 +217,14 @@ fun MainScaffold(
                                 Icon(Icons.Outlined.RestoreFromTrash, contentDescription = "Restore")
                             }
                             IconButton(onClick = { 
-                                photosViewModel.deleteMediaBulk(selectedEntries.map { it.uri })
-                                selectedIds = emptySet()
+                                if (confirmDelete) {
+                                    pendingDeleteEntries = selectedEntries
+                                    isPermanentDelete = true
+                                    showDeleteConfirmDialog = true
+                                } else {
+                                    photosViewModel.deleteMediaBulk(selectedEntries.map { it.uri })
+                                    selectedIds = emptySet()
+                                }
                             }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete permanently")
                             }
@@ -236,8 +251,14 @@ fun MainScaffold(
                             }
 
                             IconButton(onClick = { 
-                                photosViewModel.moveToTrashBulk(selectedEntries.map { it.uri })
-                                selectedIds = emptySet()
+                                if (confirmTrash) {
+                                    pendingDeleteEntries = selectedEntries
+                                    isPermanentDelete = false
+                                    showDeleteConfirmDialog = true
+                                } else {
+                                    photosViewModel.moveToTrashBulk(selectedEntries.map { it.uri })
+                                    selectedIds = emptySet()
+                                }
                             }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete")
                             }
@@ -665,6 +686,26 @@ fun MainScaffold(
                         }
                     )
                 }
+            }
+            
+            if (showDeleteConfirmDialog) {
+                DeleteConfirmationDialog(
+                    itemCount = pendingDeleteEntries.size,
+                    isPermanent = isPermanentDelete,
+                    onConfirm = { bypassTrash ->
+                        val uris = pendingDeleteEntries.map { it.uri }
+                        if (isPermanentDelete || bypassTrash) {
+                            photosViewModel.deleteMediaBulk(uris)
+                        } else {
+                            photosViewModel.moveToTrashBulk(uris)
+                        }
+                        selectedIds = emptySet()
+                    },
+                    onDismiss = {
+                        showDeleteConfirmDialog = false
+                        pendingDeleteEntries = emptyList()
+                    }
+                )
             }
         }
     }

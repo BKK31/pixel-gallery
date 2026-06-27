@@ -114,6 +114,12 @@ class PhotosViewModel @Inject constructor(
     val materialYou: StateFlow<Boolean> = settingsRepository.materialYou
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
+    val confirmTrash: StateFlow<Boolean> = settingsRepository.confirmTrash
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    val confirmDelete: StateFlow<Boolean> = settingsRepository.confirmDelete
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
     val excludedFolders: StateFlow<Set<String>> = settingsRepository.excludedFolders
         .stateIn(viewModelScope, SharingStarted.Lazily, emptySet())
 
@@ -261,6 +267,18 @@ class PhotosViewModel @Inject constructor(
     fun setMaterialYou(value: Boolean) {
         viewModelScope.launch {
             settingsRepository.setMaterialYou(value)
+        }
+    }
+
+    fun setConfirmTrash(value: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setConfirmTrash(value)
+        }
+    }
+
+    fun setConfirmDelete(value: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setConfirmDelete(value)
         }
     }
 

@@ -31,12 +31,20 @@ class SettingsRepository @Inject constructor(
     private val EXCLUDED_FOLDERS = stringSetPreferencesKey("excluded_folders")
     private val HIDDEN_FOLDERS = stringSetPreferencesKey("hidden_folders")
     private val GRID_COLUMNS = intPreferencesKey("grid_columns")
+    private val CONFIRM_TRASH = booleanPreferencesKey("confirm_trash")
+    private val CONFIRM_DELETE = booleanPreferencesKey("confirm_delete")
 
     val startupAtAlbums: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[STARTUP_AT_ALBUMS] ?: false }
 
     val materialYou: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[MATERIAL_YOU] ?: true }
+
+    val confirmTrash: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[CONFIRM_TRASH] ?: true }
+
+    val confirmDelete: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[CONFIRM_DELETE] ?: true }
 
     suspend fun setStartupAtAlbums(value: Boolean) {
         context.dataStore.edit { preferences ->
@@ -47,6 +55,18 @@ class SettingsRepository @Inject constructor(
     suspend fun setMaterialYou(value: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[MATERIAL_YOU] = value
+        }
+    }
+
+    suspend fun setConfirmTrash(value: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[CONFIRM_TRASH] = value
+        }
+    }
+
+    suspend fun setConfirmDelete(value: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[CONFIRM_DELETE] = value
         }
     }
 
