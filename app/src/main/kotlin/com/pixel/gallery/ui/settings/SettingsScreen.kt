@@ -104,7 +104,7 @@ fun SettingsScreen(
             item {
                 SettingsClickItem(
                     title = "About",
-                    description = "Pixel Gallery v4.0.0",
+                    description = "Pixel Gallery v4.1.0",
                     icon = Icons.Outlined.Info,
                     onClick = onNavigateToLicenses
                 )

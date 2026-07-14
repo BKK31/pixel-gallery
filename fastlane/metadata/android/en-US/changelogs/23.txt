@@ -1,0 +1,7 @@
+- Added drag-to-select support to album grid & tap-to-deselect card action.
+- Migrated single-album selection state to multi-select Set to support bulk Hide/Exclude/Delete folder actions.
+- Redesigned photo/album selection bars to be icon-only to match bottom nav pill style.
+- Relocated video seek bar to a floating capsule above bottom action bar.
+- Added video mute toggle & replay on end support.
+- Disabled video autoplay on page scroll.
+- Fixed app crash on setting wallpaper
