@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material3.*
@@ -26,6 +25,7 @@ import com.pixel.gallery.data.local.entity.MediaEntry
 import com.pixel.gallery.model.Album
 import com.pixel.gallery.ui.theme.EmphasizedTypography
 import com.pixel.gallery.ui.theme.ExpressiveShapes
+import com.pixel.gallery.ui.utils.albumGridDragSelect
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.combinedClickable
@@ -322,54 +322,49 @@ fun AlbumsScreen(
     onNavigateToTrash: () -> Unit,
     onNavigateToAlbum: (String) -> Unit,
     onExclude: (String) -> Unit = {},
-    onHide: (String) -> Unit = {}
+    onHide: (String) -> Unit = {},
+    onLongClickAlbum: (Album) -> Unit = {},
+    selectedAlbums: Set<Album> = emptySet(),
+    onSelectionChangeAlbums: (Set<Album>) -> Unit = {},
+    onToggleSelectionAlbum: (Album) -> Unit = {}
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             state = gridState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .albumGridDragSelect(
+                    gridState = gridState,
+                    albums = albums,
+                    selectedAlbums = selectedAlbums,
+                    onSelectionChange = onSelectionChangeAlbums
+                ),
             contentPadding = PaddingValues(
-                start = 16.dp,
-                top = 16.dp,
-                end = 16.dp,
+                start = 8.dp,
+                top = 8.dp,
+                end = 8.dp,
                 bottom = 80.dp + bottomPadding
             ),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Header Buttons: Favourites and Bin
-            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    AlbumHeaderButton(
-                        modifier = Modifier.weight(1.0f),
-                        icon = Icons.Outlined.StarOutline,
-                        label = "Favourites",
-                        onClick = onNavigateToFavourites
-                    )
-                    AlbumHeaderButton(
-                        modifier = Modifier.weight(1.0f),
-                        icon = Icons.Outlined.DeleteOutline,
-                        label = "Recycle Bin",
-                        onClick = onNavigateToTrash
-                    )
-                }
-            }
-
             items(
                 count = albums.size,
                 key = { albums[it].name }
             ) { index ->
+                val album = albums[index]
                 AlbumCard(
-                    album = albums[index],
-                    onClick = { onNavigateToAlbum(albums[index].name) },
-                    onExclude = { onExclude(albums[index].path) },
-                    onHide = { onHide(albums[index].path) }
+                    album = album,
+                    isSelected = selectedAlbums.contains(album),
+                    onClick = {
+                        if (selectedAlbums.isNotEmpty()) {
+                            onToggleSelectionAlbum(album)
+                        } else {
+                            onNavigateToAlbum(album.name)
+                        }
+                    },
+                    onLongClick = { onLongClickAlbum(album) }
                 )
             }
         }
@@ -392,17 +387,36 @@ fun AlbumsScreen(
 @Composable
 fun AlbumCard(
     album: Album,
+    isSelected: Boolean,
     onClick: () -> Unit,
-    onExclude: () -> Unit,
-    onHide: () -> Unit
+    onLongClick: () -> Unit
 ) {
-    var showMenu by remember { mutableStateOf(false) }
+    val transition = updateTransition(isSelected, label = "AlbumSelectionTransition")
+    
+    val scale by transition.animateFloat(
+        label = "Scale",
+        transitionSpec = { spring(stiffness = Spring.StiffnessLow) }
+    ) { state ->
+        if (state) 0.92f else 1.0f
+    }
+    
+    val overlayAlpha by transition.animateFloat(
+        label = "OverlayAlpha",
+        transitionSpec = { tween(200) }
+    ) { state ->
+        if (state) 0.3f else 0.0f
+    }
 
     Column(
-        modifier = Modifier.combinedClickable(
-            onClick = onClick,
-            onLongClick = { showMenu = true }
-        )
+        modifier = Modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     ) {
         Box(
             modifier = Modifier
@@ -421,40 +435,60 @@ fun AlbumCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-        }
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = album.name,
-            style = EmphasizedTypography.TitleLarge, // M3E Emphasized
-            modifier = Modifier.padding(start = 4.dp)
-        )
-        Text(
-            text = "${album.itemCount} items",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp, top = 2.dp)
-        )
-
-        DropdownMenu(
-            expanded = showMenu,
-            onDismissRequest = { showMenu = false }
-        ) {
-            DropdownMenuItem(
-                text = { Text("Hide Album") },
-                onClick = {
-                    showMenu = false
-                    onHide()
-                },
-                leadingIcon = { Icon(Icons.Outlined.VisibilityOff, contentDescription = null) }
+            
+            // Selection overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = overlayAlpha))
             )
-            DropdownMenuItem(
-                text = { Text("Exclude Album") },
-                onClick = {
-                    showMenu = false
-                    onExclude()
-                },
-                leadingIcon = { Icon(Icons.Outlined.FolderOff, contentDescription = null) }
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))
+                        )
+                    )
             )
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = album.name,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${album.itemCount}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+            }
+            
+            // Selection indicator badge
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = "Selected",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(Color.White, CircleShape)
+                    )
+                }
+            }
         }
     }
 }

@@ -4,7 +4,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.shape.CircleShape
@@ -17,10 +17,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.rememberDraggableState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.max
@@ -28,6 +28,33 @@ import kotlin.math.max
 /**
  * A custom interactive scrollbar for LazyVerticalGrid.
  */
+internal fun calculateScrollbarProgress(
+    firstVisibleItemIndex: Int,
+    totalItems: Int,
+    visibleItems: Int
+): Float {
+    val totalScrollable = totalItems - visibleItems
+    if (totalItems <= 0 || totalScrollable <= 0) return 0f
+    return (firstVisibleItemIndex.toFloat() / totalScrollable).coerceIn(0f, 1f)
+}
+
+internal fun calculateTargetIndexFromThumbOffset(
+    thumbTopPx: Float,
+    trackHeightPx: Float,
+    totalItems: Int,
+    visibleItems: Int
+): Int {
+    if (totalItems <= 0) return 0
+
+    val totalScrollable = totalItems - visibleItems
+    if (totalScrollable <= 0 || trackHeightPx <= 0f) return 0
+
+    val fraction = (thumbTopPx / trackHeightPx).coerceIn(0f, 1f)
+    return (fraction * totalScrollable)
+        .toInt()
+        .coerceIn(0, totalItems - 1)
+}
+
 @Composable
 fun VerticalScrollbar(
     gridState: LazyGridState,
@@ -35,32 +62,33 @@ fun VerticalScrollbar(
     getLabel: ((Int) -> String?)? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
-    
+
     val info = gridState.layoutInfo
     val totalItems = info.totalItemsCount
     val visibleItems = info.visibleItemsInfo.size
-    
+
     if (totalItems <= visibleItems || totalItems == 0) return
 
     val firstVisibleItemIndex = gridState.firstVisibleItemIndex
-    val firstVisibleItemScrollOffset = gridState.firstVisibleItemScrollOffset
-    
-    val scrollbarHeight = 60.dp
 
-    // Keep thumb position close to actual viewport position.
+    val scrollbarHeight = 60.dp
+    val thumbVisualWidth = 4.dp
+    val thumbDraggedVisualWidth = 8.dp
+    val thumbTouchWidth = 20.dp
+    val thumbDraggedTouchWidth = 28.dp
+
     val scrollPercentage = remember(
         firstVisibleItemIndex,
-        firstVisibleItemScrollOffset,
         totalItems,
         visibleItems
     ) {
-        val totalScrollable = max(1, totalItems - visibleItems)
-        (firstVisibleItemIndex.toFloat() / totalScrollable).coerceIn(0f, 1f)
+        calculateScrollbarProgress(firstVisibleItemIndex, totalItems, visibleItems)
     }
 
     var isDragging by remember { mutableStateOf(false) }
-    
-    // Faint but visible when idle, bright during scroll/drag
+    var dragThumbOffsetPx by remember { mutableFloatStateOf(0f) }
+    var scrollJob by remember { mutableStateOf<Job?>(null) }
+
     val alpha by animateFloatAsState(
         targetValue = when {
             isDragging -> 1f
@@ -72,9 +100,14 @@ fun VerticalScrollbar(
     )
 
     val thumbWidth by animateDpAsState(
-        targetValue = if (isDragging) 8.dp else 4.dp,
+        targetValue = if (isDragging) thumbDraggedVisualWidth else thumbVisualWidth,
         animationSpec = tween(durationMillis = 200),
         label = "scrollbar_width"
+    )
+    val thumbHitWidth by animateDpAsState(
+        targetValue = if (isDragging) thumbDraggedTouchWidth else thumbTouchWidth,
+        animationSpec = tween(durationMillis = 200),
+        label = "scrollbar_hit_width"
     )
 
     BoxWithConstraints(
@@ -82,52 +115,17 @@ fun VerticalScrollbar(
             .fillMaxHeight()
             .width(56.dp)
             .alpha(alpha)
-            .pointerInput(gridState) {
-                var scrollJob: Job? = null
-                val scrollbarHeightPx = scrollbarHeight.toPx()
-                val trackHeight = max(1f, size.height.toFloat() - scrollbarHeightPx)
-
-                fun jumpTo(y: Float) {
-                    val centeredY = (y - scrollbarHeightPx / 2f).coerceIn(0f, trackHeight)
-                    val fraction = centeredY / trackHeight
-                    val info = gridState.layoutInfo
-                    val total = info.totalItemsCount
-                    val visible = info.visibleItemsInfo.size
-                    val totalScrollable = max(1, total - visible)
-                    val targetIndex = (fraction * totalScrollable).toInt().coerceIn(0, total - 1)
-
-                    scrollJob?.cancel()
-                    scrollJob = coroutineScope.launch {
-                        gridState.scrollToItem(targetIndex)
-                    }
-                }
-
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        isDragging = true
-                        jumpTo(offset.y)
-                    },
-                    onDragEnd = { 
-                        isDragging = false 
-                        scrollJob?.cancel()
-                    },
-                    onDragCancel = { 
-                        isDragging = false 
-                        scrollJob?.cancel()
-                    },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        jumpTo(change.position.y)
-                    }
-                )
-            }
     ) {
         val density = LocalDensity.current
         val scrollbarHeightPx = with(density) { scrollbarHeight.toPx() }
         val maxHeight = constraints.maxHeight.toFloat()
         val trackHeight = max(1f, maxHeight - scrollbarHeightPx)
-        val thumbOffsetPx = scrollPercentage * trackHeight
+        val thumbOffsetPx = if (isDragging) dragThumbOffsetPx else scrollPercentage * trackHeight
         val thumbOffsetDp = with(density) { thumbOffsetPx.toDp() }
+        val currentTrackHeight = rememberUpdatedState(trackHeight)
+        val currentTotalItems = rememberUpdatedState(totalItems)
+        val currentVisibleItems = rememberUpdatedState(visibleItems)
+        val currentThumbOffsetPx = rememberUpdatedState(thumbOffsetPx)
 
         // Faint vertical track line
         Box(
@@ -164,19 +162,57 @@ fun VerticalScrollbar(
             }
         }
 
-        // Thumb
+        val draggableState = rememberDraggableState { delta ->
+            val nextThumbOffsetPx = (dragThumbOffsetPx + delta).coerceIn(0f, currentTrackHeight.value)
+            dragThumbOffsetPx = nextThumbOffsetPx
+
+            val targetIndex = calculateTargetIndexFromThumbOffset(
+                thumbTopPx = nextThumbOffsetPx,
+                trackHeightPx = currentTrackHeight.value,
+                totalItems = currentTotalItems.value,
+                visibleItems = currentVisibleItems.value
+            )
+
+            scrollJob?.cancel()
+            scrollJob = coroutineScope.launch {
+                gridState.scrollToItem(targetIndex)
+            }
+        }
+
+        // Thumb and draggable hit target.
         Box(
             modifier = Modifier
                 .offset(y = thumbOffsetDp)
                 .align(Alignment.TopEnd)
                 .padding(end = 4.dp)
-                .width(thumbWidth)
+                .width(thumbHitWidth)
                 .height(scrollbarHeight)
-                .clip(CircleShape)
-                .background(
-                    if (isDragging) MaterialTheme.colorScheme.primary 
-                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                .draggable(
+                    state = draggableState,
+                    orientation = Orientation.Vertical,
+                    onDragStarted = {
+                        isDragging = true
+                        dragThumbOffsetPx = currentThumbOffsetPx.value
+                    },
+                    onDragStopped = {
+                        isDragging = false
+                        scrollJob?.cancel()
+                        scrollJob = null
+                    }
                 )
-        )
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 4.dp)
+                    .width(thumbWidth)
+                    .height(scrollbarHeight)
+                    .clip(CircleShape)
+                    .background(
+                        if (isDragging) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+            )
+        }
     }
 }

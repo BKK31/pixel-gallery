@@ -12,10 +12,10 @@ import kotlinx.coroutines.flow.Flow
 interface MediaDao {
     
     // --- All Media ---
-    @Query("SELECT * FROM media_entries WHERE isTrashed = 0 ORDER BY bestTimestamp DESC")
+    @Query("SELECT * FROM media_entries WHERE isTrashed = 0 ORDER BY bestTimestamp DESC, contentId DESC")
     fun getAllEntries(): Flow<List<MediaEntry>>
 
-    @Query("SELECT contentId, dateModifiedMillis, isTrashed FROM media_entries")
+    @Query("SELECT contentId, dateModifiedMillis, isTrashed, bestTimestamp FROM media_entries")
     suspend fun getKnownEntries(): List<KnownEntry>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -25,7 +25,7 @@ interface MediaDao {
     suspend fun deleteByIds(ids: List<Long>)
 
     // --- Favourites ---
-    @Query("SELECT * FROM media_entries WHERE isTrashed = 0 AND contentId IN (SELECT id FROM favourites) ORDER BY bestTimestamp DESC")
+    @Query("SELECT * FROM media_entries WHERE isTrashed = 0 AND contentId IN (SELECT id FROM favourites) ORDER BY bestTimestamp DESC, contentId DESC")
     fun getFavourites(): Flow<List<MediaEntry>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -38,7 +38,7 @@ interface MediaDao {
     fun isFavourite(id: Long): Flow<Boolean>
 
     // --- Trash ---
-    @Query("SELECT * FROM media_entries WHERE isTrashed = 1 ORDER BY bestTimestamp DESC")
+    @Query("SELECT * FROM media_entries WHERE isTrashed = 1 ORDER BY bestTimestamp DESC, contentId DESC")
     fun getTrash(): Flow<List<MediaEntry>>
 
     // --- Vault ---
@@ -71,5 +71,6 @@ interface MediaDao {
 data class KnownEntry(
     val contentId: Long,
     val dateModifiedMillis: Long,
-    val isTrashed: Boolean
+    val isTrashed: Boolean,
+    val bestTimestamp: Long
 )
