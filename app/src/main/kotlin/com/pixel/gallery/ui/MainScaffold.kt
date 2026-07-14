@@ -2,9 +2,13 @@ package com.pixel.gallery.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.PhotoAlbum
 import androidx.compose.material.icons.outlined.Photo
@@ -17,8 +21,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.pixel.gallery.model.Album
 import com.pixel.gallery.ui.home.PhotosScreen
 import com.pixel.gallery.ui.home.AlbumsScreen
 import com.pixel.gallery.ui.settings.SettingsScreen
@@ -146,6 +153,10 @@ fun MainScaffold(
     var showMoveToAlbumDialog by remember { mutableStateOf(false) }
     var isMoveOperation by remember { mutableStateOf(true) }
     
+    var selectedAlbumsForActions by remember { mutableStateOf<Set<Album>>(emptySet()) }
+    var showAddPhotosToNewAlbumDialog by remember { mutableStateOf(false) }
+    var newAlbumCreatedName by remember { mutableStateOf("") }
+
     val toggleSelection = { id: Long ->
         selectedIds = if (selectedIds.contains(id)) {
             selectedIds - id
@@ -158,12 +169,22 @@ fun MainScaffold(
         selectedIds = ids
     }
 
+    val toggleSelectionAlbum = { album: Album ->
+        selectedAlbumsForActions = if (selectedAlbumsForActions.contains(album)) {
+            selectedAlbumsForActions - album
+        } else {
+            selectedAlbumsForActions + album
+        }
+    }
+
     var showMenu by remember { mutableStateOf(false) }
 
     // System back button handling
-    BackHandler(enabled = navigationStack.size > 1 || selectedIds.isNotEmpty()) {
+    BackHandler(enabled = navigationStack.size > 1 || selectedIds.isNotEmpty() || selectedAlbumsForActions.isNotEmpty()) {
         if (selectedIds.isNotEmpty()) {
             selectedIds = emptySet()
+        } else if (selectedAlbumsForActions.isNotEmpty()) {
+            selectedAlbumsForActions = emptySet()
         } else {
             navigationStack = navigationStack.dropLast(1)
         }
@@ -172,6 +193,7 @@ fun MainScaffold(
     // Reset selection when navigating
     LaunchedEffect(currentScreen) {
         selectedIds = emptySet()
+        selectedAlbumsForActions = emptySet()
     }
 
     // Scroll behavior: bar exits when scrolling down, returns when scrolling up
@@ -200,119 +222,143 @@ fun MainScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior),
         topBar = {
             if (selectedIds.isNotEmpty()) {
-                // Contextual Top Bar for Selection
-                TopAppBar(
-                    title = { Text("${selectedIds.size} selected") },
-                    navigationIcon = {
-                        IconButton(onClick = { selectedIds = emptySet() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear selection")
+                val currentPhotosForSelectAll = remember(currentScreen, allPhotos, favourites, trash, vault) {
+                    when (currentScreen) {
+                        Screen.Home -> allPhotos
+                        Screen.Favourites -> favourites
+                        Screen.Trash -> trash
+                        Screen.LockedFolder -> vault
+                        is Screen.Photo -> {
+                            val albumName = (currentScreen as Screen.Photo).albumName
+                            allPhotos.filter { java.io.File(it.path).parentFile?.name == albumName }
                         }
-                    },
-                    actions = {
-                        if (currentScreen == Screen.Trash) {
-                            IconButton(onClick = { 
-                                photosViewModel.restoreMediaBulk(selectedEntries.map { it.uri })
-                                selectedIds = emptySet()
-                            }) {
-                                Icon(Icons.Outlined.RestoreFromTrash, contentDescription = "Restore")
-                            }
-                            IconButton(onClick = { 
-                                if (confirmDelete) {
-                                    pendingDeleteEntries = selectedEntries
-                                    isPermanentDelete = true
-                                    showDeleteConfirmDialog = true
-                                } else {
-                                    photosViewModel.deleteMediaBulk(selectedEntries.map { it.uri })
-                                    selectedIds = emptySet()
-                                }
-                            }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete permanently")
-                            }
-                        } else if (currentScreen == Screen.LockedFolder) {
-                            IconButton(onClick = { 
-                                selectedEntries.forEach { photosViewModel.restoreFromVault(it.contentId) }
-                                selectedIds = emptySet()
-                            }) {
-                                Icon(Icons.Outlined.LockOpen, contentDescription = "Unlock")
-                            }
-                        } else {
-                            IconButton(onClick = { 
-                                val uris = selectedEntries.map { 
-                                    FileProvider.getUriForFile(context, "com.pixel.gallery.fileprovider", java.io.File(it.path))
-                                }
-                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND_MULTIPLE).apply {
-                                    type = "*/*" // Could be more specific if all are same type
-                                    putParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, ArrayList(uris))
-                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(android.content.Intent.createChooser(intent, "Share Media"))
-                            }) {
-                                Icon(Icons.Default.Share, contentDescription = "Share")
-                            }
-
-                            IconButton(onClick = { 
-                                if (confirmTrash) {
-                                    pendingDeleteEntries = selectedEntries
-                                    isPermanentDelete = false
-                                    showDeleteConfirmDialog = true
-                                } else {
-                                    photosViewModel.moveToTrashBulk(selectedEntries.map { it.uri })
-                                    selectedIds = emptySet()
-                                }
-                            }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete")
-                            }
-
-                            var showSelectionMenu by remember { mutableStateOf(false) }
-                            Box {
-                                IconButton(onClick = { showSelectionMenu = true }) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                                }
-                                DropdownMenu(
-                                    expanded = showSelectionMenu,
-                                    onDismissRequest = { showSelectionMenu = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("Copy to folder") },
-                                        onClick = {
-                                            showSelectionMenu = false
-                                            isMoveOperation = false
-                                            showMoveToAlbumDialog = true
-                                        },
-                                        leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Move to folder") },
-                                        onClick = {
-                                            showSelectionMenu = false
-                                            isMoveOperation = true
-                                            showMoveToAlbumDialog = true
-                                        },
-                                        leadingIcon = { Icon(Icons.Outlined.Folder, contentDescription = null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Lock") },
-                                        onClick = {
-                                            showSelectionMenu = false
-                                            selectedEntries.forEach { photosViewModel.moveToVault(it) }
+                        else -> emptyList()
+                    }
+                }
+                
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${selectedIds.size} selected",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val allSelected = currentPhotosForSelectAll.isNotEmpty() && 
+                                    currentPhotosForSelectAll.all { selectedIds.contains(it.contentId) }
+                            
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clickable {
+                                        if (allSelected) {
                                             selectedIds = emptySet()
-                                        },
-                                        leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) }
-                                    )
-                                }
+                                        } else {
+                                            selectedIds = currentPhotosForSelectAll.map { it.contentId }.toSet()
+                                        }
+                                    }
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (allSelected) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                                    contentDescription = "Select All",
+                                    tint = if (allSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "All",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            
+                            TextButton(
+                                onClick = { selectedIds = emptySet() }
+                            ) {
+                                Text(
+                                    text = "Cancel",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                     }
-                )
+                }
             } else if (currentScreen == Screen.Home) {
                 CenterAlignedTopAppBar(
                     title = {
                         Text(
-                            text = "Pixel Gallery",
+                            text = if (homePagerState.currentPage == 0) "Photos" else "Albums",
                             style = EmphasizedTypography.HeadlineMedium
                         )
                     },
                     actions = {
+                        if (homePagerState.currentPage == 1) {
+                            var showCreateAlbumDialogInHome by remember { mutableStateOf(false) }
+                            var newAlbumNameInputInHome by remember { mutableStateOf("") }
+                            IconButton(onClick = { showCreateAlbumDialogInHome = true }) {
+                                Icon(Icons.Default.Add, contentDescription = "Create Album")
+                            }
+                            if (showCreateAlbumDialogInHome) {
+                                AlertDialog(
+                                    onDismissRequest = { showCreateAlbumDialogInHome = false },
+                                    title = { Text("Create new album") },
+                                    text = {
+                                        OutlinedTextField(
+                                            value = newAlbumNameInputInHome,
+                                            onValueChange = { newAlbumNameInputInHome = it },
+                                            label = { Text("Album name") },
+                                            singleLine = true,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    },
+                                    confirmButton = {
+                                        TextButton(
+                                            onClick = {
+                                                val name = newAlbumNameInputInHome.trim()
+                                                if (name.isNotEmpty()) {
+                                                    photosViewModel.createNewAlbum(name)
+                                                    showCreateAlbumDialogInHome = false
+                                                    newAlbumNameInputInHome = ""
+                                                    newAlbumCreatedName = name
+                                                    showAddPhotosToNewAlbumDialog = true
+                                                }
+                                            },
+                                            enabled = newAlbumNameInputInHome.trim().isNotEmpty()
+                                        ) {
+                                            Text("Create")
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showCreateAlbumDialogInHome = false }) {
+                                            Text("Cancel")
+                                        }
+                                    }
+                                )
+                            }
+                        }
                         IconButton(onClick = { showMenu = !showMenu }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "More")
                         }
@@ -388,7 +434,11 @@ fun MainScaffold(
                                 onNavigateToTrash = { navigationStack = navigationStack + Screen.Trash },
                                 onNavigateToAlbum = { name -> navigationStack = navigationStack + Screen.Photo(name) },
                                 onExclude = { path -> photosViewModel.addExcludedFolder(path) },
-                                onHide = { path -> photosViewModel.addHiddenFolder(path) }
+                                onHide = { path -> photosViewModel.addHiddenFolder(path) },
+                                onLongClickAlbum = { album -> selectedAlbumsForActions = setOf(album) },
+                                selectedAlbums = selectedAlbumsForActions,
+                                onSelectionChangeAlbums = { albums -> selectedAlbumsForActions = albums },
+                                onToggleSelectionAlbum = toggleSelectionAlbum
                             )
                         }
                     }
@@ -484,7 +534,8 @@ fun MainScaffold(
             }
 
             // Only show the floating bar on the Home screen
-            if (currentScreen == Screen.Home) {
+            if (currentScreen == Screen.Home && selectedIds.isEmpty() && selectedAlbumsForActions.isEmpty()) {
+                var showMoreMenu by remember { mutableStateOf(false) }
                 HorizontalFloatingToolbar(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -501,10 +552,9 @@ fun MainScaffold(
 
                         tabs.forEachIndexed { index, tab ->
                             val isSelected = homePagerState.currentPage == index
-                            
-                            // Using a pill-shaped item that shows a label when selected
+
                             Surface(
-                                onClick = { 
+                                onClick = {
                                     scope.launch {
                                         homePagerState.animateScrollToPage(index)
                                     }
@@ -515,8 +565,7 @@ fun MainScaffold(
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             ) {
                                 Row(
-                                    modifier = Modifier
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -533,6 +582,50 @@ fun MainScaffold(
                                         )
                                     }
                                 }
+                            }
+                        }
+
+                        // More Button
+                        Box {
+                            Surface(
+                                onClick = { showMoreMenu = true },
+                                shape = FloatingToolbarDefaults.ContainerShape,
+                                color = colorScheme.surface,
+                                contentColor = colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Menu,
+                                        contentDescription = "More",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                            DropdownMenu(
+                                expanded = showMoreMenu,
+                                onDismissRequest = { showMoreMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Favorites") },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        navigationStack = navigationStack + Screen.Favourites
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.FavoriteBorder, contentDescription = null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Recycle Bin") },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        navigationStack = navigationStack + Screen.Trash
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.DeleteOutline, contentDescription = null) }
+                                )
                             }
                         }
                     }
@@ -600,35 +693,23 @@ fun MainScaffold(
                 } else {
                     AlertDialog(
                         onDismissRequest = { showMoveToAlbumDialog = false },
-                        title = { Text("$operationName to Album") },
+                        title = { 
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("$operationName to Folder")
+                                IconButton(onClick = { showNewAlbumNameInput = true }) {
+                                    Icon(Icons.Default.Add, contentDescription = "Create Album")
+                                }
+                            }
+                        },
                         text = {
                             LazyColumn(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                item {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { showNewAlbumNameInput = true }
-                                            .padding(vertical = 12.dp, horizontal = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.CreateNewFolder,
-                                            contentDescription = "New Album",
-                                            tint = colorScheme.primary,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(16.dp))
-                                        Text(
-                                            "New Album...",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = colorScheme.primary
-                                        )
-                                    }
-                                }
-                                
                                 items(albums) { album ->
                                     Row(
                                         modifier = Modifier
@@ -707,6 +788,412 @@ fun MainScaffold(
                     }
                 )
             }
+
+            // Selection Bottom Capsule Bar
+            if (selectedIds.isNotEmpty()) {
+                HorizontalFloatingToolbar(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .padding(bottom = 16.dp),
+                    expanded = true,
+                    colors = FloatingToolbarDefaults.standardFloatingToolbarColors(),
+                    content = {
+                        // 1. Lock
+                        Surface(
+                            onClick = {
+                                selectedEntries.forEach { photosViewModel.moveToVault(it) }
+                                selectedIds = emptySet()
+                            },
+                            shape = FloatingToolbarDefaults.ContainerShape,
+                            color = colorScheme.surface,
+                            contentColor = colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Outlined.Lock, contentDescription = "Lock", modifier = Modifier.size(24.dp))
+                            }
+                        }
+
+                        // 2. Share
+                        Surface(
+                            onClick = {
+                                val uris = selectedEntries.map { 
+                                    FileProvider.getUriForFile(context, "com.pixel.gallery.fileprovider", java.io.File(it.path))
+                                }
+                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND_MULTIPLE).apply {
+                                    type = "*/*"
+                                    putParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, ArrayList(uris))
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(android.content.Intent.createChooser(intent, "Share Media"))
+                            },
+                            shape = FloatingToolbarDefaults.ContainerShape,
+                            color = colorScheme.surface,
+                            contentColor = colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Share, contentDescription = "Share", modifier = Modifier.size(24.dp))
+                            }
+                        }
+
+                        // 3. Delete
+                        Surface(
+                            onClick = {
+                                if (currentScreen == Screen.Trash) {
+                                    if (confirmDelete) {
+                                        pendingDeleteEntries = selectedEntries
+                                        isPermanentDelete = true
+                                        showDeleteConfirmDialog = true
+                                    } else {
+                                        photosViewModel.deleteMediaBulk(selectedEntries.map { it.uri })
+                                        selectedIds = emptySet()
+                                    }
+                                } else {
+                                    if (confirmTrash) {
+                                        pendingDeleteEntries = selectedEntries
+                                        isPermanentDelete = false
+                                        showDeleteConfirmDialog = true
+                                    } else {
+                                        photosViewModel.moveToTrashBulk(selectedEntries.map { it.uri })
+                                        selectedIds = emptySet()
+                                    }
+                                }
+                            },
+                            shape = FloatingToolbarDefaults.ContainerShape,
+                            color = colorScheme.surface,
+                            contentColor = colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(24.dp))
+                            }
+                        }
+
+                        // 4. More
+                        var showSelectionMoreMenu by remember { mutableStateOf(false) }
+                        Box {
+                            Surface(
+                                onClick = { showSelectionMoreMenu = true },
+                                shape = FloatingToolbarDefaults.ContainerShape,
+                                color = colorScheme.surface,
+                                contentColor = colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "More", modifier = Modifier.size(24.dp))
+                                }
+                            }
+                            DropdownMenu(
+                                expanded = showSelectionMoreMenu,
+                                onDismissRequest = { showSelectionMoreMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Copy to Folder") },
+                                    onClick = {
+                                        showSelectionMoreMenu = false
+                                        isMoveOperation = false
+                                        showMoveToAlbumDialog = true
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Move to Folder") },
+                                    onClick = {
+                                        showSelectionMoreMenu = false
+                                        isMoveOperation = true
+                                        showMoveToAlbumDialog = true
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.Folder, contentDescription = null) }
+                                )
+                            }
+                        }
+                    }
+                )
+            }
+
+            // Album Selection Bottom Capsule Bar
+            val currentSelectedAlbums = selectedAlbumsForActions
+            if (currentSelectedAlbums.isNotEmpty()) {
+                val albumEntries = remember(currentSelectedAlbums, allPhotos) {
+                    val names = currentSelectedAlbums.map { it.name }.toSet()
+                    allPhotos.filter {
+                        val parentName = java.io.File(it.path).parentFile?.name
+                        parentName in names
+                    }
+                }
+                HorizontalFloatingToolbar(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .padding(bottom = 16.dp),
+                    expanded = true,
+                    colors = FloatingToolbarDefaults.standardFloatingToolbarColors(),
+                    content = {
+                        // 1. Hide Album
+                        Surface(
+                            onClick = {
+                                currentSelectedAlbums.forEach { photosViewModel.addHiddenFolder(it.path) }
+                                selectedAlbumsForActions = emptySet()
+                            },
+                            shape = FloatingToolbarDefaults.ContainerShape,
+                            color = colorScheme.surface,
+                            contentColor = colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Outlined.VisibilityOff, contentDescription = "Hide", modifier = Modifier.size(24.dp))
+                            }
+                        }
+
+                        // 2. Exclude Album
+                        Surface(
+                            onClick = {
+                                currentSelectedAlbums.forEach { photosViewModel.addExcludedFolder(it.path) }
+                                selectedAlbumsForActions = emptySet()
+                            },
+                            shape = FloatingToolbarDefaults.ContainerShape,
+                            color = colorScheme.surface,
+                            contentColor = colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Outlined.FolderOff, contentDescription = "Exclude", modifier = Modifier.size(24.dp))
+                            }
+                        }
+
+                        // 3. Delete Album
+                        Surface(
+                            onClick = {
+                                pendingDeleteEntries = albumEntries
+                                isPermanentDelete = false
+                                showDeleteConfirmDialog = true
+                            },
+                            shape = FloatingToolbarDefaults.ContainerShape,
+                            color = colorScheme.surface,
+                            contentColor = colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(24.dp))
+                            }
+                        }
+
+                        // 4. More dropdown
+                        var showAlbumMoreMenu by remember { mutableStateOf(false) }
+                        Box {
+                            Surface(
+                                onClick = { showAlbumMoreMenu = true },
+                                shape = FloatingToolbarDefaults.ContainerShape,
+                                color = colorScheme.surface,
+                                contentColor = colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "More", modifier = Modifier.size(24.dp))
+                                }
+                            }
+                            DropdownMenu(
+                                expanded = showAlbumMoreMenu,
+                                onDismissRequest = { showAlbumMoreMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Copy to Folder") },
+                                    onClick = {
+                                        showAlbumMoreMenu = false
+                                        isMoveOperation = false
+                                        selectedIds = albumEntries.map { it.contentId }.toSet()
+                                        showMoveToAlbumDialog = true
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Move to Folder") },
+                                    onClick = {
+                                        showAlbumMoreMenu = false
+                                        isMoveOperation = true
+                                        selectedIds = albumEntries.map { it.contentId }.toSet()
+                                        showMoveToAlbumDialog = true
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.Folder, contentDescription = null) }
+                                )
+                            }
+                        }
+                    }
+                )
+            }
+
+            // Post-Folder Creation photo picker
+            if (showAddPhotosToNewAlbumDialog) {
+                AddPhotosToNewAlbumDialog(
+                    albumName = newAlbumCreatedName,
+                    allPhotos = allPhotos,
+                    onDismiss = {
+                        showAddPhotosToNewAlbumDialog = false
+                        newAlbumCreatedName = ""
+                    },
+                    onConfirm = { selectedList, isMove ->
+                        showAddPhotosToNewAlbumDialog = false
+                        photosViewModel.copyOrMoveMedia(selectedList, newAlbumCreatedName, isMove = isMove) { result ->
+                            val operationPastTense = if (isMove) "Moved" else "Copied"
+                            val message = if (result.hasSuccess) {
+                                "$operationPastTense ${result.succeeded} items to '$newAlbumCreatedName'"
+                            } else {
+                                "Failed to copy/move items"
+                            }
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        }
+                        newAlbumCreatedName = ""
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun AddPhotosToNewAlbumDialog(
+    albumName: String,
+    allPhotos: List<com.pixel.gallery.data.local.entity.MediaEntry>,
+    onDismiss: () -> Unit,
+    onConfirm: (List<com.pixel.gallery.data.local.entity.MediaEntry>, Boolean) -> Unit
+) {
+    var selectedItems by remember { mutableStateOf(setOf<com.pixel.gallery.data.local.entity.MediaEntry>()) }
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Scaffold(
+                contentWindowInsets = WindowInsets.statusBars,
+                topBar = {
+                    TopAppBar(
+                        title = { Text("Add photos to $albumName") },
+                        navigationIcon = {
+                            IconButton(onClick = onDismiss) {
+                                Icon(Icons.Default.Close, contentDescription = "Cancel")
+                            }
+                        },
+                        actions = {
+                            TextButton(
+                                onClick = { onConfirm(selectedItems.toList(), false) },
+                                enabled = selectedItems.isNotEmpty()
+                            ) {
+                                Text("Copy")
+                            }
+                            TextButton(
+                                onClick = { onConfirm(selectedItems.toList(), true) },
+                                enabled = selectedItems.isNotEmpty()
+                            ) {
+                                Text("Move")
+                            }
+                        }
+                    )
+                }
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    if (allPhotos.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No photos available")
+                        }
+                    } else {
+                        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(allPhotos.size) { index ->
+                                val item = allPhotos[index]
+                                val isSelected = selectedItems.contains(item)
+                                Box(
+                                    modifier = Modifier
+                                        .aspectRatio(1f)
+                                        .clickable {
+                                            selectedItems = if (isSelected) {
+                                                selectedItems - item
+                                            } else {
+                                                selectedItems + item
+                                            }
+                                        }
+                                ) {
+                                    com.bumptech.glide.integration.compose.GlideImage(
+                                        model = item.uri,
+                                        contentDescription = null,
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                if (isSelected) Color.Black.copy(alpha = 0.3f)
+                                                else Color.Transparent
+                                            )
+                                    )
+                                    Checkbox(
+                                        checked = isSelected,
+                                        onCheckedChange = {
+                                            selectedItems = if (isSelected) {
+                                                selectedItems - item
+                                            } else {
+                                                selectedItems + item
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(4.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -716,3 +1203,5 @@ private data class NavTab(
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 )
+
+

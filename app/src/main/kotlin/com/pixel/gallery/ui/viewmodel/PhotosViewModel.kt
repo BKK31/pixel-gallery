@@ -54,7 +54,10 @@ class PhotosViewModel @Inject constructor(
     ) { all, hidden ->
         all.filter { entry ->
             !hidden.any { entry.path.startsWith(it) }
-        }
+        }.sortedWith(
+            compareByDescending<MediaEntry> { it.bestTimestamp }
+                .thenByDescending { it.contentId }
+        )
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun groupMedia(entries: List<MediaEntry>, columns: Int = 3): List<GridItem> {
@@ -86,6 +89,12 @@ class PhotosViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val favourites: StateFlow<List<MediaEntry>> = repository.favourites
+        .map { list ->
+            list.sortedWith(
+                compareByDescending<MediaEntry> { it.bestTimestamp }
+                    .thenByDescending { it.contentId }
+            )
+        }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val groupedFavourites: StateFlow<List<GridItem>> = combine(favourites, gridColumns) { media, cols ->
@@ -93,8 +102,12 @@ class PhotosViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val trashedMedia: StateFlow<List<MediaEntry>> = repository.trash
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptySet())
-        .map { it.toList() } // Compatibility
+        .map { list ->
+            list.sortedWith(
+                compareByDescending<MediaEntry> { it.bestTimestamp }
+                    .thenByDescending { it.contentId }
+            )
+        }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val groupedTrashedMedia: StateFlow<List<GridItem>> = combine(trashedMedia, gridColumns) { media, cols ->
@@ -119,6 +132,9 @@ class PhotosViewModel @Inject constructor(
 
     val confirmDelete: StateFlow<Boolean> = settingsRepository.confirmDelete
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    val ribbonOpen: StateFlow<Boolean> = settingsRepository.ribbonOpen
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     val excludedFolders: StateFlow<Set<String>> = settingsRepository.excludedFolders
         .stateIn(viewModelScope, SharingStarted.Lazily, emptySet())
@@ -309,6 +325,23 @@ class PhotosViewModel @Inject constructor(
     fun setGridColumns(value: Int) {
         viewModelScope.launch {
             settingsRepository.setGridColumns(value)
+        }
+    }
+
+    fun setRibbonOpen(value: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setRibbonOpen(value)
+        }
+    }
+
+    fun createNewAlbum(name: String) {
+        viewModelScope.launch {
+            val defaultPicturesDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES)
+            val targetDir = java.io.File(defaultPicturesDir, name)
+            if (!targetDir.exists()) {
+                targetDir.mkdirs()
+            }
+            refresh()
         }
     }
 

@@ -18,9 +18,9 @@ object FilenameDateParser {
     // e.g. 20260531144922
     private val pattern3 = Regex("""(?<!\d)(19|20\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])([01]\d|2[0-3])([0-5]\d)([0-5]\d)(?!\d)""")
 
-    // Matches 13-digit Unix millisecond timestamp
+    // Matches 13-digit Unix millisecond timestamp (in the 2010-2033 range, starting with 12 to 19)
     // e.g. 1685976340633
-    private val pattern4 = Regex("""(?<!\d)([12]\d{12})(?!\d)""")
+    private val pattern4 = Regex("""(?<!\d)(1[2-9]\d{11})(?!\d)""")
 
     fun parseDateFromFilename(filename: String): Long? {
         // Try pattern 1

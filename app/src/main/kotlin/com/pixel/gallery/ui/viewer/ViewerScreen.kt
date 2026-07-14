@@ -2,10 +2,12 @@ package com.pixel.gallery.ui.viewer
 
 import android.app.Activity
 import android.app.WallpaperManager
+import android.graphics.Bitmap
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,7 +17,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -37,7 +38,10 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bumptech.glide.Glide
 import com.pixel.gallery.ui.components.DeleteConfirmationDialog
+import com.pixel.gallery.utils.BitmapUtils
+import com.pixel.gallery.utils.MimeTypes
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -48,6 +52,7 @@ import com.pixel.gallery.ui.viewmodel.PhotosViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.saket.telephoto.zoomable.glide.ZoomableGlideImage
 import me.saket.telephoto.zoomable.rememberZoomableImageState
@@ -81,7 +86,13 @@ fun ViewerScreen(
     var showUI by remember { mutableStateOf(true) }
     var showInfo by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var showWallpaperSheet by remember { mutableStateOf(false) }
+    var wallpaperCropMedia by remember { mutableStateOf<MediaEntry?>(null) }
+    var wallpaperBusy by remember { mutableStateOf(false) }
+    var wallpaperMessage by remember { mutableStateOf<String?>(null) }
     var rotationLocked by remember { mutableStateOf(true) }
+    val wallpaperScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     
     val confirmTrash by viewModel.confirmTrash.collectAsState()
     val confirmDelete by viewModel.confirmDelete.collectAsState()
@@ -97,9 +108,20 @@ fun ViewerScreen(
     // Motion Photo State
     var motionVideoFile by remember(currentMedia?.contentId) { mutableStateOf<File?>(null) }
     var isPlayingMotion by remember { mutableStateOf(false) }
+    val canSetWallpaper = remember(currentMedia, motionVideoFile) {
+        val media = currentMedia
+        media != null &&
+            motionVideoFile == null &&
+            MimeTypes.isImage(media.sourceMimeType) &&
+            media.sourceMimeType != MimeTypes.SVG &&
+            !MimeTypes.isRaw(media.sourceMimeType)
+    }
 
     LaunchedEffect(currentMedia) {
         isPlayingMotion = false
+        showMenu = false
+        showWallpaperSheet = false
+        wallpaperCropMedia = null
         val file = withContext(Dispatchers.IO) {
             currentMedia?.let { viewModel.extractMotionVideo(it.path) }
         }
@@ -139,6 +161,12 @@ fun ViewerScreen(
             controller.hide(WindowInsetsCompat.Type.systemBars())
             controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
+    }
+
+    LaunchedEffect(wallpaperMessage) {
+        val message = wallpaperMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(message)
+        wallpaperMessage = null
     }
 
     // Selective HDR support
@@ -240,30 +268,43 @@ fun ViewerScreen(
             exit = fadeOut() + slideOutVertically { -it },
             modifier = Modifier.align(Alignment.TopCenter)
         ) {
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)
-                        )
-                    )
-                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                TopAppBar(
-                    title = {},
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-                        }
-                    },
-                    actions = {
+                // Back Button (Circle Container)
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronLeft,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+
+                // Actions Capsule Container
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
                         if (motionVideoFile != null) {
                             IconButton(onClick = { isPlayingMotion = !isPlayingMotion }) {
                                 Icon(
                                     imageVector = if (isPlayingMotion) Icons.Default.MotionPhotosPause else Icons.Default.MotionPhotosOn,
                                     contentDescription = "Motion Photo",
-                                    tint = Color.White
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                             }
                         }
@@ -279,61 +320,58 @@ fun ViewerScreen(
                             Icon(
                                 imageVector = if (rotationLocked) Icons.Outlined.ScreenLockRotation else Icons.Outlined.ScreenRotation,
                                 contentDescription = "Auto-Rotate",
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         }
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color.White)
-                        }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Set as Wallpaper") },
-                                onClick = {
-                                    showMenu = false
-                                    currentMedia?.let { media ->
-                                        val intent = WallpaperManager.getInstance(context).getCropAndSetWallpaperIntent(Uri.parse(media.uri))
-                                        context.startActivity(intent)
-                                    }
-                                },
-                                leadingIcon = { Icon(Icons.Outlined.Wallpaper, contentDescription = null) }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Move to locked folder") },
-                                onClick = {
-                                    showMenu = false
-                                    currentMedia?.let { media ->
-                                        viewModel.moveToVault(media)
-                                        onBack()
-                                    }
-                                },
-                                leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Open With") },
-                                onClick = {
-                                    showMenu = false
-                                    currentMedia?.let { media ->
-                                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(Uri.parse(media.uri), media.sourceMimeType)
-                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        Box {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                if (canSetWallpaper) {
+                                    DropdownMenuItem(
+                                        text = { Text("Set as Wallpaper") },
+                                        onClick = {
+                                            showMenu = false
+                                            showWallpaperSheet = true
+                                        },
+                                        leadingIcon = { Icon(Icons.Outlined.Wallpaper, contentDescription = null) }
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text("Move to locked folder") },
+                                    onClick = {
+                                        showMenu = false
+                                        currentMedia?.let { media ->
+                                            viewModel.moveToVault(media)
+                                            onBack()
                                         }
-                                        try {
-                                            context.startActivity(Intent.createChooser(intent, "Open with..."))
-                                        } catch (e: Exception) { }
-                                    }
-                                },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) }
-                            )
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Open With") },
+                                    onClick = {
+                                        showMenu = false
+                                        currentMedia?.let { media ->
+                                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                setDataAndType(Uri.parse(media.uri), media.sourceMimeType)
+                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            try {
+                                                context.startActivity(Intent.createChooser(intent, "Open with..."))
+                                            } catch (e: Exception) { }
+                                        }
+                                    },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) }
+                                )
+                            }
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        navigationIconContentColor = Color.White
-                    )
-                )
+                    }
+                }
             }
         }
 
@@ -347,87 +385,198 @@ fun ViewerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))
-                        )
-                    )
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(bottom = 16.dp, top = 24.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = 24.dp),
+                contentAlignment = Alignment.BottomCenter
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f),
+                    modifier = Modifier.padding(horizontal = 24.dp)
                 ) {
-                    ViewerAction(Icons.Outlined.Share, "Share") {
-                        currentMedia?.let { media ->
-                            val uri = FileProvider.getUriForFile(context, "com.pixel.gallery.fileprovider", File(media.path))
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = media.sourceMimeType
-                                putExtra(Intent.EXTRA_STREAM, uri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            context.startActivity(Intent.createChooser(intent, "Share Media"))
+                    Row(
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 1. Favorite
+                        IconButton(onClick = { 
+                            currentMedia?.let { viewModel.toggleFavourite(it.contentId, isFavourite) }
+                        }) {
+                            Icon(
+                                imageVector = if (isFavourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                contentDescription = "Favorite",
+                                tint = if (isFavourite) Color.Red else MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         }
-                    }
-                    ViewerAction(Icons.Outlined.Edit, "Edit") {
-                        currentMedia?.let { media ->
-                            val intent = Intent(Intent.ACTION_EDIT).apply {
-                                setDataAndType(Uri.parse(media.uri), media.sourceMimeType)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            try {
-                                context.startActivity(Intent.createChooser(intent, "Edit Media"))
-                            } catch (e: Exception) { }
-                        }
-                    }
-                    IconButton(onClick = { 
-                        currentMedia?.let { viewModel.toggleFavourite(it.contentId, isFavourite) }
-                    }) {
-                        Icon(
-                            imageVector = if (isFavourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                            contentDescription = "Favorite",
-                            tint = if (isFavourite) Color.Red else Color.White
-                        )
-                    }
-                    ViewerAction(Icons.Outlined.Info, "Info") {
-                        showInfo = true
-                    }
-                    if (currentMedia?.isTrashed == true) {
-                        ViewerAction(Icons.Outlined.RestoreFromTrash, "Restore") {
+
+                        // 2. Edit
+                        IconButton(onClick = {
                             currentMedia?.let { media ->
-                                viewModel.restoreMedia(media.contentId, media.uri)
-                                onBack()
+                                val intent = Intent(Intent.ACTION_EDIT).apply {
+                                    setDataAndType(Uri.parse(media.uri), media.sourceMimeType)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                try {
+                                    context.startActivity(Intent.createChooser(intent, "Edit Media"))
+                                } catch (e: Exception) { }
                             }
+                        }) {
+                            Icon(Icons.Outlined.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSecondaryContainer)
                         }
-                        ViewerAction(Icons.Outlined.Delete, "Delete permanently") {
-                            if (confirmDelete) {
-                                isPermanentDelete = true
-                                showDeleteConfirmDialog = true
-                            } else {
+
+                        // 3. Info
+                        IconButton(onClick = { showInfo = true }) {
+                            Icon(Icons.Outlined.Info, contentDescription = "Info", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                        }
+
+                        // 4. Share / Restore
+                        if (currentMedia?.isTrashed == true) {
+                            IconButton(onClick = {
                                 currentMedia?.let { media ->
-                                    viewModel.deleteMediaBulk(listOf(media.uri))
+                                    viewModel.restoreMedia(media.contentId, media.uri)
                                     onBack()
                                 }
+                            }) {
+                                Icon(Icons.Outlined.RestoreFromTrash, contentDescription = "Restore", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                            }
+                        } else {
+                            IconButton(onClick = {
+                                currentMedia?.let { media ->
+                                    val uri = FileProvider.getUriForFile(context, "com.pixel.gallery.fileprovider", File(media.path))
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = media.sourceMimeType
+                                        putExtra(Intent.EXTRA_STREAM, uri)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Share Media"))
+                                }
+                            }) {
+                                Icon(Icons.Outlined.Share, contentDescription = "Share", tint = MaterialTheme.colorScheme.onSecondaryContainer)
                             }
                         }
-                    } else {
-                        ViewerAction(Icons.Outlined.Delete, "Delete") {
-                            if (confirmTrash) {
-                                isPermanentDelete = false
-                                showDeleteConfirmDialog = true
+
+                        // 5. Delete
+                        IconButton(onClick = {
+                            if (currentMedia?.isTrashed == true) {
+                                if (confirmDelete) {
+                                    isPermanentDelete = true
+                                    showDeleteConfirmDialog = true
+                                } else {
+                                    currentMedia?.let { media ->
+                                        viewModel.deleteMediaBulk(listOf(media.uri))
+                                        onBack()
+                                    }
+                                }
                             } else {
-                                currentMedia?.let { media ->
-                                    viewModel.moveToTrash(media.contentId, media.uri, media.path)
-                                    onBack()
+                                if (confirmTrash) {
+                                    isPermanentDelete = false
+                                    showDeleteConfirmDialog = true
+                                } else {
+                                    currentMedia?.let { media ->
+                                        viewModel.moveToTrash(media.contentId, media.uri, media.path)
+                                        onBack()
+                                    }
                                 }
                             }
+                        }) {
+                            Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onSecondaryContainer)
                         }
                     }
                 }
             }
         }
+
+        if (showWallpaperSheet && currentMedia != null && canSetWallpaper) {
+            ModalBottomSheet(
+                onDismissRequest = { showWallpaperSheet = false }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                        .navigationBarsPadding()
+                ) {
+                    Text(
+                        text = "Set as wallpaper",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    ListItem(
+                        headlineContent = { Text("Crop and set") },
+                        supportingContent = { Text("Adjust the crop before applying it.") },
+                        leadingContent = { Icon(Icons.Outlined.Crop, contentDescription = null) },
+                        modifier = Modifier.clickable {
+                            showWallpaperSheet = false
+                            wallpaperCropMedia = currentMedia
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text("Set directly") },
+                        supportingContent = { Text("Apply the image without cropping.") },
+                        leadingContent = { Icon(Icons.Outlined.Wallpaper, contentDescription = null) },
+                        modifier = Modifier.clickable {
+                            val media = currentMedia ?: return@clickable
+                            showWallpaperSheet = false
+                            wallpaperScope.launch {
+                                wallpaperBusy = true
+                                try {
+                                    applyWallpaperFromMedia(context, media)
+                                    wallpaperMessage = "Wallpaper applied."
+                                } catch (e: Exception) {
+                                    Log.e("ViewerScreen", "failed to set wallpaper directly for ${media.uri}", e)
+                                    wallpaperMessage = "Could not set wallpaper."
+                                } finally {
+                                    wallpaperBusy = false
+                                }
+                            }
+                        }
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
+            }
+        }
+
+        if (wallpaperCropMedia != null && canSetWallpaper) {
+            WallpaperCropScreen(
+                media = wallpaperCropMedia!!,
+                onCancel = { wallpaperCropMedia = null },
+                onConfirm = { bitmap ->
+                    wallpaperCropMedia = null
+                            wallpaperScope.launch {
+                                wallpaperBusy = true
+                                try {
+                                    applyWallpaperBitmap(context, bitmap)
+                                    wallpaperMessage = "Wallpaper applied."
+                                } catch (e: Exception) {
+                                    Log.e("ViewerScreen", "failed to set wallpaper from crop for ${currentMedia?.uri}", e)
+                                    wallpaperMessage = "Could not set wallpaper."
+                                } finally {
+                                    wallpaperBusy = false
+                                }
+                            }
+                }
+            )
+        }
+
+        if (wallpaperBusy) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.35f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 88.dp)
+        )
 
         if (showInfo && currentMedia != null) {
             InfoBottomSheet(
@@ -530,6 +679,42 @@ fun InfoBottomSheet(
     }
 }
 
+private suspend fun loadWallpaperBitmap(
+    context: android.content.Context,
+    media: MediaEntry,
+    targetSize: WallpaperImageSize,
+): Bitmap? = withContext(Dispatchers.IO) {
+    runCatching {
+        Glide.with(context)
+            .asBitmap()
+            .load(media.uri)
+            .submit(targetSize.width, targetSize.height)
+            .get()
+    }.getOrNull()?.let { bitmap ->
+        if (MimeTypes.needRotationAfterGlide(media.sourceMimeType, null)) {
+            BitmapUtils.applyExifOrientation(context, bitmap, media.sourceRotationDegrees, false)
+        } else {
+            bitmap
+        }
+    }
+}
+
+private suspend fun applyWallpaperBitmap(
+    context: android.content.Context,
+    bitmap: Bitmap,
+) = withContext(Dispatchers.IO) {
+    WallpaperManager.getInstance(context).setBitmap(bitmap)
+}
+
+private suspend fun applyWallpaperFromMedia(
+    context: android.content.Context,
+    media: MediaEntry,
+) = withContext(Dispatchers.IO) {
+    context.contentResolver.openInputStream(Uri.parse(media.uri))?.use { input ->
+        WallpaperManager.getInstance(context).setStream(input)
+    } ?: throw IllegalStateException("failed to open wallpaper input stream for ${media.uri}")
+}
+
 @Composable
 fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String) {
     Row(
@@ -565,7 +750,7 @@ fun VideoPlayer(
                 setMediaItem(MediaItem.fromUri(Uri.parse(uri)))
                 repeatMode = if (isMotionPhoto) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
                 prepare()
-                playWhenReady = true
+                playWhenReady = isMotionPhoto
             }
         } else null
         
@@ -623,15 +808,31 @@ fun VideoControls(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    var isPlaying by remember { mutableStateOf(false) }
+    var isPlaying by remember { mutableStateOf(player.isPlaying) }
     var currentPosition by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(0L) }
     var isDragging by remember { mutableStateOf(false) }
+    var isMuted by remember { mutableStateOf(player.volume == 0f) }
+
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(isPlayingChanged: Boolean) {
+                isPlaying = isPlayingChanged
+            }
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                duration = player.duration.coerceAtLeast(0L)
+                isPlaying = player.isPlaying
+            }
+        }
+        player.addListener(listener)
+        onDispose {
+            player.removeListener(listener)
+        }
+    }
 
     LaunchedEffect(player, isDragging) {
         while (true) {
             try {
-                isPlaying = player.isPlaying
                 if (!isDragging) {
                     currentPosition = player.currentPosition
                 }
@@ -639,7 +840,7 @@ fun VideoControls(
             } catch (e: Exception) {
                 break
             }
-            delay(500)
+            delay(250)
         }
     }
 
@@ -653,7 +854,12 @@ fun VideoControls(
             IconButton(
                 onClick = { 
                     try {
-                        if (player.isPlaying) player.pause() else player.play()
+                        if (player.playbackState == Player.STATE_ENDED) {
+                            player.seekTo(0)
+                            player.play()
+                        } else {
+                            if (player.isPlaying) player.pause() else player.play()
+                        }
                     } catch (e: Exception) {}
                 },
                 modifier = Modifier
@@ -669,46 +875,65 @@ fun VideoControls(
                 )
             }
 
-            Column(
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = if (isLandscape) 48.dp else 96.dp)
+                    .padding(bottom = if (isLandscape) 85.dp else 115.dp)
                     .padding(horizontal = 24.dp)
                     .fillMaxWidth()
             ) {
-                Slider(
-                    value = currentPosition.toFloat(),
-                    onValueChange = { 
-                        isDragging = true
-                        currentPosition = it.toLong()
-                    },
-                    onValueChangeFinished = {
-                        isDragging = false
-                        try {
-                            player.seekTo(currentPosition)
-                        } catch (e: Exception) {}
-                    },
-                    valueRange = 0f..duration.toFloat().coerceAtLeast(1f),
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color.White,
-                        activeTrackColor = Color.White,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                    )
-                )
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = formatTime(currentPosition),
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
+                    
+                    Slider(
+                        value = currentPosition.toFloat(),
+                        onValueChange = { 
+                            isDragging = true
+                            currentPosition = it.toLong()
+                        },
+                        onValueChangeFinished = {
+                            isDragging = false
+                            try {
+                                player.seekTo(currentPosition)
+                            } catch (e: Exception) {}
+                        },
+                        valueRange = 0f..duration.toFloat().coerceAtLeast(1f),
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                    
                     Text(
                         text = formatTime(duration),
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
+                    
+                    IconButton(
+                        onClick = {
+                            isMuted = !isMuted
+                            player.volume = if (isMuted) 0f else 1f
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                            contentDescription = if (isMuted) "Muted" else "Unmuted",
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
                 }
             }
         }

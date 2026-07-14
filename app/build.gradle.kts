@@ -186,6 +186,8 @@ dependencies {
     implementation("com.github.deckerst:Android-TiffBitmapFactory:424b18a4ae")
     implementation("org.osmdroid:osmdroid-android:6.1.18")
 
+    testImplementation("junit:junit:4.13.2")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

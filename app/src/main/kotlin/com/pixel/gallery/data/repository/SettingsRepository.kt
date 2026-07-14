@@ -33,6 +33,7 @@ class SettingsRepository @Inject constructor(
     private val GRID_COLUMNS = intPreferencesKey("grid_columns")
     private val CONFIRM_TRASH = booleanPreferencesKey("confirm_trash")
     private val CONFIRM_DELETE = booleanPreferencesKey("confirm_delete")
+    private val RIBBON_OPEN = booleanPreferencesKey("ribbon_open")
 
     val startupAtAlbums: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[STARTUP_AT_ALBUMS] ?: false }
@@ -45,6 +46,9 @@ class SettingsRepository @Inject constructor(
 
     val confirmDelete: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[CONFIRM_DELETE] ?: true }
+
+    val ribbonOpen: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[RIBBON_OPEN] ?: false }
 
     suspend fun setStartupAtAlbums(value: Boolean) {
         context.dataStore.edit { preferences ->
@@ -67,6 +71,12 @@ class SettingsRepository @Inject constructor(
     suspend fun setConfirmDelete(value: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[CONFIRM_DELETE] = value
+        }
+    }
+
+    suspend fun setRibbonOpen(value: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[RIBBON_OPEN] = value
         }
     }
 

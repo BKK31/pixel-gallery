@@ -203,6 +203,160 @@ private fun LazyGridState.getItemIndexAt(offset: Offset): Int? {
     }?.index
 }
 
+@Composable
+fun Modifier.albumGridDragSelect(
+    gridState: LazyGridState,
+    albums: List<com.pixel.gallery.model.Album>,
+    selectedAlbums: Set<com.pixel.gallery.model.Album>,
+    onSelectionChange: (Set<com.pixel.gallery.model.Album>) -> Unit
+): Modifier {
+    val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+    val viewConfiguration = LocalViewConfiguration.current
+    
+    val currentSelectedAlbums by rememberUpdatedState(selectedAlbums)
+    val currentAlbums by rememberUpdatedState(albums)
+    val currentSelectionChange by rememberUpdatedState(onSelectionChange)
+
+    var dragInitialIndex by remember { mutableIntStateOf(-1) }
+    var dragCurrentIndex by remember { mutableIntStateOf(-1) }
+    var dragStartedWithSelection by remember { mutableStateOf(false) }
+    var initialSelectedAlbumsState by remember { mutableStateOf(setOf<com.pixel.gallery.model.Album>()) }
+    
+    var autoScrollSpeed by remember { mutableFloatStateOf(0f) }
+    var lastPointerPosition by remember { mutableStateOf(Offset.Unspecified) }
+
+    LaunchedEffect(autoScrollSpeed) {
+        if (autoScrollSpeed != 0f) {
+            while (isActive) {
+                gridState.scrollBy(autoScrollSpeed)
+                
+                if (lastPointerPosition != Offset.Unspecified && dragInitialIndex != -1) {
+                    val index = gridState.getItemIndexAt(lastPointerPosition)
+                    if (index != null && index != dragCurrentIndex) {
+                        dragCurrentIndex = index
+                        performUpdateAlbumSelection(
+                            initialSelectedAlbums = initialSelectedAlbumsState,
+                            dragInitialIndex = dragInitialIndex,
+                            dragCurrentIndex = dragCurrentIndex,
+                            dragStartedWithSelection = dragStartedWithSelection,
+                            albums = currentAlbums,
+                            onSelectionChange = currentSelectionChange
+                        )
+                    }
+                }
+                delay(10)
+            }
+        }
+    }
+
+    return this.pointerInput(Unit) {
+        while (true) {
+            awaitPointerEventScope {
+                val down = awaitFirstDown(pass = PointerEventPass.Initial)
+                var dragStarted = false
+                
+                val longPressTimeout = viewConfiguration.longPressTimeoutMillis
+                val touchSlop = viewConfiguration.touchSlop
+                
+                val longPressJob = scope.launch {
+                    delay(longPressTimeout)
+                    val index = gridState.getItemIndexAt(down.position)
+                    if (index != null && index in currentAlbums.indices) {
+                        val album = currentAlbums[index]
+                        
+                        dragStarted = true
+                        dragInitialIndex = index
+                        dragCurrentIndex = index
+                        initialSelectedAlbumsState = currentSelectedAlbums
+                        dragStartedWithSelection = !currentSelectedAlbums.contains(album)
+                        
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        
+                        performUpdateAlbumSelection(
+                            initialSelectedAlbums = initialSelectedAlbumsState,
+                            dragInitialIndex = dragInitialIndex,
+                            dragCurrentIndex = dragCurrentIndex,
+                            dragStartedWithSelection = dragStartedWithSelection,
+                            albums = currentAlbums,
+                            onSelectionChange = currentSelectionChange
+                        )
+                    }
+                }
+
+                try {
+                    do {
+                        val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                        val change = event.changes.first()
+                        lastPointerPosition = change.position
+                        
+                        if (dragStarted) {
+                            change.consume()
+                            
+                            val index = gridState.getItemIndexAt(change.position)
+                            
+                            val viewHeight = size.height
+                            val threshold = 100f
+                            autoScrollSpeed = when {
+                                change.position.y < threshold -> - (threshold - change.position.y) / 2f
+                                change.position.y > viewHeight - threshold -> (change.position.y - (viewHeight - threshold)) / 2f
+                                else -> 0f
+                            }
+
+                            if (index != null && index != dragCurrentIndex) {
+                                dragCurrentIndex = index
+                                performUpdateAlbumSelection(
+                                    initialSelectedAlbums = initialSelectedAlbumsState,
+                                    dragInitialIndex = dragInitialIndex,
+                                    dragCurrentIndex = dragCurrentIndex,
+                                    dragStartedWithSelection = dragStartedWithSelection,
+                                    albums = currentAlbums,
+                                    onSelectionChange = currentSelectionChange
+                                )
+                            }
+                        } else {
+                            val diff = change.position - down.position
+                            if (kotlin.math.hypot(diff.x, diff.y) > touchSlop) {
+                                longPressJob.cancel()
+                            }
+                        }
+                    } while (change.pressed)
+                } finally {
+                    longPressJob.cancel()
+                    dragInitialIndex = -1
+                    dragCurrentIndex = -1
+                    autoScrollSpeed = 0f
+                    lastPointerPosition = Offset.Unspecified
+                    dragStarted = false
+                }
+            }
+        }
+    }
+}
+
+private fun performUpdateAlbumSelection(
+    initialSelectedAlbums: Set<com.pixel.gallery.model.Album>,
+    dragInitialIndex: Int,
+    dragCurrentIndex: Int,
+    dragStartedWithSelection: Boolean,
+    albums: List<com.pixel.gallery.model.Album>,
+    onSelectionChange: (Set<com.pixel.gallery.model.Album>) -> Unit
+) {
+    if (dragInitialIndex == -1 || dragCurrentIndex == -1) return
+    
+    val start = minOf(dragInitialIndex, dragCurrentIndex)
+    val end = maxOf(dragInitialIndex, dragCurrentIndex)
+    
+    val rangeAlbums = (start..end).filter { it in albums.indices }.map { albums[it] }.toSet()
+    
+    val newSelection = if (dragStartedWithSelection) {
+        initialSelectedAlbums + rangeAlbums
+    } else {
+        initialSelectedAlbums - rangeAlbums
+    }
+    onSelectionChange(newSelection)
+}
+
 /**
  * A modifier that detects pinch-to-zoom gestures to dynamically change the number of columns in a grid.
  */

@@ -346,16 +346,20 @@ class MediaRepository @Inject constructor(
                 val modified = cursor.getLong(modifiedColumn) * 1000
                 val path = cursor.getString(dataColumn)
 
-                // Also update if trashing status changed
-                val knownEntry = knownEntries[id]
-                if (knownEntry?.dateModifiedMillis != modified || knownEntry.isTrashed != queryTrashed) {
-                    val mediaStoreTaken = if (takenColumn != -1) cursor.getLong(takenColumn) else 0L
-                    val hasValidMediaStoreTaken = mediaStoreTaken > 0
-                    var bestTime = if (hasValidMediaStoreTaken) mediaStoreTaken else (cursor.getLong(addedColumn) * 1000)
+                 val knownEntry = knownEntries[id]
+                 if (knownEntry?.dateModifiedMillis != modified || knownEntry.isTrashed != queryTrashed || knownEntry.bestTimestamp == 0L) {
+                     val mediaStoreTakenRaw = if (takenColumn != -1) cursor.getLong(takenColumn) else 0L
+                     val mediaStoreTaken = if (mediaStoreTakenRaw > 0 && mediaStoreTakenRaw < 1000000000000L) {
+                         mediaStoreTakenRaw * 1000
+                     } else {
+                         mediaStoreTakenRaw
+                     }
+                     val hasValidMediaStoreTaken = mediaStoreTaken > 0
+                     var bestTime = if (hasValidMediaStoreTaken) mediaStoreTaken else (cursor.getLong(addedColumn) * 1000)
                     
                     val isRecentlyAdded = Math.abs(System.currentTimeMillis() - bestTime) < 600000 // 10 mins
                     val fileTime = java.io.File(path).lastModified()
-                    val isRestoredOrOlder = fileTime > 0 && (bestTime == 0L || fileTime < bestTime - 10000)
+                    val isRestoredOrOlder = fileTime > 0 && (bestTime == 0L || fileTime < bestTime - 86400000L)
                     
                     if (!hasValidMediaStoreTaken || isRecentlyAdded || isRestoredOrOlder || bestTime == 0L) {
                         var foundTime = false
