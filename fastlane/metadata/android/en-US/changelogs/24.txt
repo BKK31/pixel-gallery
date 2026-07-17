@@ -1,0 +1,1 @@
+- Fixed ribbon navigation bug which didn't open the desired image when album was opened from ribbon
