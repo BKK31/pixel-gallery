@@ -43,19 +43,22 @@ import com.pixel.gallery.ui.theme.EmphasizedTypography
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel.GridItem
 import java.io.File
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 
-sealed class AlbumSource {
-    object Recents : AlbumSource()
-    object Favourites : AlbumSource()
-    data class Folder(val name: String) : AlbumSource()
+sealed class AlbumSource : Parcelable {
+    @Parcelize object Recents : AlbumSource()
+    @Parcelize object Favourites : AlbumSource()
+    @Parcelize data class Folder(val name: String) : AlbumSource()
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalGlideComposeApi::class)
 @Composable
 fun PhotoScreen(
-    albumName: String,
+    currentSource: AlbumSource,
     onBack: () -> Unit,
     onNavigateToViewer: (Long) -> Unit,
+    onSourceChange: (AlbumSource) -> Unit,
     selectedIds: Set<Long> = emptySet(),
     onSelectionChange: (Set<Long>) -> Unit = {},
     onToggleSelection: (Long) -> Unit = {},
@@ -68,10 +71,6 @@ fun PhotoScreen(
     val albums by viewModel.albums.collectAsState()
     val gridColumns by viewModel.gridColumns.collectAsState()
     val ribbonOpen by viewModel.ribbonOpen.collectAsState()
-
-    var currentSource by remember(albumName) {
-        mutableStateOf<AlbumSource>(AlbumSource.Folder(albumName))
-    }
 
     val currentPhotos = remember(currentSource, allPhotos, photos, favourites) {
         when (val source = currentSource) {
@@ -298,7 +297,7 @@ fun PhotoScreen(
                                     label = "Recents",
                                     count = photos.size,
                                     isSelected = currentSource is AlbumSource.Recents,
-                                    onClick = { currentSource = AlbumSource.Recents }
+                                    onClick = { onSourceChange(AlbumSource.Recents) }
                                 )
                             }
 
@@ -309,7 +308,7 @@ fun PhotoScreen(
                                     label = "Favourites",
                                     count = favourites.size,
                                     isSelected = currentSource is AlbumSource.Favourites,
-                                    onClick = { currentSource = AlbumSource.Favourites }
+                                    onClick = { onSourceChange(AlbumSource.Favourites) }
                                 )
                             }
 
@@ -320,7 +319,7 @@ fun PhotoScreen(
                                     label = album.name,
                                     count = album.itemCount,
                                     isSelected = currentSource is AlbumSource.Folder && (currentSource as AlbumSource.Folder).name == album.name,
-                                    onClick = { currentSource = AlbumSource.Folder(album.name) }
+                                    onClick = { onSourceChange(AlbumSource.Folder(album.name)) }
                                 )
                             }
                         }

@@ -86,7 +86,7 @@ sealed class Screen : Parcelable {
     ) : Screen()
     @Parcelize object ExcludedFolders : Screen()
     @Parcelize object Licenses : Screen()
-    @Parcelize data class Photo(val albumName: String) : Screen()
+    @Parcelize data class Photo(val source: com.pixel.gallery.ui.gallery.AlbumSource) : Screen()
 
     enum class ViewerSource { All, Favourites, Trash, Album, Vault, External }
 }
@@ -229,8 +229,13 @@ fun MainScaffold(
                         Screen.Trash -> trash
                         Screen.LockedFolder -> vault
                         is Screen.Photo -> {
-                            val albumName = (currentScreen as Screen.Photo).albumName
-                            allPhotos.filter { java.io.File(it.path).parentFile?.name == albumName }
+                            when (val source = (currentScreen as Screen.Photo).source) {
+                                is com.pixel.gallery.ui.gallery.AlbumSource.Recents -> allPhotos
+                                is com.pixel.gallery.ui.gallery.AlbumSource.Favourites -> favourites
+                                is com.pixel.gallery.ui.gallery.AlbumSource.Folder -> {
+                                    allPhotos.filter { java.io.File(it.path).parentFile?.name == source.name }
+                                }
+                            }
                         }
                         else -> emptyList()
                     }
@@ -432,7 +437,7 @@ fun MainScaffold(
                                 gridState = albumsGridState,
                                 onNavigateToFavourites = { navigationStack = navigationStack + Screen.Favourites },
                                 onNavigateToTrash = { navigationStack = navigationStack + Screen.Trash },
-                                onNavigateToAlbum = { name -> navigationStack = navigationStack + Screen.Photo(name) },
+                                onNavigateToAlbum = { name -> navigationStack = navigationStack + Screen.Photo(com.pixel.gallery.ui.gallery.AlbumSource.Folder(name)) },
                                 onExclude = { path -> photosViewModel.addExcludedFolder(path) },
                                 onHide = { path -> photosViewModel.addHiddenFolder(path) },
                                 onLongClickAlbum = { album -> selectedAlbumsForActions = setOf(album) },
@@ -518,12 +523,20 @@ fun MainScaffold(
                 Screen.ExcludedFolders -> ExcludedFoldersScreen(onBack = { navigationStack = navigationStack.dropLast(1) })
                 Screen.Licenses -> LicensesScreen(onBack = { navigationStack = navigationStack.dropLast(1) })
                 is Screen.Photo -> {
-                    val albumName = (currentScreen as Screen.Photo).albumName
+                    val source = (currentScreen as Screen.Photo).source
                     PhotoScreen(
-                        albumName = albumName,
+                        currentSource = source,
                         onBack = { navigationStack = navigationStack.dropLast(1) },
                         onNavigateToViewer = { id -> 
-                            navigationStack = navigationStack + Screen.Viewer(id, Screen.ViewerSource.Album, albumName) 
+                            val (viewerSource, viewerAlbumName) = when (source) {
+                                is com.pixel.gallery.ui.gallery.AlbumSource.Recents -> Screen.ViewerSource.All to null
+                                is com.pixel.gallery.ui.gallery.AlbumSource.Favourites -> Screen.ViewerSource.Favourites to null
+                                is com.pixel.gallery.ui.gallery.AlbumSource.Folder -> Screen.ViewerSource.Album to source.name
+                            }
+                            navigationStack = navigationStack + Screen.Viewer(id, viewerSource, viewerAlbumName) 
+                        },
+                        onSourceChange = { newSource ->
+                            navigationStack = navigationStack.dropLast(1) + Screen.Photo(newSource)
                         },
                         selectedIds = selectedIds,
                         onSelectionChange = updateSelection,
