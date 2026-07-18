@@ -1,0 +1,4 @@
+- Crash when restoring photos from locked folder
+- ExoPlayer default controls no longer flash on video open
+- Screen stays awake while a video is playing; sleeps normally when paused
+- Mute preference now persists across videos and app restarts
