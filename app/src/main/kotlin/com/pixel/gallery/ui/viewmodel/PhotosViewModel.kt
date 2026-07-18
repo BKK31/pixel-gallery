@@ -134,7 +134,10 @@ class PhotosViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     val ribbonOpen: StateFlow<Boolean> = settingsRepository.ribbonOpen
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    val videoMuted: StateFlow<Boolean> = settingsRepository.videoMuted
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
 
     val excludedFolders: StateFlow<Set<String>> = settingsRepository.excludedFolders
         .stateIn(viewModelScope, SharingStarted.Lazily, emptySet())
@@ -331,6 +334,12 @@ class PhotosViewModel @Inject constructor(
     fun setRibbonOpen(value: Boolean) {
         viewModelScope.launch {
             settingsRepository.setRibbonOpen(value)
+        }
+    }
+
+    fun setVideoMuted(value: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setVideoMuted(value)
         }
     }
 

@@ -517,6 +517,7 @@ fun MainScaffold(
                     ViewerScreen(
                         initialId = viewer.initialId,
                         photos = photosForViewer,
+                        isVault = viewer.source == Screen.ViewerSource.Vault,
                         onBack = { navigationStack = navigationStack.dropLast(1) }
                     )
                 }
@@ -812,10 +813,15 @@ fun MainScaffold(
                     expanded = true,
                     colors = FloatingToolbarDefaults.standardFloatingToolbarColors(),
                     content = {
-                        // 1. Lock
+                        // 1. Lock/Unlock
+                        val isVault = currentScreen == Screen.LockedFolder
                         Surface(
                             onClick = {
-                                selectedEntries.forEach { photosViewModel.moveToVault(it) }
+                                if (isVault) {
+                                    selectedEntries.forEach { photosViewModel.restoreFromVault(it.contentId) }
+                                } else {
+                                    selectedEntries.forEach { photosViewModel.moveToVault(it) }
+                                }
                                 selectedIds = emptySet()
                             },
                             shape = FloatingToolbarDefaults.ContainerShape,
@@ -828,7 +834,11 @@ fun MainScaffold(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Outlined.Lock, contentDescription = "Lock", modifier = Modifier.size(24.dp))
+                                Icon(
+                                    imageVector = if (isVault) Icons.Outlined.LockOpen else Icons.Outlined.Lock, 
+                                    contentDescription = if (isVault) "Unlock" else "Lock", 
+                                    modifier = Modifier.size(24.dp)
+                                )
                             }
                         }
 

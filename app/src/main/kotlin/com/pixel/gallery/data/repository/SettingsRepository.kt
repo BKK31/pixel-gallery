@@ -34,6 +34,7 @@ class SettingsRepository @Inject constructor(
     private val CONFIRM_TRASH = booleanPreferencesKey("confirm_trash")
     private val CONFIRM_DELETE = booleanPreferencesKey("confirm_delete")
     private val RIBBON_OPEN = booleanPreferencesKey("ribbon_open")
+    private val VIDEO_MUTED = booleanPreferencesKey("video_muted")
 
     val startupAtAlbums: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[STARTUP_AT_ALBUMS] ?: false }
@@ -49,6 +50,9 @@ class SettingsRepository @Inject constructor(
 
     val ribbonOpen: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[RIBBON_OPEN] ?: false }
+
+    val videoMuted: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[VIDEO_MUTED] ?: false }
 
     suspend fun setStartupAtAlbums(value: Boolean) {
         context.dataStore.edit { preferences ->
@@ -77,6 +81,12 @@ class SettingsRepository @Inject constructor(
     suspend fun setRibbonOpen(value: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[RIBBON_OPEN] = value
+        }
+    }
+
+    suspend fun setVideoMuted(value: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[VIDEO_MUTED] = value
         }
     }
 
