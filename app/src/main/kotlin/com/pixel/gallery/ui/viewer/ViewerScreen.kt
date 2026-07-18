@@ -75,6 +75,7 @@ private val MapnikHttps = XYTileSource(
 fun ViewerScreen(
     initialId: Long,
     photos: List<MediaEntry>,
+    isVault: Boolean = false,
     onBack: () -> Unit,
     viewModel: PhotosViewModel = hiltViewModel()
 ) {
@@ -96,6 +97,7 @@ fun ViewerScreen(
     
     val confirmTrash by viewModel.confirmTrash.collectAsState()
     val confirmDelete by viewModel.confirmDelete.collectAsState()
+    val videoMuted by viewModel.videoMuted.collectAsState()
 
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var isPermanentDelete by remember { mutableStateOf(false) }
@@ -228,6 +230,8 @@ fun ViewerScreen(
                         uri = media.uri, 
                         showUI = showUI, 
                         isActive = pagerState.currentPage == page,
+                        isMuted = videoMuted,
+                        onMuteChange = { viewModel.setVideoMuted(it) },
                         onTap = { showUI = !showUI }
                     )
                 } else {
@@ -342,15 +346,19 @@ fun ViewerScreen(
                                     )
                                 }
                                 DropdownMenuItem(
-                                    text = { Text("Move to locked folder") },
+                                    text = { Text(if (isVault) "Remove from locked folder" else "Move to locked folder") },
                                     onClick = {
                                         showMenu = false
                                         currentMedia?.let { media ->
-                                            viewModel.moveToVault(media)
+                                            if (isVault) {
+                                                viewModel.restoreFromVault(media.contentId)
+                                            } else {
+                                                viewModel.moveToVault(media)
+                                            }
                                             onBack()
                                         }
                                     },
-                                    leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) }
+                                    leadingIcon = { Icon(if (isVault) Icons.Outlined.LockOpen else Icons.Outlined.Lock, contentDescription = null) }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Open With") },
@@ -739,16 +747,32 @@ fun VideoPlayer(
     isMotionPhoto: Boolean = false,
     isActive: Boolean = true,
     showUI: Boolean = true,
+    isMuted: Boolean = false,
+    onMuteChange: (Boolean) -> Unit = {},
     onTap: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+    var isPlaying by remember { mutableStateOf(false) }
+
+    DisposableEffect(exoPlayer) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying = playing
+            }
+        }
+        exoPlayer?.addListener(listener)
+        onDispose {
+            exoPlayer?.removeListener(listener)
+        }
+    }
 
     DisposableEffect(isActive, uri) {
         val player = if (isActive) {
             ExoPlayer.Builder(context).build().apply {
                 setMediaItem(MediaItem.fromUri(Uri.parse(uri)))
                 repeatMode = if (isMotionPhoto) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+                volume = if (isMuted && !isMotionPhoto) 0f else 1f
                 prepare()
                 playWhenReady = isMotionPhoto
             }
@@ -774,13 +798,15 @@ fun VideoPlayer(
             AndroidView(
                 factory = { ctx ->
                     PlayerView(ctx).apply {
-                        player = exoPlayer
                         useController = false
+                        player = exoPlayer
                         setBackgroundColor(android.graphics.Color.BLACK)
                     }
                 },
                 update = { view ->
                     view.player = exoPlayer
+                    view.keepScreenOn = isPlaying
+                    exoPlayer?.volume = if (isMuted) 0f else 1f
                 },
                 onRelease = { view ->
                     view.player = null
@@ -792,6 +818,8 @@ fun VideoPlayer(
                 VideoControls(
                     player = exoPlayer!!,
                     isVisible = showUI,
+                    isMuted = isMuted,
+                    onMuteChange = onMuteChange,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -803,6 +831,8 @@ fun VideoPlayer(
 fun VideoControls(
     player: Player,
     isVisible: Boolean,
+    isMuted: Boolean,
+    onMuteChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val configuration = LocalConfiguration.current
@@ -812,7 +842,6 @@ fun VideoControls(
     var currentPosition by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(0L) }
     var isDragging by remember { mutableStateOf(false) }
-    var isMuted by remember { mutableStateOf(player.volume == 0f) }
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -924,8 +953,7 @@ fun VideoControls(
                     
                     IconButton(
                         onClick = {
-                            isMuted = !isMuted
-                            player.volume = if (isMuted) 0f else 1f
+                            onMuteChange(!isMuted)
                         }
                     ) {
                         Icon(
