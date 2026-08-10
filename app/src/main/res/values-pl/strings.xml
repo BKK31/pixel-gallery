@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Galeria</string>
+    
+    <!-- Navigation -->
+    <string name="nav_photos">Zdjęcia</string>
+    <string name="nav_albums">Albumy</string>
+    <string name="back">Wróć</string>
+    <string name="more">Więcej</string>
+    <string name="cancel">Anuluj</string>
+    
+    <!-- Screens -->
+    <string name="settings">Ustawienia</string>
+    <string name="favourites">Ulubione</string>
+    <string name="recycle_bin">Kosz</string>
+    <string name="hidden_albums">Ukryte albumy</string>
+    <string name="locked_folder">Bezpieczny folder</string>
+    <string name="locked_folder_auth_subtitle">Uwierzytelnij się, aby wyświetlić ukryte multimedia</string>
+    <string name="locked_folder_locked">Bezpieczny folder jest zablokowany</string>
+    <string name="locked_folder_empty">Brak elementów w bezpiecznym folderze</string>
+    <string name="locked_folder_empty_text">Przenieś tutaj poufne zdjęcia i filmy, aby ukryć je przed główną galerią oraz innymi aplikacjami.</string>
+    <string name="edit">Edytuj</string>
+    <string name="excluded_folders">Wykluczone foldery</string>
+    <string name="licenses">Licencje</string>
+    <string name="about">O programie</string>
+    <string name="open_source_licenses">Licencje Open Source</string>
+    <string name="licenses_intro">Ta aplikacja korzysta z następujących bibliotek open source:/string>
+    
+    <!-- Settings -->
+    <string name="material_you">Material You</string>
+    <string name="material_you_desc">Używaj systemowych kolorów dynamicznych</string>
+    <string name="start_at_albums">Uruchamiaj na karcie Albumy</string>
+    <string name="start_at_albums_desc">Domyślnie otwieraj kartę z albumami</string>
+    <string name="language">Język</string>
+    <string name="language_desc">Zmień język aplikacji</string>
+    <string name="excluded_folders_desc">Zarządzaj ignorowanymi lokalizacjami multimediów</string>
+    <string name="select_language">Wybierz język</string>
+
+    <!-- Hidden / Excluded -->
+    <string name="no_hidden_albums">Brak ukrytych albumów</string>
+    <string name="hidden_albums_empty_text">Albumy ukryte z głównej galerii pojawią się tutaj. Nie będą one widoczne w Ostatnich ani w siatce albumów.</string>
+    <string name="no_favourites">Brak ulubionych</string>
+    <string name="favourites_empty_text">Zdjęcia i filmy oznaczone jako ulubione pojawią się tutaj.</string>
+    <string name="bin_empty">Kosz jest pusty</string>
+    <string name="bin_empty_text">Elementy w koszu zostaną trwale usunięte po 30 dniach.</string>
+    <string name="no_excluded_folders">Brak wykluczonych folderów</string>
+    <string name="excluded_folders_empty_text">Wykluczone foldery nie będą skanowane w poszukiwaniu multimediów. Jest to przydatne w przypadku folderów zawierających wiele obrazów, które nie powinny trafić do galerii.</string>
+    <string name="hide_album">Ukryj album</string>
+    <string name="unhide">Odkryj</string>
+    <string name="exclude_album">Wyklucz album</string>
+    <string name="remove">Usuń</string>
+
+    <!-- Actions -->
+    <string name="item_count">Elementy: %1$d</string>
+    <string name="share">Udostępnij</string>
+    <string name="delete">Usuń</string>
+    <string name="restore">Przywróć</string>
+    <string name="delete_permanently">Usuń na zawsze</string>
+    <string name="move_to_locked">Przenieś do bezpiecznego</string>
+    <string name="unlock">Odblokuj</string>
+    <string name="clear_selection">Wyczyść zaznaczenie</string>
+    <string name="selected">Zaznaczono</string>
+    <string name="selected_count">Zaznaczone: %1$d</string>
+    <string name="set_as_wallpaper">Ustaw jako tapetę</string>
+    <string name="move_to_locked_folder">Przenieś do bezpiecznego folderu</string>
+    <string name="unlock_with_biometrics">Odblokuj biometrycznie</string>
+    <string name="auto_rotate">Obracaj automatycznie</string>
+    <string name="motion_photo">Zdjęcie w ruchu</string>
+    <string name="details">Szczegóły</string>
+    <string name="date_taken">Data wykonania</string>
+    <string name="camera_info">Informacje o aparacie</string>
+    <string name="location">Lokalizacja</string>
+    <string name="pause">Wstrzymaj</string>
+    <string name="play">Odtwórz</string>
+    <string name="share_media">Udostępnij multimedia</string>
+    <string name="edit_media">Edytuj multimedia</string>
+    <string name="map_placeholder">Miejsce na mapę (%1$f, %2$f)</string>
+    <string name="unknown">Nieznane</string>
+</resources>
