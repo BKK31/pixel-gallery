@@ -74,6 +74,23 @@ fun LicensesScreen(onBack: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                     lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
                 )
+                Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    text = "SPECIAL ATTRIBUTION: FOSSIFY GALLERY",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "AVIF image support and decoding integration patterns are based on reference implementations from the Fossify Gallery project.\n\n" +
+                           "GNU General Public License v3.0\n\n" +
+                           "Copyright (c) 2023, Fossify Org\n" +
+                           "Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.",
+                    style = MaterialTheme.typography.bodySmall,
+                    lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
+                )
             }
         }
     }

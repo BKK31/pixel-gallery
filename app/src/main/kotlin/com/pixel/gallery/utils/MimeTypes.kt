@@ -6,7 +6,7 @@ object MimeTypes {
     const val ANY = "*/*"
 
     // generic raster
-    private const val AVIF = "image/avif"
+    const val AVIF = "image/avif"
     const val BMP = "image/bmp"
     private const val DJVU = "image/vnd.djvu"
     const val GIF = "image/gif"
@@ -63,6 +63,8 @@ object MimeTypes {
     const val ZIP = "application/zip"
 
     fun isImage(mimeType: String?) = mimeType != null && mimeType.startsWith("image")
+
+    fun isAvif(mimeType: String?) = mimeType == AVIF
 
     fun isVideo(mimeType: String?) = mimeType != null && mimeType.startsWith("video")
 

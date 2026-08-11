@@ -23,6 +23,7 @@ import com.pixel.gallery.utils.BitmapUtils.applyExifOrientation
 import com.pixel.gallery.utils.LogUtils
 import com.pixel.gallery.utils.MimeTypes
 import com.pixel.gallery.utils.MimeTypes.SVG
+import com.pixel.gallery.utils.MimeTypes.AVIF
 import com.pixel.gallery.utils.MimeTypes.isVideo
 import com.pixel.gallery.utils.MimeTypes.needRotationAfterContentResolverThumbnail
 import com.pixel.gallery.utils.MimeTypes.needRotationAfterGlide
@@ -52,8 +53,9 @@ class ThumbnailFetcher internal constructor(
     private val height: Int = if (height?.takeIf { it > 0 } != null) height else defaultSize
     private val svgFetch = mimeType == SVG
     private val tiffFetch = mimeType == MimeTypes.TIFF
+    private val avifFetch = mimeType == AVIF
     private val multiPageFetch = false // pageId != null && MultiPageImage.isSupported(mimeType)
-    private val customFetch = svgFetch || tiffFetch || multiPageFetch
+    private val customFetch = svgFetch || tiffFetch || multiPageFetch || avifFetch
 
     suspend fun fetch() {
         var bitmap: Bitmap? = null

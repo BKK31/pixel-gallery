@@ -185,6 +185,8 @@ dependencies {
     implementation("com.github.deckerst:androidsvg:c7e58e8e59")
     implementation("com.github.deckerst:Android-TiffBitmapFactory:424b18a4ae")
     implementation("org.osmdroid:osmdroid-android:6.1.18")
+    implementation("com.github.penfeizhou.android.animation:avif:3.0.5")
+    implementation("com.github.penfeizhou.android.animation:glide-plugin:3.0.5")
 
     testImplementation("junit:junit:4.13.2")
 
