@@ -8,6 +8,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.ui.res.stringResource
+import com.pixel.gallery.R
+
 @Composable
 fun DeleteConfirmationDialog(
     itemCount: Int,
@@ -21,7 +24,11 @@ fun DeleteConfirmationDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = if (isPermanent || bypassTrash) "Delete Permanently?" else "Move to Recycle Bin?"
+                text = if (isPermanent || bypassTrash) {
+                    stringResource(R.string.delete_permanently_title)
+                } else {
+                    stringResource(R.string.move_to_recycle_bin_title)
+                }
             )
         },
         text = {
@@ -29,15 +36,15 @@ fun DeleteConfirmationDialog(
                 Text(
                     text = if (isPermanent || bypassTrash) {
                         if (itemCount == 1) {
-                            "This item will be deleted permanently and cannot be restored."
+                            stringResource(R.string.delete_permanently_single)
                         } else {
-                            "These $itemCount items will be deleted permanently and cannot be restored."
+                            stringResource(R.string.delete_permanently_multiple, itemCount)
                         }
                     } else {
                         if (itemCount == 1) {
-                            "Are you sure you want to move this item to the Recycle Bin?"
+                            stringResource(R.string.move_to_recycle_bin_single)
                         } else {
-                            "Are you sure you want to move these $itemCount items to the Recycle Bin?"
+                            stringResource(R.string.move_to_recycle_bin_multiple, itemCount)
                         }
                     }
                 )
@@ -56,7 +63,7 @@ fun DeleteConfirmationDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Delete permanently (bypass Recycle Bin)",
+                            text = stringResource(R.string.delete_permanently_bypass),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -71,14 +78,18 @@ fun DeleteConfirmationDialog(
                 }
             ) {
                 Text(
-                    text = if (isPermanent || bypassTrash) "Delete" else "Move to Bin",
+                    text = if (isPermanent || bypassTrash) {
+                        stringResource(R.string.delete)
+                    } else {
+                        stringResource(R.string.move_to_bin_action)
+                    },
                     color = MaterialTheme.colorScheme.error
                 )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

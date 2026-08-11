@@ -20,6 +20,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.pixel.gallery.ui.theme.EmphasizedTypography
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel
 
+import androidx.compose.ui.res.stringResource
+import com.pixel.gallery.R
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExcludedFoldersScreen(
@@ -33,13 +36,13 @@ fun ExcludedFoldersScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        "Excluded Folders",
+                        stringResource(R.string.excluded_folders),
                         style = EmphasizedTypography.TitleLarge
                     ) 
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ChevronLeft, contentDescription = "Back")
+                        Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -62,13 +65,13 @@ fun ExcludedFoldersScreen(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "No Excluded Folders",
+                    text = stringResource(R.string.no_excluded_folders),
                     style = EmphasizedTypography.HeadlineMedium,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Folders you exclude will not be scanned for media. This is useful for folders containing many non-gallery images.",
+                    text = stringResource(R.string.excluded_folders_empty_text),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -86,7 +89,7 @@ fun ExcludedFoldersScreen(
                         leadingContent = { Icon(Icons.Outlined.FolderOff, contentDescription = null) },
                         trailingContent = {
                             IconButton(onClick = { viewModel.removeExcludedFolder(path) }) {
-                                Icon(Icons.Outlined.RemoveCircleOutline, contentDescription = "Remove")
+                                Icon(Icons.Outlined.RemoveCircleOutline, contentDescription = stringResource(R.string.remove))
                             }
                         }
                     )

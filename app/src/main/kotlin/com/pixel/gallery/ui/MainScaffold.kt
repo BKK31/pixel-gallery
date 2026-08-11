@@ -43,6 +43,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.RestoreFromTrash
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.ui.res.stringResource
+import com.pixel.gallery.R
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.Lock
@@ -303,7 +305,7 @@ fun MainScaffold(
                                 onClick = { selectedIds = emptySet() }
                             ) {
                                 Text(
-                                    text = "Cancel",
+                                    text = stringResource(R.string.cancel),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -315,7 +317,7 @@ fun MainScaffold(
                 CenterAlignedTopAppBar(
                     title = {
                         Text(
-                            text = if (homePagerState.currentPage == 0) "Photos" else "Albums",
+                            text = if (homePagerState.currentPage == 0) stringResource(R.string.photos) else stringResource(R.string.albums),
                             style = EmphasizedTypography.HeadlineMedium
                         )
                     },
@@ -324,17 +326,17 @@ fun MainScaffold(
                             var showCreateAlbumDialogInHome by remember { mutableStateOf(false) }
                             var newAlbumNameInputInHome by remember { mutableStateOf("") }
                             IconButton(onClick = { showCreateAlbumDialogInHome = true }) {
-                                Icon(Icons.Default.Add, contentDescription = "Create Album")
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.create_album_desc))
                             }
                             if (showCreateAlbumDialogInHome) {
                                 AlertDialog(
                                     onDismissRequest = { showCreateAlbumDialogInHome = false },
-                                    title = { Text("Create new album") },
+                                    title = { Text(stringResource(R.string.create_new_album)) },
                                     text = {
                                         OutlinedTextField(
                                             value = newAlbumNameInputInHome,
                                             onValueChange = { newAlbumNameInputInHome = it },
-                                            label = { Text("Album name") },
+                                            label = { Text(stringResource(R.string.album_name_label)) },
                                             singleLine = true,
                                             modifier = Modifier.fillMaxWidth()
                                         )
@@ -353,26 +355,26 @@ fun MainScaffold(
                                             },
                                             enabled = newAlbumNameInputInHome.trim().isNotEmpty()
                                         ) {
-                                            Text("Create")
+                                            Text(stringResource(R.string.create_action))
                                         }
                                     },
                                     dismissButton = {
                                         TextButton(onClick = { showCreateAlbumDialogInHome = false }) {
-                                            Text("Cancel")
+                                            Text(stringResource(R.string.cancel))
                                         }
                                     }
                                 )
                             }
                         }
                         IconButton(onClick = { showMenu = !showMenu }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
                         }
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Hidden Albums") },
+                                text = { Text(stringResource(R.string.hidden_albums)) },
                                 onClick = { 
                                     showMenu = false
                                     navigationStack = navigationStack + Screen.HiddenAlbums 
@@ -380,7 +382,7 @@ fun MainScaffold(
                                 leadingIcon = { Icon(Icons.Outlined.VisibilityOff, contentDescription = null) }
                             )
                             DropdownMenuItem(
-                                text = { Text("Locked Folder") },
+                                text = { Text(stringResource(R.string.locked_folder)) },
                                 onClick = { 
                                     showMenu = false
                                     navigationStack = navigationStack + Screen.LockedFolder 
@@ -388,7 +390,7 @@ fun MainScaffold(
                                 leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) }
                             )
                             DropdownMenuItem(
-                                text = { Text("Settings") },
+                                text = { Text(stringResource(R.string.settings)) },
                                 onClick = { 
                                     showMenu = false
                                     navigationStack = navigationStack + Screen.Settings 
@@ -560,8 +562,8 @@ fun MainScaffold(
                     colors = FloatingToolbarDefaults.standardFloatingToolbarColors(),
                     content = {
                         val tabs = listOf(
-                            NavTab("Photos", Icons.Filled.Photo, Icons.Outlined.Photo),
-                            NavTab("Albums", Icons.Filled.PhotoAlbum, Icons.Outlined.PhotoAlbum)
+                            NavTab(stringResource(R.string.photos), Icons.Filled.Photo, Icons.Outlined.Photo),
+                            NavTab(stringResource(R.string.albums), Icons.Filled.PhotoAlbum, Icons.Outlined.PhotoAlbum)
                         )
 
                         tabs.forEachIndexed { index, tab ->
@@ -615,7 +617,7 @@ fun MainScaffold(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Menu,
-                                        contentDescription = "More",
+                                        contentDescription = stringResource(R.string.more),
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
@@ -625,7 +627,7 @@ fun MainScaffold(
                                 onDismissRequest = { showMoreMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Favorites") },
+                                    text = { Text(stringResource(R.string.favorites_title)) },
                                     onClick = {
                                         showMoreMenu = false
                                         navigationStack = navigationStack + Screen.Favourites
@@ -633,7 +635,7 @@ fun MainScaffold(
                                     leadingIcon = { Icon(Icons.Outlined.FavoriteBorder, contentDescription = null) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Recycle Bin") },
+                                    text = { Text(stringResource(R.string.recycle_bin)) },
                                     onClick = {
                                         showMoreMenu = false
                                         navigationStack = navigationStack + Screen.Trash
@@ -651,18 +653,17 @@ fun MainScaffold(
                 var showNewAlbumNameInput by remember { mutableStateOf(false) }
                 var newAlbumNameInput by remember { mutableStateOf("") }
                 
-                val operationName = if (isMoveOperation) "Move" else "Copy"
-                val operationPastTense = if (isMoveOperation) "Moved" else "Copied"
+                val operationName = if (isMoveOperation) stringResource(R.string.move_action) else stringResource(R.string.copy_action)
 
                 if (showNewAlbumNameInput) {
                     AlertDialog(
                         onDismissRequest = { showNewAlbumNameInput = false },
-                        title = { Text("Create new album") },
+                        title = { Text(stringResource(R.string.create_new_album)) },
                         text = {
                             OutlinedTextField(
                                 value = newAlbumNameInput,
                                 onValueChange = { newAlbumNameInput = it },
-                                label = { Text("Album name") },
+                                label = { Text(stringResource(R.string.album_name_label)) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -678,13 +679,13 @@ fun MainScaffold(
                                         photosViewModel.copyOrMoveMedia(entriesToMove, name, isMove = isMoveOperation) { result ->
                                             val message = when {
                                                 result.hasSuccess && result.hasFailure ->
-                                                    "$operationPastTense ${result.succeeded} items to '$name', failed ${result.failed}"
+                                                    context.getString(if (isMoveOperation) R.string.move_success_fail else R.string.copy_success_fail, result.succeeded, name, result.failed)
                                                 result.hasSuccess ->
-                                                    "$operationPastTense ${result.succeeded} items to '$name'"
+                                                    context.getString(if (isMoveOperation) R.string.move_success else R.string.copy_success, result.succeeded, name)
                                                 result.skipped > 0 && !result.hasFailure ->
-                                                    "No items ${operationPastTense.lowercase()}"
+                                                    context.getString(if (isMoveOperation) R.string.no_items_moved else R.string.no_items_copied)
                                                 else ->
-                                                    "Failed to ${operationName.lowercase()} ${entriesToMove.size} items"
+                                                    context.getString(if (isMoveOperation) R.string.move_failed else R.string.copy_failed, entriesToMove.size)
                                             }
                                             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                             if (result.hasSuccess) {
@@ -700,7 +701,7 @@ fun MainScaffold(
                         },
                         dismissButton = {
                             TextButton(onClick = { showNewAlbumNameInput = false }) {
-                                Text("Cancel")
+                                Text(stringResource(R.string.cancel))
                             }
                         }
                     )
@@ -713,9 +714,9 @@ fun MainScaffold(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("$operationName to Folder")
+                                Text(if (isMoveOperation) stringResource(R.string.move_to_folder) else stringResource(R.string.copy_to_folder))
                                 IconButton(onClick = { showNewAlbumNameInput = true }) {
-                                    Icon(Icons.Default.Add, contentDescription = "Create Album")
+                                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.create_album_desc))
                                 }
                             }
                         },
@@ -734,13 +735,13 @@ fun MainScaffold(
                                                 photosViewModel.copyOrMoveMedia(entriesToMove, album.path, isMove = isMoveOperation) { result ->
                                                     val message = when {
                                                         result.hasSuccess && result.hasFailure ->
-                                                            "$operationPastTense ${result.succeeded} items to '${album.name}', failed ${result.failed}"
+                                                            context.getString(if (isMoveOperation) R.string.move_success_fail else R.string.copy_success_fail, result.succeeded, album.name, result.failed)
                                                         result.hasSuccess ->
-                                                            "$operationPastTense ${result.succeeded} items to '${album.name}'"
+                                                            context.getString(if (isMoveOperation) R.string.move_success else R.string.copy_success, result.succeeded, album.name)
                                                         result.skipped > 0 && !result.hasFailure ->
-                                                            "No items ${operationPastTense.lowercase()}"
+                                                            context.getString(if (isMoveOperation) R.string.no_items_moved else R.string.no_items_copied)
                                                         else ->
-                                                            "Failed to ${operationName.lowercase()} ${entriesToMove.size} items"
+                                                            context.getString(if (isMoveOperation) R.string.move_failed else R.string.copy_failed, entriesToMove.size)
                                                     }
                                                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                                     if (result.hasSuccess) {
@@ -753,7 +754,7 @@ fun MainScaffold(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Outlined.Folder,
-                                            contentDescription = "Album Folder",
+                                            contentDescription = stringResource(R.string.album_folder_desc),
                                             tint = colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(24.dp)
                                         )
@@ -764,7 +765,7 @@ fun MainScaffold(
                                                 style = MaterialTheme.typography.bodyLarge
                                             )
                                             Text(
-                                                "${album.itemCount} items",
+                                                stringResource(R.string.item_count, album.itemCount),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = colorScheme.onSurfaceVariant
                                             )
@@ -836,13 +837,14 @@ fun MainScaffold(
                             ) {
                                 Icon(
                                     imageVector = if (isVault) Icons.Outlined.LockOpen else Icons.Outlined.Lock, 
-                                    contentDescription = if (isVault) "Unlock" else "Lock", 
+                                    contentDescription = if (isVault) stringResource(R.string.unlock) else stringResource(R.string.lock), 
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
 
                         // 2. Share
+                        val shareMediaTitle = stringResource(R.string.share_media)
                         Surface(
                             onClick = {
                                 val uris = selectedEntries.map { 
@@ -853,7 +855,7 @@ fun MainScaffold(
                                     putParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, ArrayList(uris))
                                     addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
-                                context.startActivity(android.content.Intent.createChooser(intent, "Share Media"))
+                                context.startActivity(android.content.Intent.createChooser(intent, shareMediaTitle))
                             },
                             shape = FloatingToolbarDefaults.ContainerShape,
                             color = colorScheme.surface,
@@ -865,7 +867,7 @@ fun MainScaffold(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Share, contentDescription = "Share", modifier = Modifier.size(24.dp))
+                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share), modifier = Modifier.size(24.dp))
                             }
                         }
 
@@ -902,7 +904,7 @@ fun MainScaffold(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(24.dp))
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), modifier = Modifier.size(24.dp))
                             }
                         }
 
@@ -921,7 +923,7 @@ fun MainScaffold(
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = "More", modifier = Modifier.size(24.dp))
+                                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more), modifier = Modifier.size(24.dp))
                                 }
                             }
                             DropdownMenu(
@@ -929,7 +931,7 @@ fun MainScaffold(
                                 onDismissRequest = { showSelectionMoreMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Copy to Folder") },
+                                    text = { Text(stringResource(R.string.copy_to_folder)) },
                                     onClick = {
                                         showSelectionMoreMenu = false
                                         isMoveOperation = false
@@ -938,7 +940,7 @@ fun MainScaffold(
                                     leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Move to Folder") },
+                                    text = { Text(stringResource(R.string.move_to_folder)) },
                                     onClick = {
                                         showSelectionMoreMenu = false
                                         isMoveOperation = true
@@ -986,7 +988,7 @@ fun MainScaffold(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Outlined.VisibilityOff, contentDescription = "Hide", modifier = Modifier.size(24.dp))
+                                Icon(Icons.Outlined.VisibilityOff, contentDescription = stringResource(R.string.hide_desc), modifier = Modifier.size(24.dp))
                             }
                         }
 
@@ -1006,7 +1008,7 @@ fun MainScaffold(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Outlined.FolderOff, contentDescription = "Exclude", modifier = Modifier.size(24.dp))
+                                Icon(Icons.Outlined.FolderOff, contentDescription = stringResource(R.string.exclude_desc), modifier = Modifier.size(24.dp))
                             }
                         }
 
@@ -1027,7 +1029,7 @@ fun MainScaffold(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(24.dp))
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), modifier = Modifier.size(24.dp))
                             }
                         }
 
@@ -1046,7 +1048,7 @@ fun MainScaffold(
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = "More", modifier = Modifier.size(24.dp))
+                                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more), modifier = Modifier.size(24.dp))
                                 }
                             }
                             DropdownMenu(
@@ -1054,7 +1056,7 @@ fun MainScaffold(
                                 onDismissRequest = { showAlbumMoreMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Copy to Folder") },
+                                    text = { Text(stringResource(R.string.copy_to_folder)) },
                                     onClick = {
                                         showAlbumMoreMenu = false
                                         isMoveOperation = false
@@ -1064,7 +1066,7 @@ fun MainScaffold(
                                     leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Move to Folder") },
+                                    text = { Text(stringResource(R.string.move_to_folder)) },
                                     onClick = {
                                         showAlbumMoreMenu = false
                                         isMoveOperation = true
@@ -1130,10 +1132,10 @@ fun AddPhotosToNewAlbumDialog(
                 contentWindowInsets = WindowInsets.statusBars,
                 topBar = {
                     TopAppBar(
-                        title = { Text("Add photos to $albumName") },
+                        title = { Text(stringResource(R.string.add_photos_to_album, albumName)) },
                         navigationIcon = {
                             IconButton(onClick = onDismiss) {
-                                Icon(Icons.Default.Close, contentDescription = "Cancel")
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cancel))
                             }
                         },
                         actions = {
@@ -1141,13 +1143,13 @@ fun AddPhotosToNewAlbumDialog(
                                 onClick = { onConfirm(selectedItems.toList(), false) },
                                 enabled = selectedItems.isNotEmpty()
                             ) {
-                                Text("Copy")
+                                Text(stringResource(R.string.copy_action))
                             }
                             TextButton(
                                 onClick = { onConfirm(selectedItems.toList(), true) },
                                 enabled = selectedItems.isNotEmpty()
                             ) {
-                                Text("Move")
+                                Text(stringResource(R.string.move_action))
                             }
                         }
                     )
@@ -1160,7 +1162,7 @@ fun AddPhotosToNewAlbumDialog(
                 ) {
                     if (allPhotos.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("No photos available")
+                            Text(stringResource(R.string.no_photos_available))
                         }
                     } else {
                         androidx.compose.foundation.lazy.grid.LazyVerticalGrid(

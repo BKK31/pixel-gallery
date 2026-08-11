@@ -18,15 +18,18 @@ import com.pixel.gallery.ui.home.PhotosScreen
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel.GridItem
 
+import androidx.compose.ui.res.stringResource
+import com.pixel.gallery.R
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavouritesScreen(
     onBack: () -> Unit,
+    items: List<GridItem>,
+    selectedIds: Set<Long>,
+    onSelectionChange: (Set<Long>) -> Unit,
+    onToggleSelection: (Long) -> Unit,
     onNavigateToViewer: (Long) -> Unit,
-    selectedIds: Set<Long> = emptySet(),
-    onSelectionChange: (Set<Long>) -> Unit = {},
-    onToggleSelection: (Long) -> Unit = {},
-    items: List<GridItem> = emptyList(),
     gridState: LazyGridState = rememberLazyGridState(),
     viewModel: PhotosViewModel = hiltViewModel()
 ) {
@@ -39,13 +42,13 @@ fun FavouritesScreen(
                 TopAppBar(
                     title = { 
                         Text(
-                            "Favourites",
+                            stringResource(R.string.favourites),
                             style = EmphasizedTypography.TitleLarge
                         ) 
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ChevronLeft, contentDescription = "Back")
+                            Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.back))
                         }
                     }
                 )
@@ -69,13 +72,13 @@ fun FavouritesScreen(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "No Favourites Yet",
+                    text = stringResource(R.string.no_favourites),
                     style = EmphasizedTypography.HeadlineMedium,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Photos and videos you mark as favourites will appear here.",
+                    text = stringResource(R.string.favourites_empty_text),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center

@@ -20,8 +20,11 @@ import androidx.fragment.app.FragmentActivity
 import com.pixel.gallery.ui.home.PhotosScreen
 import com.pixel.gallery.ui.theme.EmphasizedTypography
 import com.pixel.gallery.ui.theme.ExpressiveShapes
+import com.pixel.gallery.ui.viewmodel.PhotosViewModel
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel.GridItem
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.res.stringResource
+import com.pixel.gallery.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,7 +35,7 @@ fun LockedFolderScreen(
     onSelectionChange: (Set<Long>) -> Unit = {},
     onToggleSelection: (Long) -> Unit = {},
     items: List<GridItem> = emptyList(),
-    viewModel: com.pixel.gallery.ui.viewmodel.PhotosViewModel = hiltViewModel()
+    viewModel: PhotosViewModel = hiltViewModel()
 ) {
     val gridColumns by viewModel.gridColumns.collectAsState()
     val context = LocalContext.current
@@ -44,10 +47,13 @@ fun LockedFolderScreen(
         biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
     }
 
+    val activity = context as? FragmentActivity
+
     fun launchAuth() {
+        if (activity == null) return
         val executor = ContextCompat.getMainExecutor(context)
         val biometricPrompt = BiometricPrompt(
-            context as FragmentActivity,
+            activity,
             executor,
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
@@ -63,8 +69,8 @@ fun LockedFolderScreen(
         )
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Locked Folder")
-            .setSubtitle("Authenticate to view hidden media")
+            .setTitle(context.getString(R.string.locked_folder))
+            .setSubtitle(context.getString(R.string.locked_folder_auth_subtitle))
             .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
             .build()
 
@@ -73,7 +79,6 @@ fun LockedFolderScreen(
 
     LaunchedEffect(Unit) {
         if (canAuthenticate != BiometricManager.BIOMETRIC_SUCCESS) {
-            // No system lock present or available, bypass as requested
             isAuthenticated = true
         } else {
             launchAuth()
@@ -87,13 +92,13 @@ fun LockedFolderScreen(
                 TopAppBar(
                     title = { 
                         Text(
-                            "Locked Folder",
+                            stringResource(R.string.locked_folder),
                             style = EmphasizedTypography.TitleLarge
                         ) 
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ChevronLeft, contentDescription = "Back")
+                            Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.back))
                         }
                     }
                 )
@@ -117,7 +122,7 @@ fun LockedFolderScreen(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Locked Folder is Locked",
+                    text = stringResource(R.string.locked_folder_locked),
                     style = EmphasizedTypography.HeadlineMedium,
                     textAlign = TextAlign.Center
                 )
@@ -134,7 +139,7 @@ fun LockedFolderScreen(
                     onClick = { launchAuth() },
                     shape = ExpressiveShapes.LargeIncreased
                 ) {
-                    Text("Unlock with Biometrics")
+                    Text(stringResource(R.string.unlock_with_biometrics))
                 }
             }
         } else if (items.isEmpty()) {
@@ -154,13 +159,13 @@ fun LockedFolderScreen(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "No Items in Locked Folder",
+                    text = stringResource(R.string.locked_folder_empty),
                     style = EmphasizedTypography.HeadlineMedium,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Move sensitive photos and videos here to hide them from your main gallery and other apps.",
+                    text = stringResource(R.string.locked_folder_empty_text),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center

@@ -5,6 +5,8 @@
     <!-- Navigation -->
     <string name="nav_photos">Photos</string>
     <string name="nav_albums">Albums</string>
+    <string name="photos">Photos</string>
+    <string name="albums">Albums</string>
     <string name="back">Back</string>
     <string name="more">More</string>
     <string name="cancel">Cancel</string>
@@ -58,6 +60,7 @@
     <string name="delete_permanently">Delete permanently</string>
     <string name="move_to_locked">Move to Locked</string>
     <string name="unlock">Unlock</string>
+    <string name="lock">Lock</string>
     <string name="clear_selection">Clear selection</string>
     <string name="selected">Selected</string>
     <string name="selected_count">%1$d selected</string>
@@ -76,4 +79,67 @@
     <string name="edit_media">Edit Media</string>
     <string name="map_placeholder">Map Placeholder (%1$f, %2$f)</string>
     <string name="unknown">Unknown</string>
+
+    <!-- Settings Addition -->
+    <string name="confirm_trash">Confirm before trashing</string>
+    <string name="confirm_trash_desc">Show confirmation dialog when moving media to Recycle Bin</string>
+    <string name="confirm_delete_permanently">Confirm before deleting permanently</string>
+    <string name="confirm_delete_permanently_desc">Show confirmation dialog when deleting media permanently</string>
+    <string name="about_title">About</string>
+    <string name="about_desc">Pixel Gallery v4.1.2</string>
+    
+    <!-- Language Names -->
+    <string name="language_english">English</string>
+    <string name="language_kannada">ಕನ್ನಡ (Kannada)</string>
+
+    <!-- Dialog & Action Additions -->
+    <string name="create_new_album">Create new album</string>
+    <string name="album_name_label">Album name</string>
+    <string name="create_action">Create</string>
+    <string name="no_photos_available">No photos available</string>
+    <string name="add_photos_to_album">Add photos to %1$s</string>
+    <string name="copy_to_folder">Copy to Folder</string>
+    <string name="move_to_folder">Move to Folder</string>
+    <string name="favorites_title">Favorites</string>
+    <string name="copy_action">Copy</string>
+    <string name="move_action">Move</string>
+    <string name="select_all_desc">Select All</string>
+    <string name="create_album_desc">Create Album</string>
+    <string name="album_folder_desc">Album Folder</string>
+    <string name="exclude_desc">Exclude</string>
+    <string name="hide_desc">Hide</string>
+
+    <!-- Viewer & Wallpaper Options -->
+    <string name="open_with">Open With</string>
+    <string name="crop_and_set">Crop and set</string>
+    <string name="crop_and_set_desc">Adjust the crop before applying it.</string>
+    <string name="set_directly">Set directly</string>
+    <string name="set_directly_desc">Apply the image without cropping.</string>
+    <string name="crop_wallpaper_title">Crop wallpaper</string>
+    <string name="set_wallpaper_action">Set wallpaper</string>
+    
+    <!-- Gallery Trash & Dropdown Additions -->
+    <string name="empty_action">Empty</string>
+    <string name="empty_bin_title">Empty Recycle Bin?</string>
+    <string name="empty_bin_desc">All items in the Recycle Bin will be permanently deleted. This action cannot be undone.</string>
+
+    <!-- Delete Confirmation Dialog -->
+    <string name="delete_permanently_title">Delete Permanently?</string>
+    <string name="move_to_recycle_bin_title">Move to Recycle Bin?</string>
+    <string name="delete_permanently_single">This item will be deleted permanently and cannot be restored.</string>
+    <string name="delete_permanently_multiple">These %1$d items will be deleted permanently and cannot be restored.</string>
+    <string name="move_to_recycle_bin_single">Are you sure you want to move this item to the Recycle Bin?</string>
+    <string name="move_to_recycle_bin_multiple">Are you sure you want to move these %1$d items to the Recycle Bin?</string>
+    <string name="delete_permanently_bypass">Delete permanently (bypass Recycle Bin)</string>
+    <string name="move_to_bin_action">Move to Bin</string>
+
+    <!-- Toast / Notification Templates -->
+    <string name="copy_success_fail">Copied %1$d items to %2$s, failed %3$d</string>
+    <string name="move_success_fail">Moved %1$d items to %2$s, failed %3$d</string>
+    <string name="copy_success">Copied %1$d items to %2$s</string>
+    <string name="move_success">Moved %1$d items to %2$s</string>
+    <string name="no_items_copied">No items copied</string>
+    <string name="no_items_moved">No items moved</string>
+    <string name="copy_failed">Failed to copy %1$d items</string>
+    <string name="move_failed">Failed to move %1$d items</string>
 </resources>

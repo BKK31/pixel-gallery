@@ -11,6 +11,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import com.pixel.gallery.ui.theme.EmphasizedTypography
 
+import androidx.compose.ui.res.stringResource
+import com.pixel.gallery.R
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LicensesScreen(onBack: () -> Unit) {
@@ -19,13 +22,13 @@ fun LicensesScreen(onBack: () -> Unit) {
             TopAppBar(
                 title = { 
                     Text(
-                        "Open Source Licenses",
+                        stringResource(R.string.open_source_licenses),
                         style = EmphasizedTypography.TitleLarge
                     ) 
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ChevronLeft, contentDescription = "Back")
+                        Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.back))
                     }
                 }
             )

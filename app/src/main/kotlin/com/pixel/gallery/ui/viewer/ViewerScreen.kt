@@ -23,6 +23,8 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import com.pixel.gallery.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -288,7 +290,7 @@ fun ViewerScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.Default.ChevronLeft,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                             tint = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
@@ -307,7 +309,7 @@ fun ViewerScreen(
                             IconButton(onClick = { isPlayingMotion = !isPlayingMotion }) {
                                 Icon(
                                     imageVector = if (isPlayingMotion) Icons.Default.MotionPhotosPause else Icons.Default.MotionPhotosOn,
-                                    contentDescription = "Motion Photo",
+                                    contentDescription = stringResource(R.string.motion_photo),
                                     tint = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                             }
@@ -323,13 +325,13 @@ fun ViewerScreen(
                         }) {
                             Icon(
                                 imageVector = if (rotationLocked) Icons.Outlined.ScreenLockRotation else Icons.Outlined.ScreenRotation,
-                                contentDescription = "Auto-Rotate",
+                                contentDescription = stringResource(R.string.auto_rotate),
                                 tint = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         }
                         Box {
                             IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more), tint = MaterialTheme.colorScheme.onSecondaryContainer)
                             }
                             DropdownMenu(
                                 expanded = showMenu,
@@ -337,7 +339,7 @@ fun ViewerScreen(
                             ) {
                                 if (canSetWallpaper) {
                                     DropdownMenuItem(
-                                        text = { Text("Set as Wallpaper") },
+                                        text = { Text(stringResource(R.string.set_as_wallpaper)) },
                                         onClick = {
                                             showMenu = false
                                             showWallpaperSheet = true
@@ -346,7 +348,7 @@ fun ViewerScreen(
                                     )
                                 }
                                 DropdownMenuItem(
-                                    text = { Text(if (isVault) "Remove from locked folder" else "Move to locked folder") },
+                                    text = { Text(if (isVault) stringResource(R.string.unlock) else stringResource(R.string.move_to_locked_folder)) },
                                     onClick = {
                                         showMenu = false
                                         currentMedia?.let { media ->
@@ -361,7 +363,7 @@ fun ViewerScreen(
                                     leadingIcon = { Icon(if (isVault) Icons.Outlined.LockOpen else Icons.Outlined.Lock, contentDescription = null) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Open With") },
+                                    text = { Text(stringResource(R.string.open_with)) },
                                     onClick = {
                                         showMenu = false
                                         currentMedia?.let { media ->
@@ -413,12 +415,13 @@ fun ViewerScreen(
                         }) {
                             Icon(
                                 imageVector = if (isFavourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                                contentDescription = "Favorite",
+                                contentDescription = stringResource(R.string.favorites_title),
                                 tint = if (isFavourite) Color.Red else MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         }
 
                         // 2. Edit
+                        val editMediaTitle = stringResource(R.string.edit_media)
                         IconButton(onClick = {
                             currentMedia?.let { media ->
                                 val intent = Intent(Intent.ACTION_EDIT).apply {
@@ -426,16 +429,16 @@ fun ViewerScreen(
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
                                 try {
-                                    context.startActivity(Intent.createChooser(intent, "Edit Media"))
+                                    context.startActivity(Intent.createChooser(intent, editMediaTitle))
                                 } catch (e: Exception) { }
                             }
                         }) {
-                            Icon(Icons.Outlined.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                            Icon(Icons.Outlined.Edit, contentDescription = stringResource(R.string.edit), tint = MaterialTheme.colorScheme.onSecondaryContainer)
                         }
 
                         // 3. Info
                         IconButton(onClick = { showInfo = true }) {
-                            Icon(Icons.Outlined.Info, contentDescription = "Info", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                            Icon(Icons.Outlined.Info, contentDescription = stringResource(R.string.details), tint = MaterialTheme.colorScheme.onSecondaryContainer)
                         }
 
                         // 4. Share / Restore
@@ -446,9 +449,10 @@ fun ViewerScreen(
                                     onBack()
                                 }
                             }) {
-                                Icon(Icons.Outlined.RestoreFromTrash, contentDescription = "Restore", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                                Icon(Icons.Outlined.RestoreFromTrash, contentDescription = stringResource(R.string.restore), tint = MaterialTheme.colorScheme.onSecondaryContainer)
                             }
                         } else {
+                            val shareMediaTitle = stringResource(R.string.share_media)
                             IconButton(onClick = {
                                 currentMedia?.let { media ->
                                     val uri = FileProvider.getUriForFile(context, "com.pixel.gallery.fileprovider", File(media.path))
@@ -457,10 +461,10 @@ fun ViewerScreen(
                                         putExtra(Intent.EXTRA_STREAM, uri)
                                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     }
-                                    context.startActivity(Intent.createChooser(intent, "Share Media"))
+                                    context.startActivity(Intent.createChooser(intent, shareMediaTitle))
                                 }
                             }) {
-                                Icon(Icons.Outlined.Share, contentDescription = "Share", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                                Icon(Icons.Outlined.Share, contentDescription = stringResource(R.string.share), tint = MaterialTheme.colorScheme.onSecondaryContainer)
                             }
                         }
 
@@ -488,7 +492,7 @@ fun ViewerScreen(
                                 }
                             }
                         }) {
-                            Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                            Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.delete), tint = MaterialTheme.colorScheme.onSecondaryContainer)
                         }
                     }
                 }
@@ -506,13 +510,13 @@ fun ViewerScreen(
                         .navigationBarsPadding()
                 ) {
                     Text(
-                        text = "Set as wallpaper",
+                        text = stringResource(R.string.set_as_wallpaper),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
                     ListItem(
-                        headlineContent = { Text("Crop and set") },
-                        supportingContent = { Text("Adjust the crop before applying it.") },
+                        headlineContent = { Text(stringResource(R.string.crop_and_set)) },
+                        supportingContent = { Text(stringResource(R.string.crop_and_set_desc)) },
                         leadingContent = { Icon(Icons.Outlined.Crop, contentDescription = null) },
                         modifier = Modifier.clickable {
                             showWallpaperSheet = false
@@ -520,8 +524,8 @@ fun ViewerScreen(
                         }
                     )
                     ListItem(
-                        headlineContent = { Text("Set directly") },
-                        supportingContent = { Text("Apply the image without cropping.") },
+                        headlineContent = { Text(stringResource(R.string.set_directly)) },
+                        supportingContent = { Text(stringResource(R.string.set_directly_desc)) },
                         leadingContent = { Icon(Icons.Outlined.Wallpaper, contentDescription = null) },
                         modifier = Modifier.clickable {
                             val media = currentMedia ?: return@clickable
@@ -641,19 +645,20 @@ fun InfoBottomSheet(
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
+            val unknownText = stringResource(R.string.unknown)
             InfoRow(Icons.Outlined.Image, media.path.substringAfterLast("/"), "${media.width} x ${media.height} • ${media.sizeBytes / 1024} KB")
-            InfoRow(Icons.Outlined.CalendarToday, "Date Taken", metadata["Date Taken"] ?: "Unknown")
+            InfoRow(Icons.Outlined.CalendarToday, stringResource(R.string.date_taken), metadata["Date Taken"] ?: unknownText)
 
             if (metadata["Model"] != "Unknown") {
                 Spacer(Modifier.height(24.dp))
-                Text("Camera Info", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.camera_info), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(12.dp))
                 InfoRow(Icons.Outlined.CameraAlt, "${metadata["Make"]} ${metadata["Model"]}", "${metadata["Aperture"]} • ${metadata["Exposure Time"]} • ISO ${metadata["ISO"]}")
             }
 
             if (coords != null) {
                 Spacer(Modifier.height(24.dp))
-                Text("Location", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.location), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(12.dp))
                 Box(
                     modifier = Modifier

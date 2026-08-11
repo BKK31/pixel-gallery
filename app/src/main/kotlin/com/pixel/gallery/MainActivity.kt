@@ -1,6 +1,6 @@
 package com.pixel.gallery
 
-import androidx.fragment.app.FragmentActivity
+import androidx.appcompat.app.AppCompatActivity
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -22,7 +22,7 @@ import com.pixel.gallery.ui.viewmodel.PhotosViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class MainActivity : FragmentActivity() {
+class MainActivity : AppCompatActivity() {
 
     private val viewModel: PhotosViewModel by viewModels()
 

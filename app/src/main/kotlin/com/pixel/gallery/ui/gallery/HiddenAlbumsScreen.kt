@@ -22,6 +22,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.pixel.gallery.ui.theme.EmphasizedTypography
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel
 
+import androidx.compose.ui.res.stringResource
+import com.pixel.gallery.R
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HiddenAlbumsScreen(
@@ -36,13 +39,13 @@ fun HiddenAlbumsScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        "Hidden Albums",
+                        stringResource(R.string.hidden_albums),
                         style = EmphasizedTypography.TitleLarge
                     ) 
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ChevronLeft, contentDescription = "Back")
+                        Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -65,13 +68,13 @@ fun HiddenAlbumsScreen(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "No Hidden Albums",
+                    text = stringResource(R.string.no_hidden_albums),
                     style = EmphasizedTypography.HeadlineMedium,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Albums you hide from the main gallery will appear here. They are not visible in Recents or Albums grid.",
+                    text = stringResource(R.string.hidden_albums_empty_text),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -100,7 +103,7 @@ fun HiddenAlbumsScreen(
                         },
                         trailingContent = {
                             IconButton(onClick = { viewModel.removeHiddenFolder(album.path) }) {
-                                Icon(Icons.Outlined.Visibility, contentDescription = "Unhide")
+                                Icon(Icons.Outlined.Visibility, contentDescription = stringResource(R.string.unhide))
                             }
                         }
                     )

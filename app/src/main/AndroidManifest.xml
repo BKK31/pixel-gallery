@@ -16,7 +16,7 @@
         android:label="Gallery"
         tools:replace="android:label"
         android:icon="@mipmap/ic_launcher"
-        android:theme="@android:style/Theme.Material.NoActionBar">
+        android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
         <activity
             android:name=".MainActivity"
             android:exported="true"

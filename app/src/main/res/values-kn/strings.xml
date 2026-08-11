@@ -5,6 +5,8 @@
     <!-- Navigation -->
     <string name="nav_photos">ಫೋಟೋಗಳು</string>
     <string name="nav_albums">ಆಲ್ಬಮ್‌ಗಳು</string>
+    <string name="photos">ಫೋಟೋಗಳು</string>
+    <string name="albums">ಆಲ್ಬಮ್‌ಗಳು</string>
     <string name="back">ಹಿಂದಕ್ಕೆ</string>
     <string name="more">ಮತ್ತಷ್ಟು</string>
     <string name="cancel">ರದ್ದುಮಾಡು</string>
@@ -50,6 +52,7 @@
     <string name="restore">ಮರುಸ್ಥಾಪಿಸಿ</string>
     <string name="move_to_locked">ಲಾಕ್‌ಗೆ ಸರಿಸಿ</string>
     <string name="unlock">ಅನ್‌ಲಾಕ್ ಮಾಡಿ</string>
+    <string name="lock">ಲಾಕ್ ಮಾಡಿ</string>
     <string name="clear_selection">ಆಯ್ಕೆಯನ್ನು ಅಳಿಸಿ</string>
     <string name="selected">ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ</string>
     <string name="selected_count">%1$d ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ</string>
@@ -64,4 +67,77 @@
     <string name="location">ಸ್ಥಳ</string>
     <string name="pause">ವಿರಾಮ</string>
     <string name="play">ಪ್ಲೇ ಮಾಡಿ</string>
+
+    <!-- Missing translations -->
+    <string name="locked_folder_auth_subtitle">ಮರೆಮಾಡಲಾದ ಮಾಧ್ಯಮವನ್ನು ವೀಕ್ಷಿಸಲು ದೃಢೀಕರಿಸಿ</string>
+    <string name="locked_folder_locked">ಲಾಕ್ ಮಾಡಿದ ಫೋಲ್ಡರ್ ಲಾಕ್ ಆಗಿದೆ</string>
+    <string name="locked_folder_empty">ಲಾಕ್ ಮಾಡಿದ ಫೋಲ್ಡರ್ ಖಾಲಿ ಇದೆ</string>
+    <string name="locked_folder_empty_text">ಸೂಕ್ಷ್ಮ ಫೋಟೋಗಳು ಮತ್ತು ವೀಡಿಯೊಗಳನ್ನು ನಿಮ್ಮ ಪ್ರಮುಖ ಗ್ಯಾಲರಿ ಮತ್ತು ಇತರ ಅಪ್ಲಿಕೇಶನ್‌ಗಳಿಂದ ಮರೆಮಾಡಲು ಇಲ್ಲಿಗೆ ಸರಿಸಿ.</string>
+    <string name="no_favourites">ಇನ್ನೂ ಯಾವುದೇ ಮೆಚ್ಚಿನವುಗಳಿಲ್ಲ</string>
+    <string name="favourites_empty_text">ನೀವು ಮೆಚ್ಚಿನವುಗಳೆಂದು ಗುರುತಿಸುವ ಫೋಟೋಗಳು ಮತ್ತು ವೀಡಿಯೊಗಳು ಇಲ್ಲಿ ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತವೆ.</string>
+    <string name="bin_empty">ಕಸದ ಬುಟ್ಟಿ ಖಾಲಿ ಇದೆ</string>
+    <string name="bin_empty_text">ಕಸದ ಬುಟ್ಟಿಯಲ್ಲಿರುವ ಐಟಂಗಳನ್ನು 30 ದಿನಗಳ ನಂತರ ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಲಾಗುತ್ತದೆ.</string>
+    <string name="share_media">ಮಾಧ್ಯಮ ಹಂಚಿಕೊಳ್ಳಿ</string>
+    <string name="edit_media">ಮಾಧ್ಯಮ ತಿದ್ದುಪಡಿ ಮಾಡಿ</string>
+    <string name="map_placeholder">ನಕ್ಷೆ ಗುರುತು (%1$f, %2$f)</string>
+    <string name="unknown">ಅಪರಿಚಿತ</string>
+    <string name="confirm_trash">ಅಳಿಸುವ ಮುನ್ನ ಖಚಿತಪಡಿಸಿ</string>
+    <string name="confirm_trash_desc">ಮಾಧ್ಯಮವನ್ನು ಮರುಬಳಕೆ ಬುಟ್ಟಿಗೆ ಸರಿಸುವಾಗ ದೃಢೀಕರಣ ಸಂವಾದವನ್ನು ತೋರಿಸಿ</string>
+    <string name="confirm_delete_permanently">ಶಾಶ್ವತವಾಗಿ ಅಳಿಸುವ ಮುನ್ನ ಖಚಿತಪಡಿಸಿ</string>
+    <string name="confirm_delete_permanently_desc">ಮಾಧ್ಯಮವನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸುವಾಗ ದೃಢೀಕರಣ ಸಂವಾದವನ್ನು ತೋರಿಸಿ</string>
+    <string name="about_title">ಬಗ್ಗೆ</string>
+    <string name="about_desc">ಪಿಕ್ಸೆಲ್ ಗ್ಯಾಲರಿ v4.1.2</string>
+    <string name="language_english">English</string>
+    <string name="language_kannada">ಕನ್ನಡ (Kannada)</string>
+
+    <!-- Dialog & Action Translations -->
+    <string name="create_new_album">ಹೊಸ ಆಲ್ಬಮ್ ರಚಿಸಿ</string>
+    <string name="album_name_label">ಆಲ್ಬಮ್ ಹೆಸರು</string>
+    <string name="create_action">ರಚಿಸಿ</string>
+    <string name="no_photos_available">ಯಾವುದೇ ಫೋಟೋಗಳು ಲಭ್ಯವಿಲ್ಲ</string>
+    <string name="add_photos_to_album">%1$s ಗೆ ಫೋಟೋಗಳನ್ನು ಸೇರಿಸಿ</string>
+    <string name="copy_to_folder">ಫೋಲ್ಡರ್‌ಗೆ ನಕಲಿಸಿ</string>
+    <string name="move_to_folder">ಫೋಲ್ಡರ್‌ಗೆ ಸರಿಸಿ</string>
+    <string name="favorites_title">ಮೆಚ್ಚಿನವುಗಳು</string>
+    <string name="copy_action">ನಕಲಿಸಿ</string>
+    <string name="move_action">ಸರಿಸಿ</string>
+    <string name="select_all_desc">ಎಲ್ಲವನ್ನೂ ಆಯ್ಕೆಮಾಡಿ</string>
+    <string name="create_album_desc">ಆಲ್ಬಮ್ ರಚಿಸಿ</string>
+    <string name="album_folder_desc">ಆಲ್ಬಮ್ ಫೋಲ್ಡರ್</string>
+    <string name="exclude_desc">ಹೊರಗಿಡಿ</string>
+    <string name="hide_desc">ಮರೆಮಾಡಿ</string>
+
+    <!-- Viewer & Wallpaper Translations -->
+    <string name="open_with">ಇದರೊಂದಿಗೆ ತೆರೆಯಿರಿ</string>
+    <string name="crop_and_set">ಕ್ರಾಪ್ ಮಾಡಿ ಹೊಂದಿಸಿ</string>
+    <string name="crop_and_set_desc">ಅನ್ವಯಿಸುವ ಮೊದಲು ಕ್ರಾಪ್ ಹೊಂದಿಸಿ</string>
+    <string name="set_directly">ನೇರವಾಗಿ ಹೊಂದಿಸಿ</string>
+    <string name="set_directly_desc">ಕ್ರಾಪ್ ಮಾಡದೆಯೇ ಚಿತ್ರವನ್ನು ಅನ್ವಯಿಸಿ</string>
+    <string name="crop_wallpaper_title">ವಾಲ್‌ಪೇಪರ್ ಕ್ರಾಪ್ ಮಾಡಿ</string>
+    <string name="set_wallpaper_action">ವಾಲ್‌ಪೇಪರ್ ಹೊಂದಿಸಿ</string>
+    
+    <!-- Gallery Trash & Dropdown Translations -->
+    <string name="empty_action">ಖಾಲಿ ಮಾಡಿ</string>
+    <string name="empty_bin_title">ಮರುಬಳಕೆ ಬುಟ್ಟಿ ಖಾಲಿ ಮಾಡಬೇಕೇ?</string>
+    <string name="empty_bin_desc">ಮರುಬಳಕೆ ಬುಟ್ಟಿಯಲ್ಲಿರುವ ಎಲ್ಲಾ ಐಟಂಗಳನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಲಾಗುತ್ತದೆ. ಈ ಕ್ರಿಯೆಯನ್ನು ರದ್ದುಗೊಳಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.</string>
+
+    <!-- Delete Confirmation Dialog -->
+    <string name="delete_permanently_title">ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಬೇಕೇ?</string>
+    <string name="move_to_recycle_bin_title">ಮರುಬಳಕೆ ಬುಟ್ಟಿಗೆ ಸರಿಸಬೇಕೇ?</string>
+    <string name="delete_permanently_single">ಈ ಐಟಂ ಅನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಲಾಗುತ್ತದೆ ಮತ್ತು ಮರುಸ್ಥಾಪಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.</string>
+    <string name="delete_permanently_multiple">ಈ %1$d ಐಟಂಗಳನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಲಾಗುತ್ತದೆ ಮತ್ತು ಮರುಸ್ಥಾಪಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.</string>
+    <string name="move_to_recycle_bin_single">ಈ ಐಟಂ ಅನ್ನು ಮರುಬಳಕೆ ಬುಟ್ಟಿಗೆ ಸರಿಸಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ?</string>
+    <string name="move_to_recycle_bin_multiple">ಈ %1$d ಐಟಂಗಳನ್ನು ಮರುಬಳಕೆ ಬುಟ್ಟಿಗೆ ಸರಿಸಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ?</string>
+    <string name="delete_permanently_bypass">ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಿ (ಮರುಬಳಕೆ ಬುಟ್ಟಿಯನ್ನು ಬೈಪಾಸ್ ಮಾಡಿ)</string>
+    <string name="move_to_bin_action">ಬುಟ್ಟಿಗೆ ಸರಿಸಿ</string>
+
+    <!-- Toast / Notification Translations -->
+    <string name="copy_success_fail">%2$s ಗೆ %1$d ಐಟಂಗಳನ್ನು ನಕಲಿಸಲಾಗಿದೆ, %3$d ವಿಫಲವಾಗಿದೆ</string>
+    <string name="move_success_fail">%2$s ಗೆ %1$d ಐಟಂಗಳನ್ನು ಸರಿಸಲಾಗಿದೆ, %3$d ವಿಫಲವಾಗಿದೆ</string>
+    <string name="copy_success">%2$s ಗೆ %1$d ಐಟಂಗಳನ್ನು ನಕಲಿಸಲಾಗಿದೆ</string>
+    <string name="move_success">%2$s ಗೆ %1$d ಐಟಂಗಳನ್ನು ಸರಿಸಲಾಗಿದೆ</string>
+    <string name="no_items_copied">ಯಾವುದೇ ಐಟಂಗಳನ್ನು ನಕಲಿಸಲಾಗಿಲ್ಲ</string>
+    <string name="no_items_moved">ಯಾವುದೇ ಐಟಂಗಳನ್ನು ಸರಿಸಲಾಗಿಲ್ಲ</string>
+    <string name="copy_failed">%1$d ಐಟಂಗಳನ್ನು ನಕಲಿಸಲು ವಿಫಲವಾಗಿದೆ</string>
+    <string name="move_failed">%1$d ಐಟಂಗಳನ್ನು ಸರಿಸಲು ವಿಫಲವಾಗಿದೆ</string>
 </resources>

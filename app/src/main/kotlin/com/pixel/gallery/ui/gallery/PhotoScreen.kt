@@ -23,6 +23,8 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.ui.res.stringResource
+import com.pixel.gallery.R
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -196,7 +198,7 @@ fun PhotoScreen(
                 ) {
                     Icon(
                         Icons.Default.ChevronLeft,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.back),
                         tint = Color.White
                     )
                 }
@@ -210,7 +212,7 @@ fun PhotoScreen(
                         ) {
                             Icon(
                                 Icons.Default.MoreVert,
-                                contentDescription = "More",
+                                contentDescription = stringResource(R.string.more),
                                 tint = Color.White
                             )
                         }
@@ -219,7 +221,7 @@ fun PhotoScreen(
                             onDismissRequest = { showMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Hide Album") },
+                                text = { Text(stringResource(R.string.hide_album)) },
                                 onClick = {
                                     showMenu = false
                                     if (albumPath.isNotEmpty()) {
@@ -230,7 +232,7 @@ fun PhotoScreen(
                                 leadingIcon = { Icon(Icons.Outlined.VisibilityOff, contentDescription = null) }
                             )
                             DropdownMenuItem(
-                                text = { Text("Exclude Album") },
+                                text = { Text(stringResource(R.string.exclude_album)) },
                                 onClick = {
                                     showMenu = false
                                     if (albumPath.isNotEmpty()) {

@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.res.stringResource
+import com.pixel.gallery.R
 import com.pixel.gallery.ui.home.PhotosScreen
 import com.pixel.gallery.ui.theme.EmphasizedTypography
 import com.pixel.gallery.ui.viewmodel.PhotosViewModel
@@ -40,19 +42,19 @@ fun TrashScreen(
                 TopAppBar(
                     title = { 
                         Text(
-                            "Recycle Bin",
+                            stringResource(R.string.recycle_bin),
                             style = EmphasizedTypography.TitleLarge
                         ) 
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ChevronLeft, contentDescription = "Back")
+                            Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.back))
                         }
                     },
                     actions = {
                         if (items.isNotEmpty()) {
                             TextButton(onClick = { showEmptyConfirmDialog = true }) {
-                                Text("Empty", color = MaterialTheme.colorScheme.error)
+                                Text(stringResource(R.string.empty_action), color = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -77,13 +79,13 @@ fun TrashScreen(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Bin is Empty",
+                    text = stringResource(R.string.bin_empty),
                     style = EmphasizedTypography.HeadlineMedium,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Items in the bin will be permanently deleted after 30 days.",
+                    text = stringResource(R.string.bin_empty_text),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -107,8 +109,8 @@ fun TrashScreen(
         if (showEmptyConfirmDialog) {
             AlertDialog(
                 onDismissRequest = { showEmptyConfirmDialog = false },
-                title = { Text("Empty Recycle Bin?") },
-                text = { Text("All items in the Recycle Bin will be permanently deleted. This action cannot be undone.") },
+                title = { Text(stringResource(R.string.empty_bin_title)) },
+                text = { Text(stringResource(R.string.empty_bin_desc)) },
                 confirmButton = {
                     TextButton(
                         onClick = {
@@ -117,12 +119,12 @@ fun TrashScreen(
                             showEmptyConfirmDialog = false
                         }
                     ) {
-                        Text("Empty", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.empty_action), color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showEmptyConfirmDialog = false }) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
                 }
             )

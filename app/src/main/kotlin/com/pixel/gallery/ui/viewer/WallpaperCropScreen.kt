@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.ui.res.stringResource
+import com.pixel.gallery.R
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -170,7 +172,7 @@ fun WallpaperCropScreen(
         TopAppBar(
             title = {
                 Text(
-                    text = "Crop wallpaper",
+                    text = stringResource(R.string.crop_wallpaper_title),
                     color = Color.White
                 )
             },
@@ -178,7 +180,7 @@ fun WallpaperCropScreen(
                 IconButton(onClick = onCancel) {
                     Icon(
                             imageVector = Icons.Default.ChevronLeft,
-                            contentDescription = "Cancel",
+                            contentDescription = stringResource(R.string.cancel),
                             tint = Color.White
                         )
                     }
@@ -205,7 +207,7 @@ fun WallpaperCropScreen(
                     },
                     enabled = cropHostBitmapState.value is WallpaperLoadState.Ready,
                 ) {
-                    Text("Set wallpaper")
+                    Text(stringResource(R.string.set_wallpaper_action))
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
