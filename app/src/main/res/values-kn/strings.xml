@@ -89,6 +89,7 @@
     <string name="about_desc">ಪಿಕ್ಸೆಲ್ ಗ್ಯಾಲರಿ v4.1.2</string>
     <string name="language_english">English</string>
     <string name="language_kannada">ಕನ್ನಡ (Kannada)</string>
+    <string name="language_polish">Polski</string>
 
     <!-- Dialog & Action Translations -->
     <string name="create_new_album">ಹೊಸ ಆಲ್ಬಮ್ ರಚಿಸಿ</string>

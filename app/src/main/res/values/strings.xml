@@ -91,6 +91,7 @@
     <!-- Language Names -->
     <string name="language_english">English</string>
     <string name="language_kannada">ಕನ್ನಡ (Kannada)</string>
+    <string name="language_polish">Polski</string>
 
     <!-- Dialog & Action Additions -->
     <string name="create_new_album">Create new album</string>

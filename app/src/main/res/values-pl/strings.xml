@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Galeria</string>
-    
+
     <!-- Navigation -->
     <string name="nav_photos">Zdjęcia</string>
     <string name="nav_albums">Albumy</string>
+    <string name="photos">Zdjęcia</string>
+    <string name="albums">Albumy</string>
     <string name="back">Wróć</string>
     <string name="more">Więcej</string>
     <string name="cancel">Anuluj</string>
-    
+
     <!-- Screens -->
     <string name="settings">Ustawienia</string>
     <string name="favourites">Ulubione</string>
@@ -24,8 +26,8 @@
     <string name="licenses">Licencje</string>
     <string name="about">O programie</string>
     <string name="open_source_licenses">Licencje Open Source</string>
-    <string name="licenses_intro">Ta aplikacja korzysta z następujących bibliotek open source:/string>
-    
+    <string name="licenses_intro">Ta aplikacja korzysta z następujących bibliotek open source:</string>
+
     <!-- Settings -->
     <string name="material_you">Material You</string>
     <string name="material_you_desc">Używaj systemowych kolorów dynamicznych</string>
@@ -58,6 +60,7 @@
     <string name="delete_permanently">Usuń na zawsze</string>
     <string name="move_to_locked">Przenieś do bezpiecznego</string>
     <string name="unlock">Odblokuj</string>
+    <string name="lock">Zablokuj</string>
     <string name="clear_selection">Wyczyść zaznaczenie</string>
     <string name="selected">Zaznaczono</string>
     <string name="selected_count">Zaznaczone: %1$d</string>
@@ -76,4 +79,68 @@
     <string name="edit_media">Edytuj multimedia</string>
     <string name="map_placeholder">Miejsce na mapę (%1$f, %2$f)</string>
     <string name="unknown">Nieznane</string>
+
+    <!-- Settings Addition -->
+    <string name="confirm_trash">Potwierdź przed usunięciem do kosza</string>
+    <string name="confirm_trash_desc">Pokazuj okno potwierdzenia przy przenoszeniu mediów do Kosza</string>
+    <string name="confirm_delete_permanently">Potwierdź przed trwałym usunięciem</string>
+    <string name="confirm_delete_permanently_desc">Pokazuj okno potwierdzenia przy trwałym usuwaniu mediów</string>
+    <string name="about_title">O aplikacji</string>
+    <string name="about_desc">Pixel Gallery v4.1.2</string>
+
+    <!-- Language Names -->
+    <string name="language_english">English</string>
+    <string name="language_kannada">ಕನ್ನಡ (Kannada)</string>
+    <string name="language_polish">Polski</string>
+
+    <!-- Dialog &amp; Action Additions -->
+    <string name="create_new_album">Utwórz nowy album</string>
+    <string name="album_name_label">Nazwa albumu</string>
+    <string name="create_action">Utwórz</string>
+    <string name="no_photos_available">Brak dostępnych zdjęć</string>
+    <string name="add_photos_to_album">Dodaj zdjęcia do %1$s</string>
+    <string name="copy_to_folder">Kopiuj do folderu</string>
+    <string name="move_to_folder">Przenieś do folderu</string>
+    <string name="favorites_title">Ulubione</string>
+    <string name="copy_action">Kopiuj</string>
+    <string name="move_action">Przenieś</string>
+    <string name="select_all_desc">Zaznacz wszystko</string>
+    <string name="create_album_desc">Utwórz album</string>
+    <string name="album_folder_desc">Folder albumu</string>
+    <string name="exclude_desc">Wyklucz</string>
+    <string name="hide_desc">Ukryj</string>
+
+    <!-- Viewer &amp; Wallpaper Options -->
+    <string name="open_with">Otwórz za pomocą</string>
+    <string name="crop_and_set">Przytnij i ustaw</string>
+    <string name="crop_and_set_desc">Dostosuj kadr przed zastosowaniem.</string>
+    <string name="set_directly">Ustaw bezpośrednio</string>
+    <string name="set_directly_desc">Zastosuj obraz bez przycinania.</string>
+    <string name="crop_wallpaper_title">Przytnij tapetę</string>
+    <string name="set_wallpaper_action">Ustaw tapetę</string>
+
+    <!-- Gallery Trash &amp; Dropdown Additions -->
+    <string name="empty_action">Opróżnij</string>
+    <string name="empty_bin_title">Opróżnić Kosz?</string>
+    <string name="empty_bin_desc">Wszystkie elementy w Koszu zostaną trwale usunięte. Tej operacji nie można cofnąć.</string>
+
+    <!-- Delete Confirmation Dialog -->
+    <string name="delete_permanently_title">Usunąć na zawsze?</string>
+    <string name="move_to_recycle_bin_title">Przenieść do Kosza?</string>
+    <string name="delete_permanently_single">Ten element zostanie trwale usunięty i nie będzie można go przywrócić.</string>
+    <string name="delete_permanently_multiple">Te %1$d elementy zostaną trwale usunięte i nie będzie można ich przywrócić.</string>
+    <string name="move_to_recycle_bin_single">Czy na pewno chcesz przenieść ten element do Kosza?</string>
+    <string name="move_to_recycle_bin_multiple">Czy na pewno chcesz przenieść te %1$d elementy do Kosza?</string>
+    <string name="delete_permanently_bypass">Usuń na zawsze (z pominięciem Kosza)</string>
+    <string name="move_to_bin_action">Przenieś do Kosza</string>
+
+    <!-- Toast / Notification Templates -->
+    <string name="copy_success_fail">Skopiowano %1$d elementów do %2$s, nie udało się: %3$d</string>
+    <string name="move_success_fail">Przeniesiono %1$d elementów do %2$s, nie udało się: %3$d</string>
+    <string name="copy_success">Skopiowano %1$d elementów do %2$s</string>
+    <string name="move_success">Przeniesiono %1$d elementów do %2$s</string>
+    <string name="no_items_copied">Nie skopiowano żadnych elementów</string>
+    <string name="no_items_moved">Nie przeniesiono żadnych elementów</string>
+    <string name="copy_failed">Nie udało się skopiować %1$d elementów</string>
+    <string name="move_failed">Nie udało się przenieść %1$d elementów</string>
 </resources>

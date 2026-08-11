@@ -150,6 +150,14 @@ fun SettingsScreen(
                         headlineContent = { Text(stringResource(R.string.language_kannada)) },
                         trailingContent = { if (currentLocale == "kn") Icon(Icons.Default.Check, null) }
                     )
+                    ListItem(
+                        modifier = Modifier.clickable {
+                            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("pl"))
+                            showLanguageDialog = false
+                        },
+                        headlineContent = { Text(stringResource(R.string.language_polish)) },
+                        trailingContent = { if (currentLocale == "pl") Icon(Icons.Default.Check, null) }
+                    )
                 }
             },
             confirmButton = {
