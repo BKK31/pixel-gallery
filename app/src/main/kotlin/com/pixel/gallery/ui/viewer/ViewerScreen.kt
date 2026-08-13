@@ -885,44 +885,40 @@ fun VideoControls(
         modifier = modifier
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            IconButton(
-                onClick = { 
-                    try {
-                        if (player.playbackState == Player.STATE_ENDED) {
-                            player.seekTo(0)
-                            player.play()
-                        } else {
-                            if (player.isPlaying) player.pause() else player.play()
-                        }
-                    } catch (e: Exception) {}
-                },
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(64.dp)
-                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
-            ) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = Color.White,
-                    modifier = Modifier.size(40.dp)
-                )
-            }
-
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = if (isLandscape) 85.dp else 115.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = if (isLandscape) 105.dp else 115.dp)
                     .padding(horizontal = 24.dp)
-                    .fillMaxWidth()
+                    .then(if (isLandscape) Modifier.fillMaxWidth(0.65f) else Modifier.fillMaxWidth())
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
                 ) {
+                    IconButton(
+                        onClick = { 
+                            try {
+                                if (player.playbackState == Player.STATE_ENDED) {
+                                    player.seekTo(0)
+                                    player.play()
+                                } else {
+                                    if (player.isPlaying) player.pause() else player.play()
+                                }
+                            } catch (e: Exception) {}
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+
                     Text(
                         text = formatTime(currentPosition),
                         style = MaterialTheme.typography.labelMedium,
