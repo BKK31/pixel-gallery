@@ -15,7 +15,6 @@ import com.pixel.gallery.MainActivity
 import com.pixel.gallery.data.local.dao.MediaDao
 import com.pixel.gallery.data.local.entity.MediaEntry
 import com.pixel.gallery.data.local.entity.VaultEntry
-import com.pixel.gallery.utils.FilenameDateParser
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -375,18 +374,7 @@ class MediaRepository @Inject constructor(
                                 }
                             } catch (e: Exception) { }
                         }
-                        
-                        // 2. Try Filename
-                        if (!foundTime) {
-                            val filename = path.substringAfterLast("/")
-                            val parsedTime = FilenameDateParser.parseDateFromFilename(filename)
-                            if (parsedTime != null) {
-                                bestTime = parsedTime
-                                foundTime = true
-                            }
-                        }
-                        
-                        // 3. Try File system last modified
+                        // 2. Try File system last modified
                         if (!foundTime) {
                             if (fileTime > 0 && (bestTime == 0L || fileTime < bestTime - 10000)) {
                                 bestTime = fileTime
