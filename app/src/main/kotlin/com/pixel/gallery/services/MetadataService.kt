@@ -39,16 +39,7 @@ class MetadataService @Inject constructor(
         }
         
         if (resolvedDate == null) {
-            // 1. Try Filename Parser
-            val filename = path.substringAfterLast("/")
-            val parsedTime = FilenameDateParser.parseDateFromFilename(filename)
-            if (parsedTime != null) {
-                resolvedDate = FilenameDateParser.formatEpochMillis(parsedTime)
-            }
-        }
-        
-        if (resolvedDate == null) {
-            // 2. Try File system lastModified
+            // 1. Try File system lastModified
             val fileTime = java.io.File(path).lastModified()
             if (fileTime > 0) {
                 resolvedDate = FilenameDateParser.formatEpochMillis(fileTime)
