@@ -55,14 +55,14 @@ class ThumbnailFetcher internal constructor(
     private val tiffFetch = mimeType == MimeTypes.TIFF
     private val avifFetch = mimeType == AVIF
     private val multiPageFetch = false // pageId != null && MultiPageImage.isSupported(mimeType)
-    private val customFetch = svgFetch || tiffFetch || multiPageFetch || avifFetch
+    private val customFetch = svgFetch || tiffFetch || multiPageFetch
 
     suspend fun fetch() {
         var bitmap: Bitmap? = null
         var exception: Exception? = null
 
         try {
-            if (!customFetch && (width == defaultSize || height == defaultSize) && !isFlipped) {
+            if (!customFetch && (width == defaultSize || height == defaultSize || avifFetch) && !isFlipped) {
                 // Fetch low quality thumbnails when size is not specified.
                 // As of Android 11, the Media Store content resolver may return a thumbnail
                 // that is automatically rotated according to EXIF orientation, but not flipped,
