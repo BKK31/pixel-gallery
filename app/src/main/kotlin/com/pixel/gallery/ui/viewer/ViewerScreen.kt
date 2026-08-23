@@ -5,9 +5,11 @@ import android.app.WallpaperManager
 import android.graphics.Bitmap
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.graphics.drawable.Animatable
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import android.widget.ImageView
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,6 +43,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bumptech.glide.Glide
+import com.github.penfeizhou.animation.avif.AVIFDrawable
 import com.pixel.gallery.ui.components.DeleteConfirmationDialog
 import com.pixel.gallery.utils.BitmapUtils
 import com.pixel.gallery.utils.MimeTypes
@@ -237,30 +240,44 @@ fun ViewerScreen(
                         onTap = { showUI = !showUI }
                     )
                 } else {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        ZoomableGlideImage(
-                            model = media.uri,
-                            contentDescription = null,
+                    if (media.sourceMimeType == MimeTypes.AVIF) {
+                        AvifImage(
+                            media = media,
                             modifier = Modifier.fillMaxSize(),
-                            state = rememberZoomableImageState(),
-                            contentScale = ContentScale.Fit,
-                            onClick = { 
+                            onClick = {
                                 if (isPlayingMotion) {
                                     isPlayingMotion = false
                                 } else {
-                                    showUI = !showUI 
+                                    showUI = !showUI
                                 }
                             }
                         )
-                        
-                        if (isPlayingMotion && motionVideoFile != null) {
-                            VideoPlayer(
-                                uri = Uri.fromFile(motionVideoFile!!).toString(),
-                                isMotionPhoto = true,
-                                isActive = true, 
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            ZoomableGlideImage(
+                                model = media.uri,
+                                contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),
-                                onTap = { isPlayingMotion = false }
+                                state = rememberZoomableImageState(),
+                                contentScale = ContentScale.Fit,
+                                onClick = { 
+                                    if (isPlayingMotion) {
+                                        isPlayingMotion = false
+                                    } else {
+                                        showUI = !showUI 
+                                    }
+                                }
                             )
+                            
+                            if (isPlayingMotion && motionVideoFile != null) {
+                                VideoPlayer(
+                                    uri = Uri.fromFile(motionVideoFile!!).toString(),
+                                    isMotionPhoto = true,
+                                    isActive = true, 
+                                    modifier = Modifier.fillMaxSize(),
+                                    onTap = { isPlayingMotion = false }
+                                )
+                            }
                         }
                     }
                 }
@@ -690,6 +707,50 @@ fun InfoBottomSheet(
             }
         }
     }
+}
+
+@Composable
+private fun AvifImage(
+    media: MediaEntry,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val drawable = remember(media.path) {
+        runCatching { AVIFDrawable.fromFile(media.path) }.getOrNull()
+    }
+
+    if (drawable == null || drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0) {
+        ZoomableGlideImage(
+            model = media.uri,
+            contentDescription = null,
+            modifier = modifier,
+            state = rememberZoomableImageState(),
+            contentScale = ContentScale.Fit,
+            onClick = { _ -> onClick() }
+        )
+        return
+    }
+
+    DisposableEffect(drawable) {
+        onDispose {
+            (drawable as? Animatable)?.stop()
+        }
+    }
+
+    AndroidView(
+        factory = { context ->
+            ImageView(context).apply {
+                setBackgroundColor(android.graphics.Color.BLACK)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setImageDrawable(drawable)
+                setOnClickListener { onClick() }
+            }
+        },
+        update = { view ->
+            view.setImageDrawable(drawable)
+        },
+        modifier = modifier
+    )
 }
 
 private suspend fun loadWallpaperBitmap(
