@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -121,28 +122,68 @@ fun ViewerScreen(
             !MimeTypes.isRaw(media.sourceMimeType)
     }
 
+    // Hoisted motion photo ExoPlayer — single instance owned by ViewerScreen.
+    // Managing it here (rather than inside VideoPlayer) ensures the old decoder is
+    // always fully released before a new one is created, preventing OOM crashes.
+    var motionPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+
+    // When the current image changes: stop motion playback, release the old player
+    // eagerly, then extract the motion video file for the new image.
     LaunchedEffect(currentMedia) {
         isPlayingMotion = false
+
+        // Release old player immediately — before extracting the new file — so that
+        // the HEVC decoder is freed and its large input buffers are returned to the
+        // heap before the new decoder is allocated.
+        motionPlayer?.stop()
+        motionPlayer?.release()
+        motionPlayer = null
+
         showMenu = false
         showWallpaperSheet = false
         wallpaperCropMedia = null
+
         val file = withContext(Dispatchers.IO) {
             currentMedia?.let { viewModel.extractMotionVideo(it.path) }
         }
         val oldFile = motionVideoFile
         motionVideoFile = file
-        
+
         // Clean up old temp file after new one is ready
         if (oldFile != null && oldFile != motionVideoFile) {
-            try { 
+            try {
                 withContext(Dispatchers.IO) { oldFile.delete() }
             } catch (e: Exception) {}
         }
     }
 
-    // Comprehensive cleanup on exit
+    // Drive player creation/destruction from isPlayingMotion state.
+    LaunchedEffect(isPlayingMotion, motionVideoFile) {
+        val file = motionVideoFile
+        if (isPlayingMotion && file != null) {
+            // Release any stale player before building a fresh one.
+            motionPlayer?.stop()
+            motionPlayer?.release()
+            motionPlayer = ExoPlayer.Builder(context).build().apply {
+                setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
+                repeatMode = Player.REPEAT_MODE_ONE
+                volume = 0f // motion photos are silent
+                prepare()
+                playWhenReady = true
+            }
+        } else {
+            // Not playing — release the player to free decoder resources.
+            motionPlayer?.stop()
+            motionPlayer?.release()
+            motionPlayer = null
+        }
+    }
+
+    // Comprehensive cleanup on screen exit
     DisposableEffect(Unit) {
         onDispose {
+            motionPlayer?.stop()
+            motionPlayer?.release()
             motionVideoFile?.delete()
         }
     }
@@ -253,11 +294,9 @@ fun ViewerScreen(
                             }
                         )
                         
-                        if (isPlayingMotion && motionVideoFile != null) {
-                            VideoPlayer(
-                                uri = Uri.fromFile(motionVideoFile!!).toString(),
-                                isMotionPhoto = true,
-                                isActive = true, 
+                        if (isPlayingMotion && motionPlayer != null) {
+                            MotionPhotoPlayer(
+                                player = motionPlayer!!,
                                 modifier = Modifier.fillMaxSize(),
                                 onTap = { isPlayingMotion = false }
                             )
@@ -631,7 +670,11 @@ fun InfoBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = { BottomSheetDefaults.DragHandle() }
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        // Disable sheet-level gesture detection so that interactions with the
+        // embedded OSMDroid MapView (pan, pinch-zoom) are not misinterpreted as
+        // sheet-dismiss swipes.
+        sheetGesturesEnabled = false
     ) {
         Column(
             modifier = Modifier
@@ -677,14 +720,20 @@ fun InfoBottomSheet(
                                 controller.setZoom(15.0)
                                 val point = org.osmdroid.util.GeoPoint(coords.first, coords.second)
                                 controller.setCenter(point)
-                                
+
                                 val marker = org.osmdroid.views.overlay.Marker(this)
                                 marker.position = point
                                 marker.setAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_BOTTOM)
                                 overlays.add(marker)
                             }
                         },
-                        modifier = Modifier.fillMaxSize()
+                        // pointerInteropFilter returns true (consumed) for every event so that
+                        // the MapView's own touch handling is the sole consumer — scroll/fling
+                        // gestures on the map will never bubble up to the ModalBottomSheet's
+                        // swipe-to-dismiss gesture detector.
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInteropFilter { true }
                     )
                 }
             }
@@ -742,6 +791,46 @@ fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String
             Text(text = title, style = MaterialTheme.typography.bodyLarge)
             Text(text = subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+    }
+}
+
+/**
+ * Renders a motion photo video using an [ExoPlayer] instance that is owned and
+ * lifecycle-managed by the caller (ViewerScreen). This composable intentionally
+ * does NOT create or release any ExoPlayer — it only presents the PlayerView.
+ *
+ * Keeping the player lifecycle external ensures that old decoders are always
+ * fully released before new ones are allocated, preventing OutOfMemoryErrors.
+ */
+@Composable
+fun MotionPhotoPlayer(
+    player: ExoPlayer,
+    modifier: Modifier = Modifier,
+    onTap: () -> Unit = {}
+) {
+    Box(
+        modifier = modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = onTap
+        )
+    ) {
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    useController = false
+                    this.player = player
+                    setBackgroundColor(android.graphics.Color.BLACK)
+                }
+            },
+            update = { view ->
+                view.player = player
+            },
+            onRelease = { view ->
+                view.player = null
+            },
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 
