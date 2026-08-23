@@ -27,9 +27,12 @@ import androidx.compose.ui.res.stringResource
 import com.pixel.gallery.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -72,6 +75,17 @@ private val MapnikHttps = XYTileSource(
     ),
     "© OpenStreetMap contributors"
 )
+
+/**
+ * A [NestedScrollConnection] that consumes all scroll delta before it can reach
+ * parent composables. Applied to the map container in [InfoBottomSheet] so that
+ * OSMDroid pan/fling gestures are not misinterpreted as sheet-dismiss swipes by
+ * the [ModalBottomSheet], while still allowing the sheet to be dragged via its
+ * handle or edge areas (those don't go through this connection).
+ */
+private val ConsumeAllScrollConnection = object : NestedScrollConnection {
+    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset = available
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -143,10 +157,14 @@ fun ViewerScreen(
         showWallpaperSheet = false
         wallpaperCropMedia = null
 
+        val oldFile = motionVideoFile
+        // Clear immediately so the motion photo button hides and we don't accidentally
+        // try to play the old video while the new one is extracting.
+        motionVideoFile = null 
+
         val file = withContext(Dispatchers.IO) {
             currentMedia?.let { viewModel.extractMotionVideo(it.path) }
         }
-        val oldFile = motionVideoFile
         motionVideoFile = file
 
         // Clean up old temp file after new one is ready
@@ -157,11 +175,15 @@ fun ViewerScreen(
         }
     }
 
-    // Drive player creation/destruction from isPlayingMotion state.
-    LaunchedEffect(isPlayingMotion, motionVideoFile) {
-        val file = motionVideoFile
-        if (isPlayingMotion && file != null) {
-            // Release any stale player before building a fresh one.
+    // Drive player creation/destruction ONLY from isPlayingMotion changing.
+    // Deliberately NOT keyed on motionVideoFile — if the IO extraction completes
+    // while the user is already watching a motion video, we must not tear down
+    // and rebuild the player mid-playback (that was the regression causing the
+    // 2nd motion photo to silently stop after ~2 seconds).
+    LaunchedEffect(isPlayingMotion) {
+        if (isPlayingMotion) {
+            val file = motionVideoFile ?: return@LaunchedEffect
+            // Release any stale player, then build a fresh one.
             motionPlayer?.stop()
             motionPlayer?.release()
             motionPlayer = ExoPlayer.Builder(context).build().apply {
@@ -670,11 +692,7 @@ fun InfoBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
-        // Disable sheet-level gesture detection so that interactions with the
-        // embedded OSMDroid MapView (pan, pinch-zoom) are not misinterpreted as
-        // sheet-dismiss swipes.
-        sheetGesturesEnabled = false
+        dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
         Column(
             modifier = Modifier
@@ -703,12 +721,17 @@ fun InfoBottomSheet(
                 Spacer(Modifier.height(24.dp))
                 Text(stringResource(R.string.location), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(12.dp))
+                // ConsumeAllScrollConnection intercepts nested scroll events from the MapView
+                // before they reach the ModalBottomSheet's swipe-to-dismiss handler.
+                // Unlike pointerInteropFilter { true }, this only blocks scroll propagation
+                // upward — the sheet's own drag handle and edge-drag still work normally.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
                         .clip(MaterialTheme.shapes.large)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .nestedScroll(ConsumeAllScrollConnection)
                 ) {
                     val context = LocalContext.current
                     AndroidView(
@@ -727,13 +750,7 @@ fun InfoBottomSheet(
                                 overlays.add(marker)
                             }
                         },
-                        // pointerInteropFilter returns true (consumed) for every event so that
-                        // the MapView's own touch handling is the sole consumer — scroll/fling
-                        // gestures on the map will never bubble up to the ModalBottomSheet's
-                        // swipe-to-dismiss gesture detector.
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .pointerInteropFilter { true }
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }
