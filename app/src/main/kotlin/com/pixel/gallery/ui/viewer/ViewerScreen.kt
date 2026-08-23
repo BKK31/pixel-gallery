@@ -149,8 +149,7 @@ fun ViewerScreen(
         // Release old player immediately — before extracting the new file — so that
         // the HEVC decoder is freed and its large input buffers are returned to the
         // heap before the new decoder is allocated.
-        motionPlayer?.stop()
-        motionPlayer?.release()
+        releaseMotionPlayer(motionPlayer)
         motionPlayer = null
 
         showMenu = false
@@ -184,8 +183,7 @@ fun ViewerScreen(
         if (isPlayingMotion) {
             val file = motionVideoFile ?: return@LaunchedEffect
             // Release any stale player, then build a fresh one.
-            motionPlayer?.stop()
-            motionPlayer?.release()
+            releaseMotionPlayer(motionPlayer)
             motionPlayer = ExoPlayer.Builder(context).build().apply {
                 setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
                 repeatMode = Player.REPEAT_MODE_ONE
@@ -195,8 +193,7 @@ fun ViewerScreen(
             }
         } else {
             // Not playing — release the player to free decoder resources.
-            motionPlayer?.stop()
-            motionPlayer?.release()
+            releaseMotionPlayer(motionPlayer)
             motionPlayer = null
         }
     }
@@ -204,8 +201,7 @@ fun ViewerScreen(
     // Comprehensive cleanup on screen exit
     DisposableEffect(Unit) {
         onDispose {
-            motionPlayer?.stop()
-            motionPlayer?.release()
+            releaseMotionPlayer(motionPlayer)
             motionVideoFile?.delete()
         }
     }
@@ -316,12 +312,14 @@ fun ViewerScreen(
                             }
                         )
                         
-                        if (isPlayingMotion && motionPlayer != null) {
-                            MotionPhotoPlayer(
-                                player = motionPlayer!!,
-                                modifier = Modifier.fillMaxSize(),
-                                onTap = { isPlayingMotion = false }
-                            )
+                        if (pagerState.currentPage == page && isPlayingMotion && motionPlayer != null) {
+                            key(media.contentId, motionPlayer) {
+                                MotionPhotoPlayer(
+                                    player = motionPlayer!!,
+                                    modifier = Modifier.fillMaxSize(),
+                                    onTap = { isPlayingMotion = false }
+                                )
+                            }
                         }
                     }
                 }
@@ -849,6 +847,14 @@ fun MotionPhotoPlayer(
             modifier = Modifier.fillMaxSize()
         )
     }
+}
+
+private fun releaseMotionPlayer(player: ExoPlayer?) {
+    if (player == null) return
+    runCatching { player.playWhenReady = false }
+    runCatching { player.clearVideoSurface() }
+    runCatching { player.stop() }
+    runCatching { player.release() }
 }
 
 @Composable
