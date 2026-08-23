@@ -114,6 +114,9 @@ class PhotosViewModel @Inject constructor(
         groupMedia(media, cols)
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    val trashDates: StateFlow<Map<Long, Long>> = repository.trashDates
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
+
     val vaultEntries: StateFlow<List<MediaEntry>> = repository.vaultEntries
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 

@@ -11,6 +11,7 @@ data class FavouriteEntry(
 @Entity(tableName = "trash")
 data class TrashEntry(
     @PrimaryKey val id: Long,
+    val uri: String = "",
     val path: String,
     val dateMillis: Long
 )

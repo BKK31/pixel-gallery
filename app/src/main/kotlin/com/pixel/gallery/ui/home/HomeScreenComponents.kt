@@ -53,7 +53,11 @@ fun PhotosScreen(
     columns: Int = 3,
     onColumnsChange: (Int) -> Unit = {},
     bottomPadding: Dp = 0.dp,
-    state: LazyGridState = rememberLazyGridState()
+    state: LazyGridState = rememberLazyGridState(),
+    // Non-null means we are in the trash context. Items missing from the map fall back to
+    // dateModifiedMillis (set by Android when the item is trashed via MediaStore).
+    // Null means we are NOT in trash context — no badge shown at all.
+    trashDates: Map<Long, Long>? = null
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         LazyVerticalGrid(
@@ -128,7 +132,19 @@ fun PhotosScreen(
                     is GridItem.Photo -> {
                         val media = item.entry
                         val isSelected = selectedIds.contains(media.contentId)
-                        
+                        val daysLeft = remember(media.contentId, trashDates) {
+                            if (trashDates == null) {
+                                // Not in trash context — never show badge
+                                null
+                            } else {
+                                // In trash context: prefer recorded trash date, fall back to
+                                // dateModifiedMillis (Android sets this when item is trashed)
+                                val trashedAt = trashDates[media.contentId] ?: media.dateModifiedMillis
+                                val expiresAt = trashedAt + 30L * 24 * 60 * 60 * 1000
+                                ((expiresAt - System.currentTimeMillis()) / 86_400_000).toInt()
+                            }
+                        }
+
                         PhotoTile(
                             media = media,
                             isSelected = isSelected,
@@ -140,7 +156,8 @@ fun PhotosScreen(
                                     onNavigateToViewer(media.contentId)
                                 }
                             },
-                            onLongClick = null
+                            onLongClick = null,
+                            daysLeft = daysLeft
                         )
                     }
                 }
@@ -174,7 +191,8 @@ fun PhotoTile(
     isSelected: Boolean,
     isSelectionMode: Boolean,
     onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null
+    onLongClick: (() -> Unit)? = null,
+    daysLeft: Int? = null
 ) {
     val isVideo = remember(media.sourceMimeType) { media.sourceMimeType.startsWith("video/") }
     val formattedDuration = remember(media.durationMillis) {
@@ -309,6 +327,26 @@ fun PhotoTile(
                     modifier = Modifier.size(12.dp)
                 )
             }
+        }
+
+        // Days-left badge (trash screen only)
+        if (daysLeft != null && !isSelectionMode) {
+            val label = if (daysLeft <= 0) "Today" else "${daysLeft}d left"
+            val badgeColor = when {
+                daysLeft <= 3  -> androidx.compose.ui.graphics.Color(0xFFE53935)
+                daysLeft <= 10 -> androidx.compose.ui.graphics.Color(0xFFFB8C00)
+                else           -> Color.Black.copy(alpha = 0.55f)
+            }
+            Text(
+                text = label,
+                color = Color.White,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(6.dp)
+                    .background(badgeColor, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 5.dp, vertical = 2.dp)
+            )
         }
     }
 }

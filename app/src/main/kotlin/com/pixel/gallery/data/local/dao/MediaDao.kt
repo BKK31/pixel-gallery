@@ -41,6 +41,12 @@ interface MediaDao {
     @Query("SELECT * FROM media_entries WHERE isTrashed = 1 ORDER BY bestTimestamp DESC, contentId DESC")
     fun getTrash(): Flow<List<MediaEntry>>
 
+    @Query("SELECT * FROM trash")
+    fun getAllTrashEntries(): Flow<List<TrashEntry>>
+
+    @Query("SELECT * FROM trash WHERE dateMillis < :expiryMillis")
+    suspend fun getExpiredTrashEntries(expiryMillis: Long): List<TrashEntry>
+
     // --- Vault ---
     @Query("SELECT * FROM vault")
     fun getVaultEntries(): Flow<List<VaultEntry>>

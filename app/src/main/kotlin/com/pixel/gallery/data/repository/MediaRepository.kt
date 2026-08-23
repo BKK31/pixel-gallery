@@ -14,6 +14,7 @@ import androidx.exifinterface.media.ExifInterface
 import com.pixel.gallery.MainActivity
 import com.pixel.gallery.data.local.dao.MediaDao
 import com.pixel.gallery.data.local.entity.MediaEntry
+import com.pixel.gallery.data.local.entity.TrashEntry
 import com.pixel.gallery.data.local.entity.VaultEntry
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -21,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -60,8 +62,10 @@ class MediaRepository @Inject constructor(
         }
     }
 
-    val trash: Flow<List<MediaEntry>> = mediaDao.getTrash() 
+    val trash: Flow<List<MediaEntry>> = mediaDao.getTrash()
 
+    val trashDates: Flow<Map<Long, Long>> = mediaDao.getAllTrashEntries()
+        .map { list -> list.associate { it.id to it.dateMillis } }
 
     fun isFavourite(id: Long): Flow<Boolean> = mediaDao.isFavourite(id)
 
@@ -81,7 +85,7 @@ class MediaRepository @Inject constructor(
     suspend fun trashMediaBulk(uriStrings: List<String>): Boolean = withContext(Dispatchers.IO) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val uris = uriStrings.map { Uri.parse(it) }
-            
+
             if (Environment.isExternalStorageManager()) {
                 // If we have All Files Access, we can skip the system dialog by updating the column directly
                 val values = android.content.ContentValues().apply {
@@ -90,15 +94,40 @@ class MediaRepository @Inject constructor(
                 uris.forEach { uri ->
                     context.contentResolver.update(uri, values, null, null)
                 }
+                recordTrashDates(uriStrings)
                 true // Handled internally
             } else {
                 val pendingIntent = MediaStore.createTrashRequest(context.contentResolver, uris, true)
                 MainActivity.launchIntentSender(IntentSenderRequest.Builder(pendingIntent.intentSender).build())
+                // Record optimistically — system dialog will confirm the action
+                recordTrashDates(uriStrings)
                 false // Waiting for system activity result
             }
         } else {
             false
         }
+    }
+
+    private suspend fun recordTrashDates(uriStrings: List<String>) {
+        val now = System.currentTimeMillis()
+        uriStrings.forEach { uriString ->
+            val id = Uri.parse(uriString).lastPathSegment?.toLongOrNull() ?: return@forEach
+            mediaDao.moveToTrash(TrashEntry(id = id, uri = uriString, path = "", dateMillis = now))
+        }
+    }
+
+    suspend fun deleteExpiredTrashItems() = withContext(Dispatchers.IO) {
+        val thirtyDaysAgo = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
+        val expired = mediaDao.getExpiredTrashEntries(thirtyDaysAgo)
+        if (expired.isEmpty()) return@withContext
+
+        val urisToDelete = expired.map { it.uri }.filter { it.isNotEmpty() }
+        if (urisToDelete.isNotEmpty()) {
+            deleteMediaBulk(urisToDelete)
+        }
+
+        // Clean up the trash table regardless
+        expired.forEach { mediaDao.removeFromTrash(it.id) }
     }
 
     suspend fun restoreMedia(id: Long, uriString: String) = withContext(Dispatchers.IO) {
