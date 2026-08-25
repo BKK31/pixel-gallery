@@ -61,6 +61,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.saket.telephoto.zoomable.glide.ZoomableGlideImage
 import me.saket.telephoto.zoomable.rememberZoomableImageState
+import me.saket.telephoto.zoomable.rememberZoomableState
+import me.saket.telephoto.zoomable.zoomable
 import org.osmdroid.tileprovider.tilesource.XYTileSource
 import java.io.File
 
@@ -737,20 +739,29 @@ private fun AvifImage(
         }
     }
 
-    AndroidView(
-        factory = { context ->
-            ImageView(context).apply {
-                setBackgroundColor(android.graphics.Color.BLACK)
-                scaleType = ImageView.ScaleType.FIT_CENTER
-                setImageDrawable(drawable)
-                setOnClickListener { onClick() }
-            }
-        },
-        update = { view ->
-            view.setImageDrawable(drawable)
-        },
+    val zoomableState = rememberZoomableState()
+
+    Box(
         modifier = modifier
-    )
+            .zoomable(
+                state = zoomableState,
+                onClick = { _ -> onClick() }
+            )
+    ) {
+        AndroidView(
+            factory = { context ->
+                ImageView(context).apply {
+                    setBackgroundColor(android.graphics.Color.BLACK)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    setImageDrawable(drawable)
+                }
+            },
+            update = { view ->
+                view.setImageDrawable(drawable)
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+    }
 }
 
 private suspend fun loadWallpaperBitmap(
