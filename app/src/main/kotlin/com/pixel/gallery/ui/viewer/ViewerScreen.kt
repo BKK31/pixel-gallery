@@ -152,9 +152,17 @@ fun ViewerScreen(
         }
     }
 
+    // Keep track of whether the photos list has successfully loaded at least once
+    var hasLoaded by remember { mutableStateOf(false) }
+    LaunchedEffect(photos) {
+        if (photos.isNotEmpty()) {
+            hasLoaded = true
+        }
+    }
+
     // Close the viewer if the photos list becomes empty (e.g., last photo was deleted)
-    LaunchedEffect(photos.size) {
-        if (photos.isEmpty()) {
+    LaunchedEffect(photos.size, hasLoaded) {
+        if (hasLoaded && photos.isEmpty()) {
             onBack()
         }
     }
