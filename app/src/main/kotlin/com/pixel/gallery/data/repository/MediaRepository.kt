@@ -123,11 +123,12 @@ class MediaRepository @Inject constructor(
 
         val urisToDelete = expired.map { it.uri }.filter { it.isNotEmpty() }
         if (urisToDelete.isNotEmpty()) {
-            deleteMediaBulk(urisToDelete)
+            if (deleteMediaBulk(urisToDelete)) {
+                expired.forEach { mediaDao.removeFromTrash(it.id) }
+            }
+        } else {
+            expired.forEach { mediaDao.removeFromTrash(it.id) }
         }
-
-        // Clean up the trash table regardless
-        expired.forEach { mediaDao.removeFromTrash(it.id) }
     }
 
     suspend fun restoreMedia(id: Long, uriString: String) = withContext(Dispatchers.IO) {
@@ -296,7 +297,8 @@ class MediaRepository @Inject constructor(
             MediaStore.MediaColumns.DATE_MODIFIED,
             MediaStore.MediaColumns.DURATION,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) MediaStore.Images.Media.DATE_TAKEN else MediaStore.MediaColumns.DATE_MODIFIED,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) MediaStore.MediaColumns.IS_TRASHED else MediaStore.MediaColumns.DATA // Just a dummy for old versions
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) MediaStore.MediaColumns.IS_TRASHED else MediaStore.MediaColumns.DATA,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) MediaStore.MediaColumns.DATE_EXPIRES else MediaStore.MediaColumns.DATA
         )
 
         // Query Images
@@ -315,10 +317,11 @@ class MediaRepository @Inject constructor(
         val obsoleteIds = knownEntries.keys.filter { it !in currentIds }
         if (obsoleteIds.isNotEmpty()) {
             mediaDao.deleteByIds(obsoleteIds)
+            obsoleteIds.forEach { mediaDao.removeFromTrash(it) }
         }
     }
 
-    private fun queryMediaStore(
+    private suspend fun queryMediaStore(
         resolver: ContentResolver,
         uri: android.net.Uri,
         projection: Array<String>,
@@ -367,6 +370,9 @@ class MediaRepository @Inject constructor(
             val takenColumn = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 cursor.getColumnIndex(MediaStore.Images.Media.DATE_TAKEN)
             } else -1
+            val expiresColumn = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                cursor.getColumnIndex(MediaStore.MediaColumns.DATE_EXPIRES)
+            } else -1
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
@@ -374,7 +380,25 @@ class MediaRepository @Inject constructor(
                 val modified = cursor.getLong(modifiedColumn) * 1000
                 val path = cursor.getString(dataColumn)
 
-                 val knownEntry = knownEntries[id]
+                if (queryTrashed && expiresColumn != -1) {
+                    val expiresSecs = cursor.getLong(expiresColumn)
+                    if (expiresSecs > 0) {
+                        val expiresAtMillis = expiresSecs * 1000L
+                        val trashedAt = expiresAtMillis - 30L * 24 * 60 * 60 * 1000
+                        mediaDao.moveToTrash(
+                            TrashEntry(
+                                id = id,
+                                uri = uri.buildUpon().appendPath(id.toString()).toString(),
+                                path = path,
+                                dateMillis = trashedAt
+                            )
+                        )
+                    }
+                } else if (!queryTrashed) {
+                    mediaDao.removeFromTrash(id)
+                }
+
+                  val knownEntry = knownEntries[id]
                  if (knownEntry?.dateModifiedMillis != modified || knownEntry.isTrashed != queryTrashed || knownEntry.bestTimestamp == 0L) {
                      val mediaStoreTakenRaw = if (takenColumn != -1) cursor.getLong(takenColumn) else 0L
                      val mediaStoreTaken = if (mediaStoreTakenRaw > 0 && mediaStoreTakenRaw < 1000000000000L) {
