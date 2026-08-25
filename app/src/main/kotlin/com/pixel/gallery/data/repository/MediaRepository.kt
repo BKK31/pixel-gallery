@@ -638,4 +638,79 @@ class MediaRepository @Inject constructor(
 
         return deletedByFile || !sourceFile.exists()
     }
+
+    suspend fun resolveExternalUri(uriString: String): Pair<Long, String>? = withContext(Dispatchers.IO) {
+        val uri = Uri.parse(uriString)
+        // 1. Try parsing contentId from URI path (for MediaStore URIs)
+        val contentId = uri.lastPathSegment?.toLongOrNull()
+        if (contentId != null) {
+            val entry = mediaDao.getEntryById(contentId)
+            if (entry != null) {
+                val file = java.io.File(entry.path)
+                val parentName = file.parentFile?.name ?: "Unknown"
+                return@withContext Pair(contentId, parentName)
+            }
+        }
+
+        // 2. Handle file scheme directly
+        if (uri.scheme == "file" || uriString.startsWith("/")) {
+            val path = uri.path ?: uriString
+            val file = java.io.File(path)
+            val parentName = file.parentFile?.name ?: "Unknown"
+            val contentIdFromPath = getMediaStoreIdFromPath(path)
+            if (contentIdFromPath != null) {
+                if (mediaDao.getEntryById(contentIdFromPath) == null) {
+                    syncWithMediaStore()
+                }
+                return@withContext Pair(contentIdFromPath, parentName)
+            }
+        }
+
+        // 3. Query MediaStore directly or fallback to ContentResolver query
+        try {
+            val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DATA)
+            context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idCol = cursor.getColumnIndex(MediaStore.MediaColumns._ID)
+                    val dataCol = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
+                    val resolvedId = if (idCol != -1) cursor.getLong(idCol) else -1L
+                    val resolvedPath = if (dataCol != -1) cursor.getString(dataCol) else null
+                    if (resolvedPath != null) {
+                        val file = java.io.File(resolvedPath)
+                        val parentName = file.parentFile?.name ?: "Unknown"
+                        
+                        if (resolvedId != -1L && mediaDao.getEntryById(resolvedId) == null) {
+                            syncWithMediaStore()
+                        }
+                        val finalId = if (resolvedId != -1L) resolvedId else contentId ?: -1L
+                        if (finalId != -1L) {
+                            return@withContext Pair(finalId, parentName)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(logTag, "Error resolving external URI: $uriString", e)
+        }
+
+        null
+    }
+
+    private fun getMediaStoreIdFromPath(path: String): Long? {
+        val uri = MediaStore.Files.getContentUri("external")
+        val projection = arrayOf(MediaStore.MediaColumns._ID)
+        val selection = "${MediaStore.MediaColumns.DATA} = ?"
+        val selectionArgs = arrayOf(path)
+        try {
+            context.contentResolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idCol = cursor.getColumnIndex(MediaStore.MediaColumns._ID)
+                    if (idCol != -1) return cursor.getLong(idCol)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(logTag, "Error getting MediaStore ID for path $path", e)
+        }
+        return null
+    }
 }
