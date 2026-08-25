@@ -5,9 +5,11 @@ import android.app.WallpaperManager
 import android.graphics.Bitmap
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.graphics.drawable.Animatable
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import android.widget.ImageView
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,6 +43,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bumptech.glide.Glide
+import com.github.penfeizhou.animation.avif.AVIFDrawable
 import com.pixel.gallery.ui.components.DeleteConfirmationDialog
 import com.pixel.gallery.utils.BitmapUtils
 import com.pixel.gallery.utils.MimeTypes
@@ -58,6 +61,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.saket.telephoto.zoomable.glide.ZoomableGlideImage
 import me.saket.telephoto.zoomable.rememberZoomableImageState
+import me.saket.telephoto.zoomable.rememberZoomableState
+import me.saket.telephoto.zoomable.zoomable
 import org.osmdroid.tileprovider.tilesource.XYTileSource
 import java.io.File
 
@@ -144,6 +149,13 @@ fun ViewerScreen(
     DisposableEffect(Unit) {
         onDispose {
             motionVideoFile?.delete()
+        }
+    }
+
+    // Close the viewer if the photos list becomes empty (e.g., last photo was deleted)
+    LaunchedEffect(photos.size) {
+        if (photos.isEmpty()) {
+            onBack()
         }
     }
 
@@ -237,30 +249,44 @@ fun ViewerScreen(
                         onTap = { showUI = !showUI }
                     )
                 } else {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        ZoomableGlideImage(
-                            model = media.uri,
-                            contentDescription = null,
+                    if (media.sourceMimeType == MimeTypes.AVIF) {
+                        AvifImage(
+                            media = media,
                             modifier = Modifier.fillMaxSize(),
-                            state = rememberZoomableImageState(),
-                            contentScale = ContentScale.Fit,
-                            onClick = { 
+                            onClick = {
                                 if (isPlayingMotion) {
                                     isPlayingMotion = false
                                 } else {
-                                    showUI = !showUI 
+                                    showUI = !showUI
                                 }
                             }
                         )
-                        
-                        if (isPlayingMotion && motionVideoFile != null) {
-                            VideoPlayer(
-                                uri = Uri.fromFile(motionVideoFile!!).toString(),
-                                isMotionPhoto = true,
-                                isActive = true, 
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            ZoomableGlideImage(
+                                model = media.uri,
+                                contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),
-                                onTap = { isPlayingMotion = false }
+                                state = rememberZoomableImageState(),
+                                contentScale = ContentScale.Fit,
+                                onClick = { 
+                                    if (isPlayingMotion) {
+                                        isPlayingMotion = false
+                                    } else {
+                                        showUI = !showUI 
+                                    }
+                                }
                             )
+                            
+                            if (isPlayingMotion && motionVideoFile != null) {
+                                VideoPlayer(
+                                    uri = Uri.fromFile(motionVideoFile!!).toString(),
+                                    isMotionPhoto = true,
+                                    isActive = true, 
+                                    modifier = Modifier.fillMaxSize(),
+                                    onTap = { isPlayingMotion = false }
+                                )
+                            }
                         }
                     }
                 }
@@ -477,7 +503,6 @@ fun ViewerScreen(
                                 } else {
                                     currentMedia?.let { media ->
                                         viewModel.deleteMediaBulk(listOf(media.uri))
-                                        onBack()
                                     }
                                 }
                             } else {
@@ -487,7 +512,6 @@ fun ViewerScreen(
                                 } else {
                                     currentMedia?.let { media ->
                                         viewModel.moveToTrash(media.contentId, media.uri, media.path)
-                                        onBack()
                                     }
                                 }
                             }
@@ -608,7 +632,6 @@ fun ViewerScreen(
                     } else {
                         viewModel.moveToTrash(currentMedia.contentId, currentMedia.uri, currentMedia.path)
                     }
-                    onBack()
                 },
                 onDismiss = {
                     showDeleteConfirmDialog = false
@@ -689,6 +712,59 @@ fun InfoBottomSheet(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AvifImage(
+    media: MediaEntry,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val drawable = remember(media.path) {
+        runCatching { AVIFDrawable.fromFile(media.path) }.getOrNull()
+    }
+
+    if (drawable == null || drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0) {
+        ZoomableGlideImage(
+            model = media.uri,
+            contentDescription = null,
+            modifier = modifier,
+            state = rememberZoomableImageState(),
+            contentScale = ContentScale.Fit,
+            onClick = { _ -> onClick() }
+        )
+        return
+    }
+
+    DisposableEffect(drawable) {
+        onDispose {
+            (drawable as? Animatable)?.stop()
+        }
+    }
+
+    val zoomableState = rememberZoomableState()
+
+    Box(
+        modifier = modifier
+            .zoomable(
+                state = zoomableState,
+                onClick = { _ -> onClick() }
+            )
+    ) {
+        AndroidView(
+            factory = { context ->
+                ImageView(context).apply {
+                    setBackgroundColor(android.graphics.Color.BLACK)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    setImageDrawable(drawable)
+                }
+            },
+            update = { view ->
+                view.setImageDrawable(drawable)
+            },
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 

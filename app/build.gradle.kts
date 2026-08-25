@@ -34,8 +34,8 @@ android {
         applicationId = "com.pixel.gallery"
         minSdk = 26
         targetSdk = 35
-        versionCode = 26
-        versionName = "4.1.3"
+        versionCode = 28
+        versionName = "4.1.5"
     }
 
     signingConfigs {
@@ -154,6 +154,9 @@ dependencies {
     val hiltVersion = "2.55"
     implementation("com.google.dagger:hilt-android:$hiltVersion")
     ksp("com.google.dagger:hilt-android-compiler:$hiltVersion")
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // DataStore
@@ -189,6 +192,7 @@ dependencies {
     // Other formats
     implementation("com.github.deckerst:androidsvg:c7e58e8e59")
     implementation("com.github.deckerst:Android-TiffBitmapFactory:424b18a4ae")
+    implementation("com.github.penfeizhou.android.animation:avif:3.0.5")
     implementation("org.osmdroid:osmdroid-android:6.1.18")
     implementation("com.github.bumptech.glide:avif-integration:4.16.0")
 

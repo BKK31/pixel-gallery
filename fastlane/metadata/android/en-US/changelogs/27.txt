@@ -1,0 +1,3 @@
+- Fixed issues with AVIF thumbnail and image loading
+- Fixed trashed images not auto-deleting
+- Fixed app crash when viewing motion photos

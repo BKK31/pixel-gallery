@@ -24,6 +24,9 @@ interface MediaDao {
     @Query("DELETE FROM media_entries WHERE contentId IN (:ids)")
     suspend fun deleteByIds(ids: List<Long>)
 
+    @Query("SELECT * FROM media_entries WHERE contentId = :id LIMIT 1")
+    suspend fun getEntryById(id: Long): MediaEntry?
+
     // --- Favourites ---
     @Query("SELECT * FROM media_entries WHERE isTrashed = 0 AND contentId IN (SELECT id FROM favourites) ORDER BY bestTimestamp DESC, contentId DESC")
     fun getFavourites(): Flow<List<MediaEntry>>
