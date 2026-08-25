@@ -84,7 +84,8 @@ sealed class Screen : Parcelable {
         val source: ViewerSource = ViewerSource.All,
         val albumName: String? = null,
         val externalUri: String? = null,
-        val externalMimeType: String? = null
+        val externalMimeType: String? = null,
+        val showHidden: Boolean = false
     ) : Screen()
     @Parcelize object ExcludedFolders : Screen()
     @Parcelize object Licenses : Screen()
@@ -115,7 +116,20 @@ fun MainScaffold(
 
     LaunchedEffect(externalMedia) {
         externalMedia?.let { media ->
-            navigationStack = listOf(Screen.Home, Screen.Viewer(initialId = -1L, source = Screen.ViewerSource.External, externalUri = media.uri, externalMimeType = media.mimeType))
+            if (media.resolvedContentId != null && media.resolvedFolderName != null) {
+                val isHidden = !photosViewModel.photos.value.any { it.contentId == media.resolvedContentId }
+                navigationStack = listOf(
+                    Screen.Home,
+                    Screen.Viewer(
+                        initialId = media.resolvedContentId,
+                        source = Screen.ViewerSource.Album,
+                        albumName = media.resolvedFolderName,
+                        showHidden = isHidden
+                    )
+                )
+            } else {
+                navigationStack = listOf(Screen.Home, Screen.Viewer(initialId = -1L, source = Screen.ViewerSource.External, externalUri = media.uri, externalMimeType = media.mimeType))
+            }
             photosViewModel.clearExternalMediaUri()
         }
     }
@@ -490,7 +504,12 @@ fun MainScaffold(
                         Screen.ViewerSource.Trash -> trash
                         Screen.ViewerSource.Vault -> vault
                         Screen.ViewerSource.Album -> {
-                            allPhotos.filter { 
+                            val sourceList = if (viewer.showHidden) {
+                                photosViewModel.allPhotos.value
+                            } else {
+                                allPhotos
+                            }
+                            sourceList.filter { 
                                 val file = java.io.File(it.path)
                                 file.parentFile?.name == viewer.albumName
                             }

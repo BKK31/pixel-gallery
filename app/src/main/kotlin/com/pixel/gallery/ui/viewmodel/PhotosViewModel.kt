@@ -25,14 +25,27 @@ class PhotosViewModel @Inject constructor(
         data class Photo(val entry: MediaEntry) : GridItem()
     }
 
-    data class ExternalMedia(val uri: String, val mimeType: String)
+    data class ExternalMedia(
+        val uri: String,
+        val mimeType: String,
+        val resolvedContentId: Long? = null,
+        val resolvedFolderName: String? = null
+    )
 
     private val _externalMedia = MutableStateFlow<ExternalMedia?>(null)
     val externalMedia: StateFlow<ExternalMedia?> = _externalMedia
 
     fun setExternalMediaUri(uri: String?, mimeType: String? = null) {
         if (uri != null) {
-            _externalMedia.value = ExternalMedia(uri, mimeType ?: "image/*")
+            viewModelScope.launch {
+                val resolved = repository.resolveExternalUri(uri)
+                _externalMedia.value = ExternalMedia(
+                    uri = uri,
+                    mimeType = mimeType ?: "image/*",
+                    resolvedContentId = resolved?.first,
+                    resolvedFolderName = resolved?.second
+                )
+            }
         } else {
             _externalMedia.value = null
         }

@@ -152,6 +152,13 @@ fun ViewerScreen(
         }
     }
 
+    // Close the viewer if the photos list becomes empty (e.g., last photo was deleted)
+    LaunchedEffect(photos.size) {
+        if (photos.isEmpty()) {
+            onBack()
+        }
+    }
+
     // Auto-hide UI timer
     LaunchedEffect(showUI, pagerState.currentPage, isPlayingMotion) {
         if (showUI && !isPlayingMotion) {
@@ -496,7 +503,6 @@ fun ViewerScreen(
                                 } else {
                                     currentMedia?.let { media ->
                                         viewModel.deleteMediaBulk(listOf(media.uri))
-                                        onBack()
                                     }
                                 }
                             } else {
@@ -506,7 +512,6 @@ fun ViewerScreen(
                                 } else {
                                     currentMedia?.let { media ->
                                         viewModel.moveToTrash(media.contentId, media.uri, media.path)
-                                        onBack()
                                     }
                                 }
                             }
@@ -627,7 +632,6 @@ fun ViewerScreen(
                     } else {
                         viewModel.moveToTrash(currentMedia.contentId, currentMedia.uri, currentMedia.path)
                     }
-                    onBack()
                 },
                 onDismiss = {
                     showDeleteConfirmDialog = false
