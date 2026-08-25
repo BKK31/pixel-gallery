@@ -1,0 +1,1 @@
+- Fixed bug where avif images showed only thumbnails, but displayed black screen when opened.
