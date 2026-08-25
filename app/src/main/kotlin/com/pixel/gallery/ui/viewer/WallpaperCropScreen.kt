@@ -45,7 +45,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 import com.bumptech.glide.Glide
+import com.github.penfeizhou.animation.avif.AVIFDrawable
 import com.pixel.gallery.data.local.entity.MediaEntry
 import com.pixel.gallery.utils.BitmapUtils
 import com.pixel.gallery.utils.MimeTypes
@@ -273,6 +275,10 @@ private suspend fun loadWallpaperBitmap(
     media: MediaEntry,
     targetSize: WallpaperImageSize,
 ): Bitmap? = withContext(Dispatchers.IO) {
+    if (media.sourceMimeType == MimeTypes.AVIF) {
+        return@withContext runCatching { AVIFDrawable.fromFile(media.path).toBitmap() }.getOrNull()
+    }
+
     runCatching {
         Glide.with(context)
             .asBitmap()

@@ -5,9 +5,11 @@ import android.app.WallpaperManager
 import android.graphics.Bitmap
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.graphics.drawable.Animatable
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import android.widget.ImageView
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,12 +29,8 @@ import androidx.compose.ui.res.stringResource
 import com.pixel.gallery.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +43,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bumptech.glide.Glide
+import com.github.penfeizhou.animation.avif.AVIFDrawable
 import com.pixel.gallery.ui.components.DeleteConfirmationDialog
 import com.pixel.gallery.utils.BitmapUtils
 import com.pixel.gallery.utils.MimeTypes
@@ -75,17 +74,6 @@ private val MapnikHttps = XYTileSource(
     ),
     "© OpenStreetMap contributors"
 )
-
-/**
- * A [NestedScrollConnection] that consumes all scroll delta before it can reach
- * parent composables. Applied to the map container in [InfoBottomSheet] so that
- * OSMDroid pan/fling gestures are not misinterpreted as sheet-dismiss swipes by
- * the [ModalBottomSheet], while still allowing the sheet to be dragged via its
- * handle or edge areas (those don't go through this connection).
- */
-private val ConsumeAllScrollConnection = object : NestedScrollConnection {
-    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset = available
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,72 +124,28 @@ fun ViewerScreen(
             !MimeTypes.isRaw(media.sourceMimeType)
     }
 
-    // Hoisted motion photo ExoPlayer — single instance owned by ViewerScreen.
-    // Managing it here (rather than inside VideoPlayer) ensures the old decoder is
-    // always fully released before a new one is created, preventing OOM crashes.
-    var motionPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
-
-    // When the current image changes: stop motion playback, release the old player
-    // eagerly, then extract the motion video file for the new image.
     LaunchedEffect(currentMedia) {
         isPlayingMotion = false
-
-        // Release old player immediately — before extracting the new file — so that
-        // the HEVC decoder is freed and its large input buffers are returned to the
-        // heap before the new decoder is allocated.
-        releaseMotionPlayer(motionPlayer)
-        motionPlayer = null
-
         showMenu = false
         showWallpaperSheet = false
         wallpaperCropMedia = null
-
-        val oldFile = motionVideoFile
-        // Clear immediately so the motion photo button hides and we don't accidentally
-        // try to play the old video while the new one is extracting.
-        motionVideoFile = null 
-
         val file = withContext(Dispatchers.IO) {
             currentMedia?.let { viewModel.extractMotionVideo(it.path) }
         }
+        val oldFile = motionVideoFile
         motionVideoFile = file
-
+        
         // Clean up old temp file after new one is ready
         if (oldFile != null && oldFile != motionVideoFile) {
-            try {
+            try { 
                 withContext(Dispatchers.IO) { oldFile.delete() }
             } catch (e: Exception) {}
         }
     }
 
-    // Drive player creation/destruction ONLY from isPlayingMotion changing.
-    // Deliberately NOT keyed on motionVideoFile — if the IO extraction completes
-    // while the user is already watching a motion video, we must not tear down
-    // and rebuild the player mid-playback (that was the regression causing the
-    // 2nd motion photo to silently stop after ~2 seconds).
-    LaunchedEffect(isPlayingMotion) {
-        if (isPlayingMotion) {
-            val file = motionVideoFile ?: return@LaunchedEffect
-            // Release any stale player, then build a fresh one.
-            releaseMotionPlayer(motionPlayer)
-            motionPlayer = ExoPlayer.Builder(context).build().apply {
-                setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
-                repeatMode = Player.REPEAT_MODE_ONE
-                volume = 0f // motion photos are silent
-                prepare()
-                playWhenReady = true
-            }
-        } else {
-            // Not playing — release the player to free decoder resources.
-            releaseMotionPlayer(motionPlayer)
-            motionPlayer = null
-        }
-    }
-
-    // Comprehensive cleanup on screen exit
+    // Comprehensive cleanup on exit
     DisposableEffect(Unit) {
         onDispose {
-            releaseMotionPlayer(motionPlayer)
             motionVideoFile?.delete()
         }
     }
@@ -296,26 +240,40 @@ fun ViewerScreen(
                         onTap = { showUI = !showUI }
                     )
                 } else {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        ZoomableGlideImage(
-                            model = media.uri,
-                            contentDescription = null,
+                    if (media.sourceMimeType == MimeTypes.AVIF) {
+                        AvifImage(
+                            media = media,
                             modifier = Modifier.fillMaxSize(),
-                            state = rememberZoomableImageState(),
-                            contentScale = ContentScale.Fit,
-                            onClick = { 
+                            onClick = {
                                 if (isPlayingMotion) {
                                     isPlayingMotion = false
                                 } else {
-                                    showUI = !showUI 
+                                    showUI = !showUI
                                 }
                             }
                         )
-                        
-                        if (pagerState.currentPage == page && isPlayingMotion && motionPlayer != null) {
-                            key(media.contentId, motionPlayer) {
-                                MotionPhotoPlayer(
-                                    player = motionPlayer!!,
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            ZoomableGlideImage(
+                                model = media.uri,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                state = rememberZoomableImageState(),
+                                contentScale = ContentScale.Fit,
+                                onClick = { 
+                                    if (isPlayingMotion) {
+                                        isPlayingMotion = false
+                                    } else {
+                                        showUI = !showUI 
+                                    }
+                                }
+                            )
+                            
+                            if (isPlayingMotion && motionVideoFile != null) {
+                                VideoPlayer(
+                                    uri = Uri.fromFile(motionVideoFile!!).toString(),
+                                    isMotionPhoto = true,
+                                    isActive = true, 
                                     modifier = Modifier.fillMaxSize(),
                                     onTap = { isPlayingMotion = false }
                                 )
@@ -719,17 +677,12 @@ fun InfoBottomSheet(
                 Spacer(Modifier.height(24.dp))
                 Text(stringResource(R.string.location), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(12.dp))
-                // ConsumeAllScrollConnection intercepts nested scroll events from the MapView
-                // before they reach the ModalBottomSheet's swipe-to-dismiss handler.
-                // Unlike pointerInteropFilter { true }, this only blocks scroll propagation
-                // upward — the sheet's own drag handle and edge-drag still work normally.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
                         .clip(MaterialTheme.shapes.large)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .nestedScroll(ConsumeAllScrollConnection)
                 ) {
                     val context = LocalContext.current
                     AndroidView(
@@ -741,7 +694,7 @@ fun InfoBottomSheet(
                                 controller.setZoom(15.0)
                                 val point = org.osmdroid.util.GeoPoint(coords.first, coords.second)
                                 controller.setCenter(point)
-
+                                
                                 val marker = org.osmdroid.views.overlay.Marker(this)
                                 marker.position = point
                                 marker.setAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_BOTTOM)
@@ -754,6 +707,50 @@ fun InfoBottomSheet(
             }
         }
     }
+}
+
+@Composable
+private fun AvifImage(
+    media: MediaEntry,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val drawable = remember(media.path) {
+        runCatching { AVIFDrawable.fromFile(media.path) }.getOrNull()
+    }
+
+    if (drawable == null || drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0) {
+        ZoomableGlideImage(
+            model = media.uri,
+            contentDescription = null,
+            modifier = modifier,
+            state = rememberZoomableImageState(),
+            contentScale = ContentScale.Fit,
+            onClick = { _ -> onClick() }
+        )
+        return
+    }
+
+    DisposableEffect(drawable) {
+        onDispose {
+            (drawable as? Animatable)?.stop()
+        }
+    }
+
+    AndroidView(
+        factory = { context ->
+            ImageView(context).apply {
+                setBackgroundColor(android.graphics.Color.BLACK)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setImageDrawable(drawable)
+                setOnClickListener { onClick() }
+            }
+        },
+        update = { view ->
+            view.setImageDrawable(drawable)
+        },
+        modifier = modifier
+    )
 }
 
 private suspend fun loadWallpaperBitmap(
@@ -807,54 +804,6 @@ fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String
             Text(text = subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
-}
-
-/**
- * Renders a motion photo video using an [ExoPlayer] instance that is owned and
- * lifecycle-managed by the caller (ViewerScreen). This composable intentionally
- * does NOT create or release any ExoPlayer — it only presents the PlayerView.
- *
- * Keeping the player lifecycle external ensures that old decoders are always
- * fully released before new ones are allocated, preventing OutOfMemoryErrors.
- */
-@Composable
-fun MotionPhotoPlayer(
-    player: ExoPlayer,
-    modifier: Modifier = Modifier,
-    onTap: () -> Unit = {}
-) {
-    Box(
-        modifier = modifier.clickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null,
-            onClick = onTap
-        )
-    ) {
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    useController = false
-                    this.player = player
-                    setBackgroundColor(android.graphics.Color.BLACK)
-                }
-            },
-            update = { view ->
-                view.player = player
-            },
-            onRelease = { view ->
-                view.player = null
-            },
-            modifier = Modifier.fillMaxSize()
-        )
-    }
-}
-
-private fun releaseMotionPlayer(player: ExoPlayer?) {
-    if (player == null) return
-    runCatching { player.playWhenReady = false }
-    runCatching { player.clearVideoSurface() }
-    runCatching { player.stop() }
-    runCatching { player.release() }
 }
 
 @Composable
