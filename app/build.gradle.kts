@@ -34,8 +34,8 @@ android {
         applicationId = "com.pixel.gallery"
         minSdk = 26
         targetSdk = 35
-        versionCode = 28
-        versionName = "4.1.5"
+        versionCode = 29
+        versionName = "4.1.6"
     }
 
     signingConfigs {
