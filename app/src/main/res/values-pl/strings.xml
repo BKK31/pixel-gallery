@@ -86,7 +86,7 @@
     <string name="confirm_delete_permanently">Potwierdź przed trwałym usunięciem</string>
     <string name="confirm_delete_permanently_desc">Pokazuj okno potwierdzenia przy trwałym usuwaniu mediów</string>
     <string name="about_title">O aplikacji</string>
-    <string name="about_desc">Pixel Gallery v4.1.2</string>
+    <string name="about_desc">Pixel Gallery v4.1.4</string>
 
     <!-- Language Names -->
     <string name="language_english">English</string>

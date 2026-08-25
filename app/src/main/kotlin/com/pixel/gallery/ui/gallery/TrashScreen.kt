@@ -33,6 +33,7 @@ fun TrashScreen(
     viewModel: PhotosViewModel = hiltViewModel()
 ) {
     val gridColumns by viewModel.gridColumns.collectAsState()
+    val trashDates by viewModel.trashDates.collectAsState()
     var showEmptyConfirmDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -101,7 +102,8 @@ fun TrashScreen(
                     onToggleSelection = onToggleSelection,
                     columns = gridColumns,
                     onColumnsChange = { viewModel.setGridColumns(it) },
-                    state = gridState
+                    state = gridState,
+                    trashDates = trashDates
                 )
             }
         }

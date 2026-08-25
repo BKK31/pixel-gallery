@@ -17,7 +17,7 @@ import com.pixel.gallery.data.local.entity.VaultEntry
         TrashEntry::class,
         VaultEntry::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class GalleryDatabase : RoomDatabase() {
