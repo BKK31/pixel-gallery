@@ -1,0 +1,2 @@
+- Fixed bug with timer displayed in recycle bin for number of days left
+- Fixed photo swiping to next images with external intent

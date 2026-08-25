@@ -34,8 +34,8 @@ android {
         applicationId = "com.pixel.gallery"
         minSdk = 26
         targetSdk = 35
-        versionCode = 28
-        versionName = "4.1.5"
+        versionCode = 29
+        versionName = "4.1.6"
     }
 
     signingConfigs {
@@ -161,6 +161,11 @@ dependencies {
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.2")
+
+    // WorkManager (trash auto-delete)
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
 
     // Media3 (ExoPlayer)
     val media3Version = "1.5.1"
