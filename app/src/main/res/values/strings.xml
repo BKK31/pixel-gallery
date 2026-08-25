@@ -86,7 +86,7 @@
     <string name="confirm_delete_permanently">Confirm before deleting permanently</string>
     <string name="confirm_delete_permanently_desc">Show confirmation dialog when deleting media permanently</string>
     <string name="about_title">About</string>
-    <string name="about_desc">Pixel Gallery v4.1.6</string>
+    <string name="about_desc">Pixel Gallery v4.1.7</string>
     
     <!-- Language Names -->
     <string name="language_english">English</string>

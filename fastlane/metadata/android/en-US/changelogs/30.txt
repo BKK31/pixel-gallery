@@ -1,0 +1,1 @@
+- Fixed bug when loading media with external intent where the loaded image would be shown only for a split second before the ui returning to home screen
