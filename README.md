@@ -16,13 +16,15 @@
     <img src="https://img.shields.io/badge/UI-Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose">
   </a>
   <a href="https://github.com/bkk31">
-    <img src="https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge" alt="Maintained">
+    <img src="https://img.shields.io/badge/Maintained%3F-no-red.svg?style=for-the-badge" alt="Maintained">
   </a>
 </p>
 
-> [!IMPORTANT]
-> ### 🤝 Co-Maintainers & Contributors Wanted!
-> Due to work commitments, I am currently unable to maintain the application and am looking for maintainers or co-contributors. If you are interested in helping support or develop this project, please open an issue or reach out!
+> [!WARNING]
+> ### ⚠️ Project Archived / No Longer Maintained
+> Due to career changes and time constraints, this project is no longer actively maintained and this repository will be archived soon. 
+> 
+> If you wish to continue developing this project, fix issues, or add features, you are welcome to fork the repository under the GPL-3 license. Thank you to everyone who supported, contributed to, or used Pixel Gallery!
 
 <p align="center">
   <a href="#features">Features</a> •
