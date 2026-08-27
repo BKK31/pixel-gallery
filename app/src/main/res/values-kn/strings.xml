@@ -121,6 +121,9 @@
     <string name="empty_action">ಖಾಲಿ ಮಾಡಿ</string>
     <string name="empty_bin_title">ಮರುಬಳಕೆ ಬುಟ್ಟಿ ಖಾಲಿ ಮಾಡಬೇಕೇ?</string>
     <string name="empty_bin_desc">ಮರುಬಳಕೆ ಬುಟ್ಟಿಯಲ್ಲಿರುವ ಎಲ್ಲಾ ಐಟಂಗಳನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಲಾಗುತ್ತದೆ. ಈ ಕ್ರಿಯೆಯನ್ನು ರದ್ದುಗೊಳಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.</string>
+    <string name="restore_all">ಎಲ್ಲವನ್ನೂ ಮರುಸ್ಥಾಪಿಸಿ</string>
+    <string name="restore_all_title">ಎಲ್ಲಾ ಐಟಂಗಳನ್ನು ಮರುಸ್ಥಾಪಿಸಬೇಕೇ?</string>
+    <string name="restore_all_desc">ಮರುಬಳಕೆ ಬುಟ್ಟಿಯಲ್ಲಿರುವ ಎಲ್ಲಾ ಐಟಂಗಳನ್ನು ಅವುಗಳ ಮೂಲ ಸ್ಥಳಗಳಿಗೆ ಮರುಸ್ಥಾಪಿಸಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ?</string>
 
     <!-- Delete Confirmation Dialog -->
     <string name="delete_permanently_title">ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಬೇಕೇ?</string>

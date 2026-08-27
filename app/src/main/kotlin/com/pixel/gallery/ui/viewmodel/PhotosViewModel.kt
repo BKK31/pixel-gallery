@@ -214,8 +214,11 @@ class PhotosViewModel @Inject constructor(
         }
     }
 
-    fun refresh() {
+    fun refresh(delayMillis: Long = 0L) {
         viewModelScope.launch {
+            if (delayMillis > 0L) {
+                kotlinx.coroutines.delay(delayMillis)
+            }
             repository.syncWithMediaStore()
         }
     }
@@ -242,7 +245,7 @@ class PhotosViewModel @Inject constructor(
     fun moveToTrashBulk(uris: List<String>) {
         viewModelScope.launch {
             if (repository.trashMediaBulk(uris)) {
-                refresh()
+                refresh(1000L)
             }
         }
     }
@@ -250,13 +253,14 @@ class PhotosViewModel @Inject constructor(
     fun restoreMedia(id: Long, uri: String) {
         viewModelScope.launch {
             repository.restoreMedia(id, uri)
+            refresh(1000L)
         }
     }
 
     fun restoreMediaBulk(uris: List<String>) {
         viewModelScope.launch {
             if (repository.restoreMediaBulk(uris)) {
-                refresh()
+                refresh(1000L)
             }
         }
     }
@@ -264,7 +268,7 @@ class PhotosViewModel @Inject constructor(
     fun moveToVault(entry: MediaEntry) {
         viewModelScope.launch {
             if (repository.moveToVault(entry)) {
-                refresh()
+                refresh(1000L)
             }
         }
     }
@@ -272,7 +276,7 @@ class PhotosViewModel @Inject constructor(
     fun restoreFromVault(id: Long) {
         viewModelScope.launch {
             if (repository.restoreFromVault(id)) {
-                refresh()
+                refresh(1000L)
             }
         }
     }
@@ -280,7 +284,7 @@ class PhotosViewModel @Inject constructor(
     fun deleteMediaBulk(uris: List<String>) {
         viewModelScope.launch {
             if (repository.deleteMediaBulk(uris)) {
-                refresh()
+                refresh(1000L)
             }
         }
     }

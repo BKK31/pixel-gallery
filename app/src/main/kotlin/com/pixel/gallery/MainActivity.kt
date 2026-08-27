@@ -39,7 +39,7 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK) {
-            viewModel.refresh()
+            viewModel.refresh(1000L)
         }
     }
 
