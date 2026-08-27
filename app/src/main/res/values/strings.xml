@@ -123,6 +123,9 @@
     <string name="empty_action">Empty</string>
     <string name="empty_bin_title">Empty Recycle Bin?</string>
     <string name="empty_bin_desc">All items in the Recycle Bin will be permanently deleted. This action cannot be undone.</string>
+    <string name="restore_all">Restore all</string>
+    <string name="restore_all_title">Restore all items?</string>
+    <string name="restore_all_desc">Are you sure you want to restore all items in the Recycle Bin to their original locations?</string>
 
     <!-- Delete Confirmation Dialog -->
     <string name="delete_permanently_title">Delete Permanently?</string>

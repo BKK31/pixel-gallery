@@ -35,6 +35,7 @@ fun TrashScreen(
     val gridColumns by viewModel.gridColumns.collectAsState()
     val trashDates by viewModel.trashDates.collectAsState()
     var showEmptyConfirmDialog by remember { mutableStateOf(false) }
+    var showRestoreAllConfirmDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -54,6 +55,9 @@ fun TrashScreen(
                     },
                     actions = {
                         if (items.isNotEmpty()) {
+                            TextButton(onClick = { showRestoreAllConfirmDialog = true }) {
+                                Text(stringResource(R.string.restore_all), color = MaterialTheme.colorScheme.primary)
+                            }
                             TextButton(onClick = { showEmptyConfirmDialog = true }) {
                                 Text(stringResource(R.string.empty_action), color = MaterialTheme.colorScheme.error)
                             }
@@ -126,6 +130,30 @@ fun TrashScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showEmptyConfirmDialog = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
+
+        if (showRestoreAllConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showRestoreAllConfirmDialog = false },
+                title = { Text(stringResource(R.string.restore_all_title)) },
+                text = { Text(stringResource(R.string.restore_all_desc)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val uris = items.filterIsInstance<GridItem.Photo>().map { it.entry.uri }
+                            viewModel.restoreMediaBulk(uris)
+                            showRestoreAllConfirmDialog = false
+                        }
+                    ) {
+                        Text(stringResource(R.string.restore), color = MaterialTheme.colorScheme.primary)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRestoreAllConfirmDialog = false }) {
                         Text(stringResource(R.string.cancel))
                     }
                 }

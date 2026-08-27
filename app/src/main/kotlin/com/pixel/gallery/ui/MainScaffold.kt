@@ -833,105 +833,13 @@ fun MainScaffold(
                     expanded = true,
                     colors = FloatingToolbarDefaults.standardFloatingToolbarColors(),
                     content = {
-                        // 1. Lock/Unlock
-                        val isVault = currentScreen == Screen.LockedFolder
-                        Surface(
-                            onClick = {
-                                if (isVault) {
-                                    selectedEntries.forEach { photosViewModel.restoreFromVault(it.contentId) }
-                                } else {
-                                    selectedEntries.forEach { photosViewModel.moveToVault(it) }
-                                }
-                                selectedIds = emptySet()
-                            },
-                            shape = FloatingToolbarDefaults.ContainerShape,
-                            color = colorScheme.surface,
-                            contentColor = colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = if (isVault) Icons.Outlined.LockOpen else Icons.Outlined.Lock, 
-                                    contentDescription = if (isVault) stringResource(R.string.unlock) else stringResource(R.string.lock), 
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-
-                        // 2. Share
-                        val shareMediaTitle = stringResource(R.string.share_media)
-                        Surface(
-                            onClick = {
-                                val uris = selectedEntries.map { 
-                                    FileProvider.getUriForFile(context, "com.pixel.gallery.fileprovider", java.io.File(it.path))
-                                }
-                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND_MULTIPLE).apply {
-                                    type = "*/*"
-                                    putParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, ArrayList(uris))
-                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(android.content.Intent.createChooser(intent, shareMediaTitle))
-                            },
-                            shape = FloatingToolbarDefaults.ContainerShape,
-                            color = colorScheme.surface,
-                            contentColor = colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share), modifier = Modifier.size(24.dp))
-                            }
-                        }
-
-                        // 3. Delete
-                        Surface(
-                            onClick = {
-                                if (currentScreen == Screen.Trash) {
-                                    if (confirmDelete) {
-                                        pendingDeleteEntries = selectedEntries
-                                        isPermanentDelete = true
-                                        showDeleteConfirmDialog = true
-                                    } else {
-                                        photosViewModel.deleteMediaBulk(selectedEntries.map { it.uri })
-                                        selectedIds = emptySet()
-                                    }
-                                } else {
-                                    if (confirmTrash) {
-                                        pendingDeleteEntries = selectedEntries
-                                        isPermanentDelete = false
-                                        showDeleteConfirmDialog = true
-                                    } else {
-                                        photosViewModel.moveToTrashBulk(selectedEntries.map { it.uri })
-                                        selectedIds = emptySet()
-                                    }
-                                }
-                            },
-                            shape = FloatingToolbarDefaults.ContainerShape,
-                            color = colorScheme.surface,
-                            contentColor = colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), modifier = Modifier.size(24.dp))
-                            }
-                        }
-
-                        // 4. More
-                        var showSelectionMoreMenu by remember { mutableStateOf(false) }
-                        Box {
+                        if (currentScreen == Screen.Trash) {
+                            // 1. Restore
                             Surface(
-                                onClick = { showSelectionMoreMenu = true },
+                                onClick = {
+                                    photosViewModel.restoreMediaBulk(selectedEntries.map { it.uri })
+                                    selectedIds = emptySet()
+                                },
                                 shape = FloatingToolbarDefaults.ContainerShape,
                                 color = colorScheme.surface,
                                 contentColor = colorScheme.onSurfaceVariant,
@@ -942,31 +850,168 @@ fun MainScaffold(
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more), modifier = Modifier.size(24.dp))
+                                    Icon(
+                                        imageVector = Icons.Outlined.RestoreFromTrash,
+                                        contentDescription = stringResource(R.string.restore),
+                                        modifier = Modifier.size(24.dp)
+                                    )
                                 }
                             }
-                            DropdownMenu(
-                                expanded = showSelectionMoreMenu,
-                                onDismissRequest = { showSelectionMoreMenu = false }
+
+                            // 2. Delete Permanently
+                            Surface(
+                                onClick = {
+                                    if (confirmDelete) {
+                                        pendingDeleteEntries = selectedEntries
+                                        isPermanentDelete = true
+                                        showDeleteConfirmDialog = true
+                                    } else {
+                                        photosViewModel.deleteMediaBulk(selectedEntries.map { it.uri })
+                                        selectedIds = emptySet()
+                                    }
+                                },
+                                shape = FloatingToolbarDefaults.ContainerShape,
+                                color = colorScheme.surface,
+                                contentColor = colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 4.dp)
                             ) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.copy_to_folder)) },
-                                    onClick = {
-                                        showSelectionMoreMenu = false
-                                        isMoveOperation = false
-                                        showMoveToAlbumDialog = true
-                                    },
-                                    leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.move_to_folder)) },
-                                    onClick = {
-                                        showSelectionMoreMenu = false
-                                        isMoveOperation = true
-                                        showMoveToAlbumDialog = true
-                                    },
-                                    leadingIcon = { Icon(Icons.Outlined.Folder, contentDescription = null) }
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.delete),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                        } else {
+                            // 1. Lock/Unlock
+                            val isVault = currentScreen == Screen.LockedFolder
+                            Surface(
+                                onClick = {
+                                    if (isVault) {
+                                        selectedEntries.forEach { photosViewModel.restoreFromVault(it.contentId) }
+                                    } else {
+                                        selectedEntries.forEach { photosViewModel.moveToVault(it) }
+                                    }
+                                    selectedIds = emptySet()
+                                },
+                                shape = FloatingToolbarDefaults.ContainerShape,
+                                color = colorScheme.surface,
+                                contentColor = colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = if (isVault) Icons.Outlined.LockOpen else Icons.Outlined.Lock, 
+                                        contentDescription = if (isVault) stringResource(R.string.unlock) else stringResource(R.string.lock), 
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+
+                            // 2. Share
+                            val shareMediaTitle = stringResource(R.string.share_media)
+                            Surface(
+                                onClick = {
+                                    val uris = selectedEntries.map { 
+                                        FileProvider.getUriForFile(context, "com.pixel.gallery.fileprovider", java.io.File(it.path))
+                                    }
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_SEND_MULTIPLE).apply {
+                                        type = "*/*"
+                                        putParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, ArrayList(uris))
+                                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(android.content.Intent.createChooser(intent, shareMediaTitle))
+                                },
+                                shape = FloatingToolbarDefaults.ContainerShape,
+                                color = colorScheme.surface,
+                                contentColor = colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share), modifier = Modifier.size(24.dp))
+                                }
+                            }
+
+                            // 3. Delete
+                            Surface(
+                                onClick = {
+                                    if (confirmTrash) {
+                                        pendingDeleteEntries = selectedEntries
+                                        isPermanentDelete = false
+                                        showDeleteConfirmDialog = true
+                                    } else {
+                                        photosViewModel.moveToTrashBulk(selectedEntries.map { it.uri })
+                                        selectedIds = emptySet()
+                                    }
+                                },
+                                shape = FloatingToolbarDefaults.ContainerShape,
+                                color = colorScheme.surface,
+                                contentColor = colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), modifier = Modifier.size(24.dp))
+                                }
+                            }
+
+                            // 4. More
+                            var showSelectionMoreMenu by remember { mutableStateOf(false) }
+                            Box {
+                                Surface(
+                                    onClick = { showSelectionMoreMenu = true },
+                                    shape = FloatingToolbarDefaults.ContainerShape,
+                                    color = colorScheme.surface,
+                                    contentColor = colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more), modifier = Modifier.size(24.dp))
+                                    }
+                                }
+                                DropdownMenu(
+                                    expanded = showSelectionMoreMenu,
+                                    onDismissRequest = { showSelectionMoreMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.copy_to_folder)) },
+                                        onClick = {
+                                            showSelectionMoreMenu = false
+                                            isMoveOperation = false
+                                            showMoveToAlbumDialog = true
+                                        },
+                                        leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.move_to_folder)) },
+                                        onClick = {
+                                            showSelectionMoreMenu = false
+                                            isMoveOperation = true
+                                            showMoveToAlbumDialog = true
+                                        },
+                                        leadingIcon = { Icon(Icons.Outlined.Folder, contentDescription = null) }
+                                    )
+                                }
                             }
                         }
                     }

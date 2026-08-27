@@ -123,6 +123,9 @@
     <string name="empty_action">Opróżnij</string>
     <string name="empty_bin_title">Opróżnić Kosz?</string>
     <string name="empty_bin_desc">Wszystkie elementy w Koszu zostaną trwale usunięte. Tej operacji nie można cofnąć.</string>
+    <string name="restore_all">Przywróć wszystko</string>
+    <string name="restore_all_title">Przywrócić wszystkie elementy?</string>
+    <string name="restore_all_desc">Czy na pewno chcesz przywrócić wszystkie elementy z Kosza do ich oryginalnych lokalizacji?</string>
 
     <!-- Delete Confirmation Dialog -->
     <string name="delete_permanently_title">Usunąć na zawsze?</string>
