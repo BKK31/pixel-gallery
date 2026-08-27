@@ -1,0 +1,1 @@
+- Add bulk restore functionality to trash screen
